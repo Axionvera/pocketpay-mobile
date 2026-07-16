@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../src/components/Button';
-import { Input } from '../src/components/Input';
+import { FormField } from '../src/components/FormField';
 import { COLORS, SIZES, RADIUS } from '../src/constants/theme';
 import { sendXlmTransaction } from '../src/services/stellar';
 import { useWalletStore } from '../src/store/walletStore';
@@ -68,28 +68,31 @@ export default function SendScreen() {
       </View>
 
       <View style={styles.form}>
-        <Input
+        <FormField
           label="Destination Address (Public Key)"
           placeholder="G..."
           value={destination}
           onChangeText={setDestination}
           autoCapitalize="none"
           autoCorrect={false}
+          helperText="Enter the recipient's Stellar public key (starts with 'G')"
         />
         
-        <Input
+        <FormField
           label="Amount (XLM)"
           placeholder="0.00"
           value={amount}
           onChangeText={setAmount}
           keyboardType="decimal-pad"
+          helperText={`Available balance: ${balance} XLM`}
         />
 
-        <Input
+        <FormField
           label="Memo (Optional)"
           placeholder="Payment reference"
           value={memo}
           onChangeText={setMemo}
+          helperText="Add a note for the recipient"
         />
       </View>
 
