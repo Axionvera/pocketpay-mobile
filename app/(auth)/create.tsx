@@ -5,8 +5,8 @@ import { Button } from '../../src/components/Button';
 import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
 import { generateKeypair } from '../../src/services/stellar';
 import { useWalletStore } from '../../src/store/walletStore';
-import { AlertTriangle, Copy } from 'lucide-react-native';
-import * as Clipboard from 'expo-clipboard';
+import { AlertTriangle } from 'lucide-react-native';
+import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
 
 export default function CreateWalletScreen() {
   const router = useRouter();
@@ -23,12 +23,6 @@ export default function CreateWalletScreen() {
     }
   };
 
-  const handleCopySecret = async () => {
-    if (keypair) {
-      await Clipboard.setStringAsync(keypair.secretKey);
-      Alert.alert('Copied', 'Secret key copied to clipboard. Keep it safe!');
-    }
-  };
 
   const handleContinue = async () => {
     if (!keypair) return;
@@ -84,15 +78,7 @@ export default function CreateWalletScreen() {
 
       <View style={styles.keyContainer}>
         <Text style={styles.keyLabel}>Secret Key</Text>
-        <View style={styles.secretBox}>
-          <Text style={styles.secretValue} selectable>{keypair.secretKey}</Text>
-          <Button 
-            title="Copy Secret" 
-            variant="secondary" 
-            style={styles.copyButton}
-            onPress={handleCopySecret}
-          />
-        </View>
+        <SecretKeyReveal secretKey={keypair.secretKey} />
       </View>
 
       <Button 
@@ -174,20 +160,5 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     fontSize: 14,
   },
-  secretBox: {
-    backgroundColor: 'rgba(255, 61, 0, 0.05)',
-    padding: SIZES.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 61, 0, 0.3)',
-  },
-  secretValue: {
-    color: COLORS.error,
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: SIZES.md,
-  },
-  copyButton: {
-    height: 40,
-  }
+
 });

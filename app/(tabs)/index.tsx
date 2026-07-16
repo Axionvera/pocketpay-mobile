@@ -4,7 +4,8 @@ import { useRouter } from 'expo-router';
 import { useWalletStore } from '../../src/store/walletStore';
 import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
 import { Button } from '../../src/components/Button';
-import { ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react-native';
+import { TransactionListItem } from '../../src/components/TransactionListItem';
+import { Clock } from 'lucide-react-native';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -66,24 +67,16 @@ export default function HomeScreen() {
             <Text style={styles.emptyText}>No recent transactions</Text>
           </View>
         )}
-        
-        {recentTransactions.map((tx, index) => {
-          const isSent = tx.source_account === publicKey || tx.from === publicKey;
-          return (
-            <View key={tx.id || index} style={styles.txItem}>
-              <View style={[styles.txIcon, { backgroundColor: isSent ? 'rgba(255, 61, 0, 0.1)' : 'rgba(0, 230, 118, 0.1)' }]}>
-                {isSent ? <ArrowUpRight color={COLORS.error} /> : <ArrowDownLeft color={COLORS.success} />}
-              </View>
-              <View style={styles.txInfo}>
-                <Text style={styles.txType}>{isSent ? 'Sent XLM' : 'Received XLM'}</Text>
-                <Text style={styles.txDate}>{new Date(tx.created_at).toLocaleDateString()}</Text>
-              </View>
-              <Text style={[styles.txAmount, { color: isSent ? COLORS.textPrimary : COLORS.success }]}>
-                {isSent ? '-' : '+'}{tx.amount || '0'}
-              </Text>
-            </View>
-          );
-        })}
+
+        {recentTransactions.map((tx, index) => (
+          <TransactionListItem
+            key={tx.id || index}
+            transaction={tx}
+            currentPublicKey={publicKey}
+            variant="inline"
+            onPress={() => router.push('/(tabs)/history')}
+          />
+        ))}
       </View>
     </ScrollView>
   );
@@ -161,37 +154,5 @@ const styles = StyleSheet.create({
   emptyText: {
     color: COLORS.textMuted,
     fontSize: 14,
-  },
-  txItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SIZES.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  txIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SIZES.md,
-  },
-  txInfo: {
-    flex: 1,
-  },
-  txType: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  txDate: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  txAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });
