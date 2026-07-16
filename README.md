@@ -34,6 +34,10 @@ Before adding new screens or components, read the [Design System guide](docs/des
 
 Please read our [Contributing Guidelines](CONTRIBUTING.md) and review our [Accessibility Checklist](docs/accessibility.md) before making UI changes.
 
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for a full list of notable changes across releases.
+
 ## License
 
 MIT
