@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
-import { Input } from '../../src/components/Input';
+import { FormField } from '../../src/components/FormField';
 import { COLORS, SIZES } from '../../src/constants/theme';
 import { useWalletStore } from '../../src/store/walletStore';
 import * as StellarSdk from '@stellar/stellar-sdk';
@@ -47,7 +47,7 @@ export default function ImportWalletScreen() {
           </Text>
         </View>
 
-        <Input
+        <FormField
           label="Secret Key"
           placeholder="S..."
           value={secretKey}
@@ -57,6 +57,7 @@ export default function ImportWalletScreen() {
           }}
           secureTextEntry
           error={error}
+          helperText="Enter your 56-character Stellar secret key starting with 'S'"
           autoCapitalize="none"
           autoCorrect={false}
         />

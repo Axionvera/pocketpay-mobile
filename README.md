@@ -1,73 +1,52 @@
-# Stellar PocketPay 🚀
+# Stellar PocketPay
 
-A production-quality React Native Expo application for interacting with the Stellar Testnet. This mobile wallet allows users to securely generate and store keypairs, view XLM balances, send and receive Testnet XLM, view transaction history, manage contacts, and includes a placeholder for a Soroban Savings Vault.
+React Native Expo wallet for Stellar Testnet.
+
+## Documentation
+
+- [Storage Guide](./docs/storage.md) - SecureStore vs AsyncStorage
+
+> ⚠️ **This app runs on the Stellar Testnet only.** Testnet XLM has no real monetary value. Read the [Security Guide](docs/security.md) before storing or sharing any keys.
 
 ## Features
 
-*   **Wallet Management**: Create a new Stellar Testnet wallet or import an existing one using a secret key. Keys are securely stored on the device using `expo-secure-store`.
-*   **Balance & Activity**: View your real-time XLM balance and recent transactions.
-*   **Send & Receive**: Send XLM to any Stellar address. Receive XLM easily by sharing your auto-generated QR code.
-*   **Address Book**: Save frequently used addresses in your contacts for quick access.
-*   **Soroban Vault (Mock)**: A UI placeholder demonstrating where future Soroban smart contract integrations (like a savings vault) would live.
-*   **Premium UI**: Clean, modern fintech aesthetic with dark mode support.
+- Wallet creation and import
+- XLM balance and transactions
+- Send and receive with QR codes
+- Address book contacts
+- Soroban vault placeholder
+
+For the expected screen sequence, validation, and UI states behind these features, see [Main wallet user flows](docs/user-flows.md).
+
+## Documentation
+
+*   [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
 
 ## Tech Stack
 
-*   **Framework**: React Native with Expo (Managed Workflow)
-*   **Navigation**: Expo Router (File-based routing)
-*   **State Management**: Zustand
-*   **Storage**: `expo-secure-store`, `@react-native-async-storage/async-storage`
-*   **Blockchain**: `@stellar/stellar-sdk` (with required React Native polyfills)
+React Native, Expo Router, Zustand, Stellar SDK, SecureStore, AsyncStorage
 
-## Getting Started
+## Quick Start
 
-### Prerequisites
-
-*   Node.js (v18+ recommended)
-*   npm or yarn
-*   Expo CLI (`npm install -g expo-cli`)
-*   Expo Go app on your physical device, or an iOS Simulator / Android Emulator.
-
-### Installation
-
-1.  **Clone the repository** (if applicable) or navigate to the project directory:
-    ```bash
-    cd stellar-pocketpay-mobile
-    ```
-
-2.  **Install dependencies**:
-    ```bash
-    npm install --legacy-peer-deps
-    ```
-    *(Note: `--legacy-peer-deps` is required due to React 19 peer dependency conflicts in some React Native libraries)*
-
-3.  **Environment Variables**:
-    The project includes a `.env.example` file. Copy it to `.env`:
-    ```bash
-    cp .env.example .env
-    ```
-    The default values are configured for the Stellar Testnet.
-
-### Running the App
-
-Start the Expo development server:
-
-```bash
+npm install --legacy-peer-deps
+cp .env.example .env
 npm start
-```
 
-Press `i` to open in iOS simulator, `a` to open in Android emulator, or scan the QR code with the Expo Go app on your physical device.
+## Contributing
 
-## Important Note on Polyfills
+Before adding new screens or components, read the [Design System guide](docs/design-system.md). It covers colour tokens, typography, spacing, card patterns, buttons, inputs, and dark mode rules derived directly from the existing codebase.
 
-The Stellar SDK is designed for Node.js and Browser environments. To make it work in React Native, this project uses specific polyfills (`buffer`, `react-native-get-random-values`, `events`, etc.) which are configured in `shim.js` and imported at the very top of `app/_layout.tsx`.
+## Contributing
 
-## Funding Your Testnet Account
+Please read our [Contributing Guidelines](CONTRIBUTING.md) and review our [Accessibility Checklist](docs/accessibility.md) before making UI changes.
 
-When you create a new wallet, it will have a balance of 0 XLM and won't exist on the ledger until funded. To fund it:
-1. Copy your new Public Key from the app.
-2. Go to the [Stellar Laboratory Friendbot](https://laboratory.stellar.org/#create-account).
-3. Paste your Public Key and click "Get test network XLM".
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for a full list of notable changes across releases.
+
+## Security
+
+See the full [Security Guide](docs/security.md) for details on secret key handling, device storage, backups, and safe development practices.
 
 ## License
 

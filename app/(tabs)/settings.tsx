@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
@@ -6,31 +6,24 @@ import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useAppStore } from '../../src/store/appStore';
 import { Users, LogOut, Key, Moon, Sun } from 'lucide-react-native';
-import * as Clipboard from 'expo-clipboard';
+import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { clearWallet, getSecretKey } = useWalletStore();
   const { isDarkMode, toggleDarkMode } = useAppStore();
+  const [showSecret, setShowSecret] = useState(false);
+  const [secretKey, setSecretKey] = useState<string | null>(null);
 
   const handleExportKey = async () => {
-    const secret = await getSecretKey();
-    if (secret) {
-      Alert.alert(
-        'Export Secret Key',
-        'WARNING: Never share your secret key with anyone. Anyone with this key can steal your funds.\n\nDo you want to copy it to clipboard?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Copy to Clipboard', 
-            style: 'destructive',
-            onPress: async () => {
-              await Clipboard.setStringAsync(secret);
-              Alert.alert('Copied', 'Secret key copied to clipboard.');
-            }
-          }
-        ]
-      );
+    if (!showSecret) {
+      const secret = await getSecretKey();
+      if (secret) {
+        setSecretKey(secret);
+        setShowSecret(true);
+      }
+    } else {
+      setShowSecret(false);
     }
   };
 
@@ -81,11 +74,19 @@ export default function SettingsScreen() {
             style={styles.menuButton}
           />
           <Button 
-            title="Export Secret Key" 
+            title={showSecret ? "Hide Export Menu" : "Export Secret Key"} 
             variant="outline" 
             onPress={handleExportKey}
             style={styles.menuButton}
           />
+          {showSecret && secretKey && (
+            <View style={{ padding: SIZES.lg, paddingTop: 0, borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
+              <Text style={{ color: COLORS.textSecondary, marginBottom: SIZES.sm, fontSize: 14 }}>
+                Your secret key is highly sensitive. Proceed with caution.
+              </Text>
+              <SecretKeyReveal secretKey={secretKey} />
+            </View>
+          )}
         </View>
       </View>
 
