@@ -1,6 +1,8 @@
 # Stellar PocketPay 🚀
 
-A production-quality React Native Expo application for interacting with the Stellar Testnet. This mobile wallet allows users to securely generate and store keypairs, view XLM balances, send and receive Testnet XLM, view transaction history, manage contacts, and includes a placeholder for a Soroban Savings Vault.
+A polished React Native Expo wallet for the **Stellar Testnet**, part of the evolving PocketPay ecosystem. This mobile app lets users generate and store keypairs, view XLM balances, send and receive Testnet XLM, browse transaction history, manage contacts, and explore a mock Soroban Savings Vault UI.
+
+> **⚠️ Project Status — Actively evolving.** PocketPay works end-to-end on Testnet, but several areas (detailed below) are still being iterated on. Expect refinements and breaking changes as we approach a production-ready release.
 
 ## Features
 
@@ -8,10 +10,30 @@ A production-quality React Native Expo application for interacting with the Stel
 *   **Balance & Activity**: View your real-time XLM balance and recent transactions.
 *   **Send & Receive**: Send XLM to any Stellar address. Receive XLM easily by sharing your auto-generated QR code.
 *   **Address Book**: Save frequently used addresses in your contacts for quick access.
-*   **Soroban Vault (Mock)**: A UI placeholder demonstrating where future Soroban smart contract integrations (like a savings vault) would live.
+*   **Soroban Vault (Mock)**: A UI placeholder demonstrating where future Soroban smart contract integrations (like a savings vault) would live. **Not backed by deployed contracts** — balances and state shown are simulated.
 *   **Premium UI**: Clean, modern fintech aesthetic with dark mode support.
 
 For the expected screen sequence, validation, and UI states behind these features, see [Main wallet user flows](docs/user-flows.md).
+
+## Project Status
+
+| Area | Status |
+|------|--------|
+| **Testnet wallet (send, receive, balance)** | ✅ Functional — daily-driver ready on Testnet |
+| **Key generation & import** | ✅ Functional |
+| **Transaction history** | ✅ Functional |
+| **Address book** | ✅ Functional |
+| **Soroban Vault (mock)** | 🚧 UI only — no on-chain contracts yet |
+| **Mainnet readiness** | ❌ Not planned until future release |
+
+PocketPay currently operates **exclusively on Stellar Testnet**. All transactions use Testnet XLM (no real value). Mainnet support is on the roadmap but not yet available.
+
+## Ecosystem
+
+PocketPay is part of a broader collection of projects:
+
+- **[stellar-sdk](https://github.com/stellar/stellar-sdk)** — The official Stellar SDK used by this app for keypair generation, transaction building, and Horizon interaction.
+- **[pocketpay-contracts](https://github.com/stellar/soroban-examples)** — Companion Soroban smart contracts (work in progress). The mock Vault UI is designed to align with these contracts once deployed.
 
 ## Tech Stack
 
@@ -48,7 +70,7 @@ For the expected screen sequence, validation, and UI states behind these feature
     ```bash
     cp .env.example .env
     ```
-    The default values are configured for the Stellar Testnet.
+    The default values are configured for the **Stellar Testnet**. Do not change them to Mainnet — the app is not yet Mainnet-ready.
 
 ### Running the App
 
@@ -60,16 +82,19 @@ npm start
 
 Press `i` to open in iOS simulator, `a` to open in Android emulator, or scan the QR code with the Expo Go app on your physical device.
 
-## Important Note on Polyfills
+## Polyfills for the Stellar SDK
 
-The Stellar SDK is designed for Node.js and Browser environments. To make it work in React Native, this project uses specific polyfills (`buffer`, `react-native-get-random-values`, `events`, etc.) which are configured in `shim.js` and imported at the very top of `app/_layout.tsx`.
+The `@stellar/stellar-sdk` is designed for Node.js and browser environments. To make it work in React Native, this project includes several polyfills (`buffer`, `react-native-get-random-values`, `events`, etc.) configured in `shim.js` and imported at the top of `app/_layout.tsx`.
 
 ## Funding Your Testnet Account
 
-When you create a new wallet, it will have a balance of 0 XLM and won't exist on the ledger until funded. To fund it:
-1. Copy your new Public Key from the app.
-2. Go to the [Stellar Laboratory Friendbot](https://laboratory.stellar.org/#create-account).
-3. Paste your Public Key and click "Get test network XLM".
+Newly created wallets start with **0 XLM** and do not yet exist on the ledger. To fund yours:
+
+1. Copy your Public Key from the app.
+2. Go to the [Stellar Laboratory Friendbot](https://laboratory.stellar.org/#create-account) (Testnet).
+3. Paste your Public Key and click **"Get test network XLM"**.
+
+> 💡 Testnet XLM has **no real monetary value**. It's only used for development and testing.
 
 ## License
 
