@@ -4,6 +4,7 @@ import { Button } from '../src/components/Button';
 import { Input } from '../src/components/Input';
 import { COLORS, SIZES, RADIUS } from '../src/constants/theme';
 import { useAppStore, Contact } from '../src/store/appStore';
+import { validateDestinationAddress } from '../src/utils/stellarAddress';
 import { Trash2, User } from 'lucide-react-native';
 
 export default function ContactsScreen() {
@@ -18,8 +19,9 @@ export default function ContactsScreen() {
       return;
     }
 
-    if (!publicKey.startsWith('G') || publicKey.length !== 56) {
-      Alert.alert('Error', 'Invalid Stellar Public Key format.');
+    const validation = validateDestinationAddress(publicKey);
+    if (validation.error) {
+      Alert.alert('Error', validation.error);
       return;
     }
 
