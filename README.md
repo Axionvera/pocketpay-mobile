@@ -8,7 +8,7 @@ A production-quality React Native Expo application for interacting with the Stel
 *   **Balance & Activity**: View your real-time XLM balance and recent transactions.
 *   **Send & Receive**: Send XLM to any Stellar address. Receive XLM easily by sharing your auto-generated QR code.
 *   **Address Book**: Save frequently used addresses in your contacts for quick access.
-*   **Soroban Vault (Mock)**: A UI placeholder demonstrating where future Soroban smart contract integrations (like a savings vault) would live.
+*   **Soroban Vault (Mock)**: A UI placeholder demonstrating where future Soroban smart contract integrations (like a savings vault) would live. See [docs/pause-design.md](docs/pause-design.md) for research on the vault's future pause/emergency-stop mechanism.
 *   **Premium UI**: Clean, modern fintech aesthetic with dark mode support.
 
 For the expected screen sequence, validation, and UI states behind these features, see [Main wallet user flows](docs/user-flows.md).
@@ -70,6 +70,10 @@ When you create a new wallet, it will have a balance of 0 XLM and won't exist on
 1. Copy your new Public Key from the app.
 2. Go to the [Stellar Laboratory Friendbot](https://laboratory.stellar.org/#create-account).
 3. Paste your Public Key and click "Get test network XLM".
+
+## Documentation
+
+- [Pause & Emergency Stop Design Research](docs/pause-design.md) — Analysis of trade-offs for adding a pause mechanism to the Soroban Savings Vault.
 
 ## License
 
