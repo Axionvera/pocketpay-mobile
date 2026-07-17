@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
-import { fetchXlmBalance, fetchRecentTransactions } from '../services/stellar';
+import { fetchXlmBalance, fetchRecentTransactions, fundWithFriendbot } from '../services/stellar';
 
 const WALLET_KEY = 'pocketpay_wallet_secret';
 
@@ -20,6 +20,8 @@ interface WalletState {
   balance: string;
   transactions: TransactionRecord[];
   isLoading: boolean;
+  isFunding: boolean;
+  fundError: string | null;
   error: string | null;
   
   // Actions
@@ -28,6 +30,7 @@ interface WalletState {
   refreshWalletData: () => Promise<void>;
   clearWallet: () => Promise<void>;
   getSecretKey: () => Promise<string | null>;
+  fundWallet: () => Promise<void>;
 }
 
 export const useWalletStore = create<WalletState>((set, get) => ({
@@ -35,6 +38,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   balance: '0.0000000',
   transactions: [],
   isLoading: false,
+  isFunding: false,
+  fundError: null,
   error: null,
 
   setWallet: async (publicKey: string, secretKey: string) => {
@@ -100,6 +105,22 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     } catch (err) {
       console.error('Failed to get secret key:', err);
       return null;
+    }
+  },
+
+  fundWallet: async () => {
+    const { publicKey } = get();
+    if (!publicKey) return;
+
+    set({ isFunding: true, fundError: null });
+    try {
+      await fundWithFriendbot(publicKey);
+      // Refresh balance after successful funding
+      await get().refreshWalletData();
+      set({ isFunding: false });
+    } catch (err: any) {
+      console.error('Friendbot funding failed:', err);
+      set({ isFunding: false, fundError: err.message || 'Funding failed. Please try again.' });
     }
   }
 }));
