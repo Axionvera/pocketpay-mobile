@@ -18,8 +18,8 @@ export default function CreateWalletScreen() {
     try {
       const keys = generateKeypair();
       setKeypair(keys);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to generate keypair.');
+    } catch (error: any) {
+      Alert.alert('Error', `Failed to generate keypair: ${error?.message || error}`);
     }
   };
 
@@ -36,8 +36,11 @@ export default function CreateWalletScreen() {
           text: 'Yes, I saved it', 
           onPress: async () => {
             setIsLoading(true);
-            await setWallet(keypair.publicKey, keypair.secretKey);
+            const saved = await setWallet(keypair.publicKey, keypair.secretKey);
             setIsLoading(false);
+            if (!saved) {
+              Alert.alert('Wallet Not Saved', 'Failed to persist wallet securely. Please try again.');
+            }
             // Router will automatically redirect to (main) due to root layout logic
           }
         }

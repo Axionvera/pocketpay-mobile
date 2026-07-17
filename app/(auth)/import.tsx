@@ -25,10 +25,14 @@ export default function ImportWalletScreen() {
       setIsLoading(true);
       const { publicKey } = importWallet(secretKey.trim());
       
-      await setWallet(publicKey, secretKey.trim());
+      const saved = await setWallet(publicKey, secretKey.trim());
+      if (!saved) {
+        setError('Failed to persist wallet securely. Please try again.');
+      }
       // Router will automatically redirect to (main)
-    } catch (err) {
+    } catch {
       setError('Invalid secret key. Please check and try again.');
+    } finally {
       setIsLoading(false);
     }
   };
