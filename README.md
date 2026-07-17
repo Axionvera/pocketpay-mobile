@@ -1,6 +1,13 @@
 # Stellar PocketPay
 
-React Native Expo wallet for Stellar Testnet.
+React Native Expo wallet for Stellar Testnet. The app aims to feel polished and usable for core wallet flows while still evolving as the PocketPay ecosystem matures.
+
+## Project Status
+
+- This project is best described as a polished but still-evolving wallet experience rather than a production-ready product.
+- Core flows such as wallet creation and import, balance checks, sending and receiving, contacts, and the vault UI are implemented and actively refined.
+- The app is intentionally focused on Stellar Testnet for development and experimentation. Testnet XLM has no real monetary value.
+- The vault experience is currently mock-backed by default. A real Soroban contract integration can be enabled with configuration, but the default experience remains a safe placeholder.
 
 ## Documentation
 
@@ -19,9 +26,38 @@ React Native Expo wallet for Stellar Testnet.
 
 For the expected screen sequence, validation, and UI states behind these features, see [Main wallet user flows](docs/user-flows.md).
 
+## Ecosystem
+
+PocketPay Mobile is part of a broader PocketPay stack:
+
+- [PocketPay SDK](https://github.com/Axionvera/pocketpay-sdk)
+- [PocketPay Contracts](https://github.com/Axionvera/pocketpay-contracts)
+
 ## Documentation
 
 *   [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
+
+## Screenshots
+
+> 📸 Screenshots below are placeholders. To update them, capture each screen from a simulator or device (use dummy/funded Testnet data only — never real keys or mainnet funds) and replace the files in `docs/screenshots/`.
+
+| Wallet | Send | Receive |
+|:---:|:---:|:---:|
+| ![Wallet screen](docs/screenshots/wallet.png) | ![Send screen](docs/screenshots/send.png) | ![Receive screen](docs/screenshots/receive.png) |
+| *Balance overview and quick actions* | *Send XLM to any Stellar address* | *QR code for your public key* |
+
+| Activity | Contacts | Vault |
+|:---:|:---:|:---:|
+| ![Activity screen](docs/screenshots/activity.png) | ![Contacts screen](docs/screenshots/contacts.png) | ![Vault screen](docs/screenshots/vault.png) |
+| *Transaction history with sent/received indicators* | *Saved addresses for quick access* | *Soroban Savings Vault (mock)* |
+
+### Updating screenshots
+
+1. Run the app in a simulator with a funded Testnet account.
+2. Navigate to the relevant screen.
+3. Take a screenshot and export it at roughly **390 × 844 px** (iPhone 14 logical resolution) or equivalent Android size.
+4. Save it to `docs/screenshots/<screen-name>.png` using the filenames shown above.
+5. Commit only the image files — never include screenshots that reveal a real secret key or personal data.
 
 ## Tech Stack
 

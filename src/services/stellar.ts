@@ -2,6 +2,8 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 import * as ExpoCrypto from 'expo-crypto';
 import { Buffer } from 'buffer';
 
+export type PaymentRecord = any;
+
 const server = new StellarSdk.Horizon.Server(
   process.env.EXPO_PUBLIC_STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org'
 );
@@ -241,15 +243,16 @@ export const mockWithdrawFromVault = async (secretKey: string, amount: string): 
   return true;
 };
 
-export const mockLockVault = async (
-  secretKey: string,
-  amount: string,
-  unlockTimestamp: number
-): Promise<{ success: boolean; unlockTime: string }> => {
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  const unlockDate = new Date(unlockTimestamp * 1000);
-  return {
-    success: true,
-    unlockTime: unlockDate.toLocaleString(),
-  };
+export const fundWithFriendbot = async (publicKey: string): Promise<void> => {
+  try {
+    const url = `https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Friendbot error: ${response.statusText}`);
+    }
+  } catch (error: any) {
+    console.error('Friendbot funding failed:', error);
+    throw new Error(error.message || 'Friendbot funding failed');
+  }
 };
+
