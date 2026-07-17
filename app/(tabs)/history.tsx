@@ -1,62 +1,145 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
+import React, { useCallback, useEffect } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { Clock } from 'lucide-react-native';
 import { useWalletStore, TransactionRecord } from '../../src/store/walletStore';
-import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
-import { ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react-native';
+import { COLORS, SIZES } from '../../src/constants/theme';
+import { TransactionListItem } from '../../src/components/TransactionListItem';
 
-export default function HistoryScreen() {
-  const { transactions, isLoading, refreshWalletData, publicKey } = useWalletStore();
+// ─── Sub-components ────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    refreshWalletData();
-  }, []);
+/**
+ * Footer rendered below the list while loading more items or when the
+ * end-of-list has been reached.
+ */
+const ListFooter: React.FC<{
+  isLoadingMore: boolean;
+  hasMoreTransactions: boolean;
+  hasTransactions: boolean;
+}> = ({ isLoadingMore, hasMoreTransactions, hasTransactions }) => {
+  if (!hasTransactions) return null;
 
-  const renderItem = ({ item }: { item: TransactionRecord }) => {
-    // Basic logic to determine if it's sent or received
-    // In a real app with more complex ops, this would be more robust
-    const isSent = item.source_account === publicKey || item.from === publicKey;
-
+  if (isLoadingMore) {
     return (
-      <View style={styles.txItem}>
-        <View style={[styles.txIcon, { backgroundColor: isSent ? 'rgba(255, 61, 0, 0.1)' : 'rgba(0, 230, 118, 0.1)' }]}>
-          {isSent ? <ArrowUpRight color={COLORS.error} /> : <ArrowDownLeft color={COLORS.success} />}
-        </View>
-        <View style={styles.txInfo}>
-          <Text style={styles.txType}>{isSent ? 'Sent XLM' : 'Received XLM'}</Text>
-          <Text style={styles.txDate}>
-            {new Date(item.created_at).toLocaleString()}
-          </Text>
-        </View>
-        <Text style={[styles.txAmount, { color: isSent ? COLORS.textPrimary : COLORS.success }]}>
-          {isSent ? '-' : '+'}{item.amount || '0'}
-        </Text>
+      <View style={styles.footer} testID="loading-more-indicator">
+        <ActivityIndicator color={COLORS.primary} size="small" />
+        <Text style={styles.footerText}>Loading older transactions…</Text>
       </View>
     );
-  };
+  }
+
+  if (!hasMoreTransactions) {
+    return (
+      <View style={styles.footer} testID="end-of-list-indicator">
+        <Text style={styles.footerText}>You've reached the beginning of your history.</Text>
+      </View>
+    );
+  }
+
+  return null;
+};
+
+/**
+ * Shown when there are no transactions and the screen is not loading.
+ */
+const EmptyState: React.FC = () => (
+  <View style={styles.emptyState} testID="empty-state">
+    <Clock color={COLORS.textMuted} size={48} style={{ marginBottom: SIZES.md }} />
+    <Text style={styles.emptyText}>No transactions found</Text>
+    <Text style={styles.emptySubtext}>Your recent activity will appear here.</Text>
+  </View>
+);
+
+// ─── Screen ────────────────────────────────────────────────────────────────────
+
+export default function HistoryScreen() {
+  const {
+    transactions,
+    isLoading,
+    isLoadingMore,
+    hasMoreTransactions,
+    publicKey,
+    refreshWalletData,
+    loadMoreTransactions,
+  } = useWalletStore();
+
+  // Load the first page on mount.
+  useEffect(() => {
+    refreshWalletData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const renderItem = useCallback(
+    ({ item }: { item: TransactionRecord }) => (
+      <TransactionListItem
+        transaction={item}
+        currentPublicKey={publicKey}
+        variant="card"
+      />
+    ),
+    [publicKey]
+  );
+
+  const keyExtractor = useCallback((item: TransactionRecord) => item.id, []);
+
+  /**
+   * Triggered when the FlatList scrolls close to the end.
+   * Only fires when there are more pages and we are not already fetching.
+   */
+  const handleEndReached = useCallback(() => {
+    if (hasMoreTransactions && !isLoadingMore) {
+      loadMoreTransactions();
+    }
+  }, [hasMoreTransactions, isLoadingMore, loadMoreTransactions]);
+
+  const renderFooter = useCallback(
+    () => (
+      <ListFooter
+        isLoadingMore={isLoadingMore}
+        hasMoreTransactions={hasMoreTransactions}
+        hasTransactions={transactions.length > 0}
+      />
+    ),
+    [isLoadingMore, hasMoreTransactions, transactions.length]
+  );
 
   return (
     <View style={styles.container}>
       <FlatList
         data={transactions}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          transactions.length === 0 && styles.listContentEmpty,
+        ]}
         refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refreshWalletData} tintColor={COLORS.primary} />
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={refreshWalletData}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
         }
-        ListEmptyComponent={
-          !isLoading ? (
-            <View style={styles.emptyState}>
-              <Clock color={COLORS.textMuted} size={64} style={{ marginBottom: SIZES.md }} />
-              <Text style={styles.emptyText}>No transactions found</Text>
-              <Text style={styles.emptySubtext}>Your recent activity will appear here.</Text>
-            </View>
-          ) : null
-        }
+        // Trigger load-more when 20 % of the list remains below the viewport.
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.2}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={!isLoading ? <EmptyState /> : null}
+        // Avoid stale closures while also keeping rendering performant.
+        extraData={{ isLoadingMore, hasMoreTransactions }}
       />
     </View>
   );
 }
+
+// ─── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
@@ -65,46 +148,18 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: SIZES.lg,
+    paddingBottom: SIZES.xxl,
   },
-  txItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SIZES.md,
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: SIZES.lg,
-    borderRadius: RADIUS.md,
-    marginBottom: SIZES.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  txIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SIZES.md,
-  },
-  txInfo: {
-    flex: 1,
-  },
-  txType: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  txDate: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-  },
-  txAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  /** When there are no items the FlatList should fill the screen so the
+   *  empty state is centred vertically. */
+  listContentEmpty: {
+    flexGrow: 1,
   },
   emptyState: {
+    flex: 1,
     padding: SIZES.xl,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: SIZES.xxl * 2,
   },
   emptyText: {
@@ -116,5 +171,16 @@ const styles = StyleSheet.create({
   emptySubtext: {
     color: COLORS.textSecondary,
     fontSize: 14,
-  }
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SIZES.lg,
+    gap: SIZES.sm,
+  },
+  footerText: {
+    color: COLORS.textMuted,
+    fontSize: 13,
+  },
 });

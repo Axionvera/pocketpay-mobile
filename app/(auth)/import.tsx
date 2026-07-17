@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
-import { Input } from '../../src/components/Input';
+import { FormField } from '../../src/components/FormField';
 import { COLORS, SIZES } from '../../src/constants/theme';
 import { useWalletStore } from '../../src/store/walletStore';
-import * as StellarSdk from '@stellar/stellar-sdk';
+import { importWallet } from 'pocketpay-sdk';
 
 export default function ImportWalletScreen() {
   const router = useRouter();
@@ -23,13 +23,16 @@ export default function ImportWalletScreen() {
 
     try {
       setIsLoading(true);
-      const keypair = StellarSdk.Keypair.fromSecret(secretKey.trim());
-      const publicKey = keypair.publicKey();
+      const { publicKey } = importWallet(secretKey.trim());
       
-      await setWallet(publicKey, secretKey.trim());
+      const saved = await setWallet(publicKey, secretKey.trim());
+      if (!saved) {
+        setError('Failed to persist wallet securely. Please try again.');
+      }
       // Router will automatically redirect to (main)
-    } catch (err) {
+    } catch {
       setError('Invalid secret key. Please check and try again.');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -47,7 +50,7 @@ export default function ImportWalletScreen() {
           </Text>
         </View>
 
-        <Input
+        <FormField
           label="Secret Key"
           placeholder="S..."
           value={secretKey}
@@ -57,6 +60,7 @@ export default function ImportWalletScreen() {
           }}
           secureTextEntry
           error={error}
+          helperText="Enter your 56-character Stellar secret key starting with 'S'"
           autoCapitalize="none"
           autoCorrect={false}
         />
