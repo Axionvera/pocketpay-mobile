@@ -18,8 +18,8 @@ export default function CreateWalletScreen() {
     try {
       const keys = generateKeypair();
       setKeypair(keys);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to generate keypair.');
+    } catch (error: any) {
+      Alert.alert('Error', `Failed to generate keypair: ${error?.message || error}`);
     }
   };
 
