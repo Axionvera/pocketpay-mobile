@@ -18,10 +18,11 @@ interface WalletState {
   isFunding: boolean;
   fundError: string | null;
   error: string | null;
-  
+
   // Actions
   setWallet: (publicKey: string, secretKey: string) => Promise<boolean>;
   loadWalletFromStorage: () => Promise<boolean>;
+  /** Pull-to-refresh: resets pagination and loads the first page fresh. */
   refreshWalletData: () => Promise<void>;
   clearWallet: () => Promise<boolean>;
   getSecretKey: () => Promise<string | null>;
@@ -120,14 +121,42 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
     set({ isLoading: true, error: null });
     try {
-      const [balance, txs] = await Promise.all([
+      const [balance, page] = await Promise.all([
         fetchXlmBalance(publicKey),
-        fetchRecentTransactions(publicKey),
+        fetchTransactionsPage(publicKey, TX_PAGE_SIZE),
       ]);
       set({ balance, transactions: txs, isLoading: false });
     } catch (err: any) {
       console.error('Failed to refresh wallet data');
       set({ isLoading: false, error: err.message || 'Failed to sync data' });
+    }
+  },
+
+  loadMoreTransactions: async () => {
+    const { publicKey, isLoadingMore, hasMoreTransactions, nextCursor, transactions } = get();
+
+    // Guard: nothing to do if already loading or no more pages.
+    if (!publicKey || isLoadingMore || !hasMoreTransactions || !nextCursor) return;
+
+    set({ isLoadingMore: true, error: null });
+    try {
+      const page = await fetchTransactionsPage(publicKey, TX_PAGE_SIZE, nextCursor);
+
+      // Deduplicate: build a set of existing IDs then filter the new records.
+      const existingIds = new Set(transactions.map((tx) => tx.id));
+      const newRecords = (page.records as TransactionRecord[]).filter(
+        (tx) => !existingIds.has(tx.id)
+      );
+
+      set({
+        transactions: [...transactions, ...newRecords],
+        nextCursor: page.nextCursor,
+        hasMoreTransactions: page.hasMore,
+        isLoadingMore: false,
+      });
+    } catch (err: any) {
+      console.error('Failed to load more transactions:', err);
+      set({ isLoadingMore: false, error: err.message || 'Failed to load more' });
     }
   },
 

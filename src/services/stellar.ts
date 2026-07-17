@@ -84,6 +84,65 @@ export const fetchRecentTransactions = async (
   }
 };
 
+export interface TransactionsPage {
+  /** Fetched operation records for this page. */
+  records: any[];
+  /**
+   * Paging token (cursor) of the oldest record in this page.
+   * Pass this as `cursor` to `fetchTransactionsPage` to load the next
+   * (older) page.  `null` means there are no more pages.
+   */
+  nextCursor: string | null;
+  /** True when fewer records than `limit` were returned — no more pages. */
+  hasMore: boolean;
+}
+
+/**
+ * Fetch a page of operations for `publicKey`, ordered descending
+ * (newest-first).  Supports cursor-based "load more older" pagination.
+ *
+ * @param publicKey  – Stellar public key to query.
+ * @param limit      – Page size (default 20).
+ * @param cursor     – Paging token from a previous page to continue from.
+ *                     Pass `undefined` / omit to start from the latest.
+ */
+export const fetchTransactionsPage = async (
+  publicKey: string,
+  limit: number = 20,
+  cursor?: string
+): Promise<TransactionsPage> => {
+  try {
+    let builder = server
+      .operations()
+      .forAccount(publicKey)
+      .order('desc')
+      .limit(limit);
+
+    if (cursor) {
+      builder = builder.cursor(cursor);
+    }
+
+    const response = await builder.call();
+    const records = response.records;
+    const hasMore = records.length === limit;
+
+    // The cursor for the next page is the paging_token of the last (oldest)
+    // record returned.  Horizon uses paging_token as the cursor value.
+    const nextCursor =
+      hasMore && records.length > 0
+        ? (records[records.length - 1] as any).paging_token ?? null
+        : null;
+
+    return { records, nextCursor, hasMore };
+  } catch (error: any) {
+    if (error.message && error.message.includes('not found')) {
+      return { records: [], nextCursor: null, hasMore: false };
+    }
+    console.error('Error fetching transactions page:', error);
+    throw error;
+  }
+};
+
 /**
  * Send XLM to a destination address.
  */
