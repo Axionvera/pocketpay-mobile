@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
-    "postinstall": "tsc --project node_modules/pocketpay-sdk/tsconfig.json --ignoreDeprecations 5.0",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
