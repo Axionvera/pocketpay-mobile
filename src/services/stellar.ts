@@ -2,29 +2,12 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 import * as ExpoCrypto from 'expo-crypto';
 import { Buffer } from 'buffer';
 
-export type PaymentRecord = any;
-
 const server = new StellarSdk.Horizon.Server(
   process.env.EXPO_PUBLIC_STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org'
 );
 
 /** Horizon operation record type used for transaction history. */
 export type PaymentRecord = StellarSdk.Horizon.ServerApi.OperationRecord;
-
-/**
- * Fund a Testnet account using Friendbot.
- * This is Testnet-only; Friendbot does not exist on Mainnet / Futurenet.
- */
-export const fundWithFriendbot = async (publicKey: string): Promise<void> => {
-  const friendbotUrl = 'https://friendbot.stellar.org';
-  const response = await fetch(`${friendbotUrl}?addr=${encodeURIComponent(publicKey)}`);
-
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    const detail = (body as any)?.detail || `Friendbot request failed (HTTP ${response.status})`;
-    throw new Error(detail);
-  }
-};
 
 /**
  * Generates a new Stellar Keypair.

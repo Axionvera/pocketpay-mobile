@@ -9,7 +9,6 @@ const TX_PAGE_SIZE = 20;
 const PERSIST_WALLET_ERROR = 'Failed to persist wallet securely';
 const RESTORE_WALLET_ERROR = 'Failed to restore wallet securely';
 const CLEAR_WALLET_ERROR = 'Failed to clear wallet securely';
-const TX_PAGE_SIZE = 20;
 
 export type TransactionRecord = PaymentRecord;
 
@@ -21,9 +20,6 @@ interface WalletState {
   isFunding: boolean;
   fundError: string | null;
   error: string | null;
-  isLoadingMore: boolean;
-  hasMoreTransactions: boolean;
-  nextCursor: string | null;
 
   // Pagination
   isLoadingMore: boolean;
@@ -39,7 +35,6 @@ interface WalletState {
   clearWallet: () => Promise<boolean>;
   getSecretKey: () => Promise<string | null>;
   fundWallet: () => Promise<void>;
-  loadMoreTransactions: () => Promise<void>;
 }
 
 const resetWalletState = () => ({
