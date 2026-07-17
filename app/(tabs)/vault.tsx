@@ -160,8 +160,24 @@ export default function VaultScreen() {
         <Button
           title="Lock Funds (30 days)"
           variant="outline"
-          onPress={() => showConfirmation('lock')}
-          disabled={isLoading}
+          onPress={() =>
+            Alert.alert(
+              'Lock Funds',
+              `Lock ${amount || '0'} XLM for 30 days? Locked funds cannot be withdrawn until the unlock time.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Confirm Lock',
+                  onPress: () =>
+                    Alert.alert(
+                      'Notice',
+                      'Vault lock is not yet implemented. This is a placeholder for Soroban time-lock functionality.'
+                    ),
+                },
+              ]
+            )
+          }
+          disabled={isSubmitting}
           style={styles.lockButton}
         />
       </View>
@@ -268,5 +284,8 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     marginHorizontal: SIZES.xs,
+  },
+  lockButton: {
+    marginTop: SIZES.md,
   },
 });

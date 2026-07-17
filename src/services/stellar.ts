@@ -6,6 +6,24 @@ const server = new StellarSdk.Horizon.Server(
   process.env.EXPO_PUBLIC_STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org'
 );
 
+/** Horizon operation record type used for transaction history. */
+export type PaymentRecord = StellarSdk.Horizon.ServerApi.OperationRecord;
+
+/**
+ * Fund a Testnet account using Friendbot.
+ * This is Testnet-only; Friendbot does not exist on Mainnet / Futurenet.
+ */
+export const fundWithFriendbot = async (publicKey: string): Promise<void> => {
+  const friendbotUrl = 'https://friendbot.stellar.org';
+  const response = await fetch(`${friendbotUrl}?addr=${encodeURIComponent(publicKey)}`);
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    const detail = (body as any)?.detail || `Friendbot request failed (HTTP ${response.status})`;
+    throw new Error(detail);
+  }
+};
+
 /**
  * Generates a new Stellar Keypair.
  * This function returns both the public and secret keys.
@@ -48,9 +66,10 @@ export const fetchAccountDetails = async (publicKey: string) => {
  */
 export const fetchXlmBalance = async (publicKey: string): Promise<string> => {
   try {
-    const accountBalance = await getBalance(publicKey, sdkConfig);
-    return accountBalance.nativeBalance;
-  } catch (error: unknown) {
+    const account = await fetchAccountDetails(publicKey);
+    const nativeBalance = account.balances.find((b) => b.asset_type === 'native');
+    return nativeBalance ? nativeBalance.balance : '0.0000000';
+  } catch (error: any) {
     // If account is not found (unfunded), balance is 0
     if (isNotFoundError(error)) {
       return '0.0000000';

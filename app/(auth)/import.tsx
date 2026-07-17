@@ -23,7 +23,7 @@ export default function ImportWalletScreen() {
 
     try {
       setIsLoading(true);
-      const { publicKey } = importWallet(secretKey.trim());
+      const { publicKey } = await importWallet(secretKey.trim());
       
       const saved = await setWallet(publicKey, secretKey.trim());
       if (!saved) {
