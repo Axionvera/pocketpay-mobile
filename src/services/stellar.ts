@@ -159,3 +159,16 @@ export const mockWithdrawFromVault = async (secretKey: string, amount: string): 
   await new Promise(resolve => setTimeout(resolve, 1500));
   return true;
 };
+
+export const mockLockVault = async (
+  secretKey: string,
+  amount: string,
+  unlockTimestamp: number
+): Promise<{ success: boolean; unlockTime: string }> => {
+  await new Promise(resolve => setTimeout(resolve, 1500));
+  const unlockDate = new Date(unlockTimestamp * 1000);
+  return {
+    success: true,
+    unlockTime: unlockDate.toLocaleString(),
+  };
+};

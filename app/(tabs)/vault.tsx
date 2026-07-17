@@ -1,17 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Input } from '../../src/components/Input';
+import { VaultConfirmModal, VaultAction } from '../../src/components/VaultConfirmModal';
 import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
 import { useWalletStore } from '../../src/store/walletStore';
-import { mockFetchVaultBalance, mockDepositToVault, mockWithdrawFromVault } from '../../src/services/stellar';
+import {
+  mockFetchVaultBalance,
+  mockDepositToVault,
+  mockWithdrawFromVault,
+  mockLockVault,
+} from '../../src/services/stellar';
 import { PiggyBank, ShieldCheck } from 'lucide-react-native';
+
+const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
 export default function VaultScreen() {
   const { publicKey, getSecretKey } = useWalletStore();
   const [vaultBalance, setVaultBalance] = useState('0.0000000');
   const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Confirmation modal state
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [pendingAction, setPendingAction] = useState<VaultAction>('deposit');
+  const [pendingUnlockTime, setPendingUnlockTime] = useState('');
 
   useEffect(() => {
     if (publicKey) {
@@ -29,17 +42,50 @@ export default function VaultScreen() {
     }
   };
 
-  const handleDeposit = async () => {
-    if (!amount) return;
+  const showConfirmation = (action: VaultAction) => {
+    if (!amount || parseFloat(amount) <= 0) {
+      Alert.alert('Error', 'Please enter a valid amount.');
+      return;
+    }
+    if (action === 'lock') {
+      const unlockTimestamp = Math.floor(Date.now() / 1000) + LOCK_PERIOD_SECONDS;
+      const unlockDate = new Date(unlockTimestamp * 1000);
+      setPendingUnlockTime(unlockDate.toLocaleString());
+    }
+    setPendingAction(action);
+    setConfirmVisible(true);
+  };
+
+  const executeAction = useCallback(async () => {
     try {
       setIsLoading(true);
+      setConfirmVisible(false);
+
       const secret = await getSecretKey();
       if (!secret) throw new Error('Secret key not found');
-      
-      // MOCK CALL TO SOROBAN CONTRACT
-      await mockDepositToVault(secret, amount);
-      
-      Alert.alert('Success', 'Funds deposited into Soroban Vault (Mock)');
+
+      switch (pendingAction) {
+        case 'deposit': {
+          await mockDepositToVault(secret, amount);
+          Alert.alert('Success', 'Funds deposited into Soroban Vault (Mock)');
+          break;
+        }
+        case 'withdraw': {
+          await mockWithdrawFromVault(secret, amount);
+          Alert.alert('Success', 'Funds withdrawn from Soroban Vault (Mock)');
+          break;
+        }
+        case 'lock': {
+          const unlockTimestamp = Math.floor(Date.now() / 1000) + LOCK_PERIOD_SECONDS;
+          const result = await mockLockVault(secret, amount, unlockTimestamp);
+          Alert.alert(
+            'Success',
+            `Funds locked in Soroban Vault until ${result.unlockTime} (Mock)`
+          );
+          break;
+        }
+      }
+
       setAmount('');
       loadVaultBalance();
     } catch (e: any) {
@@ -47,6 +93,10 @@ export default function VaultScreen() {
     } finally {
       setIsLoading(false);
     }
+  }, [pendingAction, amount, getSecretKey]);
+
+  const cancelAction = () => {
+    setConfirmVisible(false);
   };
 
   return (
@@ -69,28 +119,45 @@ export default function VaultScreen() {
 
       <View style={styles.form}>
         <Input
-          label="Amount to Deposit/Withdraw (XLM)"
+          label="Amount (XLM)"
           placeholder="0.00"
           value={amount}
           onChangeText={setAmount}
           keyboardType="decimal-pad"
         />
         <View style={styles.actions}>
-          <Button 
-            title="Deposit" 
-            onPress={handleDeposit} 
+          <Button
+            title="Deposit"
+            onPress={() => showConfirmation('deposit')}
             isLoading={isLoading}
             style={styles.actionButton}
           />
-          <Button 
-            title="Withdraw" 
+          <Button
+            title="Withdraw"
             variant="secondary"
-            onPress={() => Alert.alert('Notice', 'Withdrawal mock action triggered')} 
+            onPress={() => showConfirmation('withdraw')}
             disabled={isLoading}
             style={styles.actionButton}
           />
         </View>
+        <Button
+          title="Lock Funds (30 days)"
+          variant="outline"
+          onPress={() => showConfirmation('lock')}
+          disabled={isLoading}
+          style={styles.lockButton}
+        />
       </View>
+
+      <VaultConfirmModal
+        visible={confirmVisible}
+        actionType={pendingAction}
+        amount={amount}
+        unlockTime={pendingAction === 'lock' ? pendingUnlockTime : undefined}
+        isLoading={isLoading}
+        onConfirm={executeAction}
+        onCancel={cancelAction}
+      />
     </View>
   );
 }
@@ -160,5 +227,8 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     marginHorizontal: SIZES.xs,
-  }
+  },
+  lockButton: {
+    marginTop: SIZES.md,
+  },
 });
