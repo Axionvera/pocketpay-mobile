@@ -77,7 +77,7 @@ export default function VaultScreen() {
     } catch (e: any) {
       Alert.alert(`${action === 'deposit' ? 'Deposit' : 'Withdrawal'} failed`, e.message);
     }
-  }, [pendingAction, amount, getSecretKey]);
+  };
 
   const cancelAction = () => {
     setConfirmVisible(false);
