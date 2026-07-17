@@ -9,12 +9,22 @@ import { Clock } from 'lucide-react-native';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { publicKey, balance, transactions, isLoading, refreshWalletData } = useWalletStore();
+  const {
+    publicKey,
+    balance,
+    transactions,
+    isLoading,
+    isFunding,
+    fundError,
+    refreshWalletData,
+    fundWallet,
+  } = useWalletStore();
 
   useEffect(() => {
     refreshWalletData();
   }, []);
 
+  const isFunded = balance !== '0.0000000';
   const recentTransactions = transactions.slice(0, 3); // Preview
 
   return (
@@ -35,6 +45,13 @@ export default function HomeScreen() {
           {publicKey}
         </Text>
       </View>
+
+      <FundButton
+        isFunding={isFunding}
+        fundError={fundError}
+        onFund={fundWallet}
+        isFunded={isFunded}
+      />
 
       <View style={styles.actionsContainer}>
         <Button 
@@ -67,7 +84,6 @@ export default function HomeScreen() {
             <Text style={styles.emptyText}>No recent transactions</Text>
           </View>
         )}
-
         {recentTransactions.map((tx, index) => (
           <TransactionListItem
             key={tx.id || index}

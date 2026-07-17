@@ -16,6 +16,7 @@ interface AppState {
   initializeApp: () => Promise<void>;
   addContact: (contact: Contact) => Promise<void>;
   removeContact: (id: string) => Promise<void>;
+  findContactByPublicKey: (publicKey: string) => Contact | undefined;
   toggleDarkMode: () => Promise<void>;
 }
 
@@ -23,6 +24,10 @@ const STORAGE_KEYS = {
   CONTACTS: '@pocketpay_contacts',
   DARK_MODE: '@pocketpay_theme',
 };
+
+export function normalizePublicKey(publicKey: string): string {
+  return publicKey.trim().toUpperCase();
+}
 
 export const useAppStore = create<AppState>((set, get) => ({
   contacts: [],
@@ -65,6 +70,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (e) {
       console.error('Failed to remove contact:', e);
     }
+  },
+
+  findContactByPublicKey: (publicKey: string) => {
+    const normalized = normalizePublicKey(publicKey);
+    return get().contacts.find(
+      (c) => normalizePublicKey(c.publicKey) === normalized,
+    );
   },
 
   toggleDarkMode: async () => {

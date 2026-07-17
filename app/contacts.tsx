@@ -105,8 +105,17 @@ export default function ContactsScreen() {
 
     setNameError(currentNameError);
     setKeyError(currentKeyError);
+    setDuplicateError(undefined);
 
     if (currentNameError || currentKeyError) return;
+
+    const existing = findContactByPublicKey(publicKey);
+    if (existing) {
+      setDuplicateError(
+        `This address is already saved as "${existing.name}". You cannot add duplicate addresses.`,
+      );
+      return;
+    }
 
     const newContact: Contact = {
       id: Date.now().toString(),
