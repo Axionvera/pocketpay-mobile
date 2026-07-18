@@ -4,7 +4,10 @@ import { useRouter } from 'expo-router';
 import { useWalletStore } from '../../src/store/walletStore';
 import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
 import { Button } from '../../src/components/Button';
+import { FundButton } from '../../src/components/FundButton';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
+import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
+import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
 import { Clock } from 'lucide-react-native';
 
 export default function HomeScreen() {
@@ -16,9 +19,12 @@ export default function HomeScreen() {
     isLoading,
     isFunding,
     fundError,
+    error,
     refreshWalletData,
     fundWallet,
   } = useWalletStore();
+
+  const { networkErrorType, message } = useNetworkStatus(error);
 
   useEffect(() => {
     refreshWalletData();
@@ -38,6 +44,13 @@ export default function HomeScreen() {
         />
       }
     >
+      <NetworkStatusBanner
+        networkErrorType={networkErrorType}
+        message={message}
+        onRetry={refreshWalletData}
+        isRetrying={isLoading}
+      />
+
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Total Balance (Testnet)</Text>
         <Text style={styles.balanceValue}>{balance} XLM</Text>
