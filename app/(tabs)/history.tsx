@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Clock } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { useWalletStore, TransactionRecord } from '../../src/store/walletStore';
 import { COLORS, SIZES } from '../../src/constants/theme';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
@@ -59,6 +60,7 @@ const EmptyState: React.FC = () => (
 // ─── Screen ────────────────────────────────────────────────────────────────────
 
 export default function HistoryScreen() {
+  const router = useRouter();
   const {
     transactions,
     isLoading,
@@ -81,9 +83,10 @@ export default function HistoryScreen() {
         transaction={item}
         currentPublicKey={publicKey}
         variant="card"
+        onPress={(tx) => router.push(`/transaction/${tx.id}`)}
       />
     ),
-    [publicKey]
+    [publicKey, router]
   );
 
   const keyExtractor = useCallback((item: TransactionRecord) => item.id, []);
