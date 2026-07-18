@@ -13,6 +13,18 @@ export default function TransactionDetailScreen() {
   const { transactions, publicKey } = useWalletStore();
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
+  interface TransactionDetail {
+    id: string;
+    from?: string;
+    to?: string;
+    amount?: string;
+    asset?: string;
+    createdAt?: string;
+    timestamp?: string;
+    hash?: string;
+    transaction_hash?: string;
+  }
+
   const transaction = transactions.find((tx) => tx.id === id);
 
   if (!transaction) {
@@ -24,19 +36,21 @@ export default function TransactionDetailScreen() {
     );
   }
 
-  const isSent = !!publicKey && transaction.from === publicKey;
+  const tx = transaction as TransactionDetail;
+
+  const isSent = !!publicKey && tx.from === publicKey;
   const directionLabel = isSent ? 'Sent' : 'Received';
   const amountColor = isSent ? COLORS.textPrimary : COLORS.success;
-  const formattedAmount = `${isSent ? '-' : '+'}${transaction.amount} ${transaction.asset || 'XLM'}`;
-  const formattedDate = transaction.createdAt 
-    ? new Date(transaction.createdAt).toLocaleString() 
-    : transaction.timestamp 
-    ? new Date(transaction.timestamp).toLocaleString()
+  const formattedAmount = `${isSent ? '-' : '+'}${tx.amount || 'N/A'} ${tx.asset || 'XLM'}`;
+  const formattedDate = tx.createdAt 
+    ? new Date(tx.createdAt).toLocaleString() 
+    : tx.timestamp 
+    ? new Date(tx.timestamp).toLocaleString()
     : 'Unknown date';
 
-  const txHash = transaction.hash || transaction.transaction_hash || '';
-  const senderAddress = transaction.from || '';
-  const recipientAddress = transaction.to || '';
+  const txHash = tx.hash || tx.transaction_hash || '';
+  const senderAddress = tx.from || '';
+  const recipientAddress = tx.to || '';
 
   const handleCopy = async (text: string, fieldName: string) => {
     if (!text) return;
