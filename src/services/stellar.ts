@@ -226,6 +226,31 @@ export const mockWithdrawFromVault = async (secretKey: string, amount: string): 
   return true;
 };
 
+/**
+ * Networks with a known stellar.expert explorer path. Anything else (e.g. a
+ * custom standalone network) has no public explorer, so callers should treat
+ * a `null` result as "no explorer link available".
+ */
+const EXPLORER_NETWORK_PATHS: Record<string, string> = {
+  TESTNET: 'testnet',
+  PUBLIC: 'public',
+  MAINNET: 'public',
+};
+
+/**
+ * Builds a stellar.expert transaction URL for the network configured via
+ * EXPO_PUBLIC_STELLAR_NETWORK (defaults to Testnet, matching this app's
+ * default network). Returns null when there is no hash or no known explorer
+ * for the configured network.
+ */
+export const getExplorerTxUrl = (hash: string | null | undefined): string | null => {
+  if (!hash) return null;
+  const network = (process.env.EXPO_PUBLIC_STELLAR_NETWORK || 'TESTNET').toUpperCase();
+  const explorerNetwork = EXPLORER_NETWORK_PATHS[network];
+  if (!explorerNetwork) return null;
+  return `https://stellar.expert/explorer/${explorerNetwork}/tx/${hash}`;
+};
+
 export const fundWithFriendbot = async (publicKey: string): Promise<void> => {
   try {
     const url = `https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`;

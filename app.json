@@ -14,7 +14,10 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "PocketPay uses Face ID to lock and protect your wallet."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +32,13 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-router"
+      "expo-router",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "PocketPay uses Face ID to lock and protect your wallet."
+        }
+      ]
     ]
   }
 }

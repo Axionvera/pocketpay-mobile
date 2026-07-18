@@ -103,7 +103,7 @@ export default function HomeScreen() {
             transaction={tx}
             currentPublicKey={publicKey}
             variant="inline"
-            onPress={() => router.push('/(tabs)/history')}
+            onPress={() => router.push(`/transaction/${tx.id}`)}
           />
         ))}
       </View>

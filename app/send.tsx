@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+﻿import React, { useState } from 'react';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Alert, Modal, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../src/components/Button';
 import { FormField } from '../src/components/FormField';
+import { QrScanner } from '../src/components/QrScanner';
 import { COLORS, SIZES, RADIUS } from '../src/constants/theme';
 import { sendXlmTransaction } from '../src/services/stellar';
 import { useWalletStore } from '../src/store/walletStore';
 import { validateAddress, validateAmount, validateMemo } from '../src/utils/validation';
-import { Send as SendIcon } from 'lucide-react-native';
+import { Send as SendIcon, ScanLine } from 'lucide-react-native';
 
 interface FieldErrors {
   destination?: string;
@@ -24,6 +25,7 @@ export default function SendScreen() {
   const [memo, setMemo] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
 
   const handleDestinationChange = (value: string) => {
     setDestination(value);
@@ -49,6 +51,20 @@ export default function SendScreen() {
     }));
   };
 
+  const handleScanSuccess = (address: string) => {
+    setIsScanning(false);
+    handleDestinationChange(address);
+  };
+
+  const handleScanError = (message: string) => {
+    setIsScanning(false);
+    Alert.alert('Invalid QR Code', message);
+  };
+
+  const handleScanClose = () => {
+    setIsScanning(false);
+  };
+
   const handleSend = async () => {
     const fieldErrors: FieldErrors = {
       destination: validateAddress(destination, publicKey) ?? undefined,
@@ -66,17 +82,17 @@ export default function SendScreen() {
       const secretKey = await getSecretKey();
       if (!secretKey) throw new Error('Secret key not found.');
 
-      await sendXlmTransaction(secretKey, destination.trim(), amount.trim(), memo.trim());
-      
-      Alert.alert('Success', 'Transaction sent successfully!', [
-        { 
-          text: 'OK', 
-          onPress: () => {
-            refreshWalletData();
-            router.back();
-          } 
-        }
-      ]);
+      const result = await sendXlmTransaction(secretKey, destination.trim(), amount.trim(), memo.trim());
+
+      refreshWalletData();
+      router.replace({
+        pathname: '/payment-success',
+        params: {
+          hash: result.hash,
+          amount: amount.trim(),
+          destination: destination.trim(),
+        },
+      });
     } catch (error: any) {
       Alert.alert('Transaction Failed', error.message || 'An error occurred while sending.');
     } finally {
@@ -85,54 +101,79 @@ export default function SendScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-    >
-      <View style={styles.header}>
-        <Text style={styles.title}>Send XLM</Text>
-        <Text style={styles.subtitle}>Available Balance: {balance} XLM</Text>
-      </View>
+    <>
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>Send XLM</Text>
+          <Text style={styles.subtitle}>Available Balance: {balance} XLM</Text>
+        </View>
 
-      <View style={styles.form}>
-        <FormField
-          label="Destination Address (Public Key)"
-          placeholder="G..."
-          value={destination}
-          onChangeText={handleDestinationChange}
-          error={errors.destination}
-          autoCapitalize="none"
-          autoCorrect={false}
-          helperText="Enter the recipient's Stellar public key (starts with 'G')"
-        />
-        
-        <FormField
-          label="Amount (XLM)"
-          placeholder="0.00"
-          value={amount}
-          onChangeText={handleAmountChange}
-          error={errors.amount}
-          keyboardType="decimal-pad"
-          helperText={`Available balance: ${balance} XLM`}
-        />
+        <View style={styles.form}>
+          <FormField
+            label="Destination Address (Public Key)"
+            placeholder="G..."
+            value={destination}
+            onChangeText={handleDestinationChange}
+            error={errors.destination}
+            autoCapitalize="none"
+            autoCorrect={false}
+            helperText="Enter the recipient's Stellar public key (starts with 'G')"
+            rightIcon={
+              <TouchableOpacity
+                onPress={() => setIsScanning(true)}
+                accessibilityLabel="Scan QR code for recipient address"
+                accessibilityRole="button"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <ScanLine size={20} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            }
+          />
+          
+          <FormField
+            label="Amount (XLM)"
+            placeholder="0.00"
+            value={amount}
+            onChangeText={handleAmountChange}
+            error={errors.amount}
+            keyboardType="decimal-pad"
+            helperText={`Available balance: ${balance} XLM`}
+          />
 
-        <FormField
-          label="Memo (Optional)"
-          placeholder="Payment reference"
-          value={memo}
-          onChangeText={setMemo}
-          helperText="Add a note for the recipient"
-        />
-      </View>
+          <FormField
+            label="Memo (Optional)"
+            placeholder="Payment reference"
+            value={memo}
+            onChangeText={setMemo}
+            helperText="Add a note for the recipient"
+          />
+        </View>
 
-      <Button 
-        title="Send Payment" 
-        onPress={handleSend} 
-        isLoading={isLoading}
-        style={styles.sendButton}
-      />
-    </KeyboardAvoidingView>
+        <Button 
+          title="Send Payment" 
+          onPress={handleSend} 
+          isLoading={isLoading}
+          style={styles.sendButton}
+        />
+      </KeyboardAvoidingView>
+
+      <Modal
+        visible={isScanning}
+        animationType="slide"
+        onRequestClose={handleScanClose}
+        accessibilityViewIsModal
+      >
+        <QrScanner
+          onScan={handleScanSuccess}
+          onError={handleScanError}
+          onClose={handleScanClose}
+        />
+      </Modal>
+    </>
   );
 }
 
