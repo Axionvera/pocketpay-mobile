@@ -6,20 +6,37 @@ import { useWalletStore } from '../src/store/walletStore';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import TransactionDetailScreen from '../app/transaction/[id]';
 
-// ─── Module mocks ─────────────────────────────────────────────────────────────
+const mockBack = jest.fn();
+const mockPush = jest.fn();
+const mockUseRouterFn = jest.fn(() => ({
+  back: mockBack,
+  push: mockPush,
+  replace: jest.fn(),
+}));
+const mockUseLocalSearchParamsFn = jest.fn(() => ({ id: 'tx1' }));
 
 jest.mock('expo-clipboard', () => ({
   setStringAsync: jest.fn(),
 }));
 jest.mock('../src/store/walletStore');
-jest.mock('expo-router');
+jest.mock('expo-router', () => ({
+  useRouter: () => mockUseRouterFn(),
+  useLocalSearchParams: () => mockUseLocalSearchParamsFn(),
+  Stack: {
+    Screen: () => null,
+  },
+}));
+jest.mock('lucide-react-native', () => ({
+  Copy: () => null,
+  Check: () => null,
+  ArrowLeft: () => null,
+  ArrowUpRight: () => null,
+  ArrowDownLeft: () => null,
+}));
 
 const mockUseWalletStore = useWalletStore as jest.MockedFunction<typeof useWalletStore>;
-const mockUseLocalSearchParams = useLocalSearchParams as jest.MockedFunction<typeof useLocalSearchParams>;
-const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
-
-const mockBack = jest.fn();
-const mockPush = jest.fn();
+const mockUseRouter = mockUseRouterFn;
+const mockUseLocalSearchParams = mockUseLocalSearchParamsFn;
 
 const mockTx = {
   id: 'tx1',
