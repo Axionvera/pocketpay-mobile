@@ -42,6 +42,8 @@ const MOCK_SECRET       = 'SXXXXXXSECRETXXXXXXX';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const mockBack = jest.fn();
+const mockReplace = jest.fn();
+const mockPush = jest.fn();
 
 function setupWalletStore(overrides: Record<string, unknown> = {}) {
   mockUseWalletStore.mockReturnValue({
@@ -66,7 +68,7 @@ const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 beforeEach(() => {
   jest.clearAllMocks();
   alertSpy.mockImplementation(() => undefined);
-  mockUseRouter.mockReturnValue({ back: mockBack, push: jest.fn(), replace: jest.fn() } as any);
+  mockUseRouter.mockReturnValue({ back: mockBack, push: mockPush, replace: mockReplace } as any);
   setupWalletStore();
   mockSendXlmTransaction.mockResolvedValue({ hash: 'abc123' } as any);
 });
@@ -185,7 +187,7 @@ describe('AC4 – valid form calls sendXlmTransaction', () => {
     });
   });
 
-  it('shows a success alert after a successful send', async () => {
+  it('navigates to the payment success receipt with the tx hash, amount, and destination', async () => {
     const { getByPlaceholderText, getByText } = render(<SendScreen />);
 
     fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
@@ -193,11 +195,28 @@ describe('AC4 – valid form calls sendXlmTransaction', () => {
     fireEvent.press(getByText('Send Payment'));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Success',
-        'Transaction sent successfully!',
-        expect.arrayContaining([expect.objectContaining({ text: 'OK' })]),
-      );
+      expect(mockReplace).toHaveBeenCalledWith({
+        pathname: '/payment-success',
+        params: {
+          hash: 'abc123',
+          amount: VALID_AMOUNT,
+          destination: VALID_DESTINATION,
+        },
+      });
+    });
+  });
+
+  it('refreshes wallet data after a successful send', async () => {
+    const refreshWalletData = jest.fn();
+    setupWalletStore({ refreshWalletData });
+    const { getByPlaceholderText, getByText } = render(<SendScreen />);
+
+    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
+    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
+    fireEvent.press(getByText('Send Payment'));
+
+    await waitFor(() => {
+      expect(refreshWalletData).toHaveBeenCalled();
     });
   });
 });

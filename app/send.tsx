@@ -66,17 +66,17 @@ export default function SendScreen() {
       const secretKey = await getSecretKey();
       if (!secretKey) throw new Error('Secret key not found.');
 
-      await sendXlmTransaction(secretKey, destination.trim(), amount.trim(), memo.trim());
-      
-      Alert.alert('Success', 'Transaction sent successfully!', [
-        { 
-          text: 'OK', 
-          onPress: () => {
-            refreshWalletData();
-            router.back();
-          } 
-        }
-      ]);
+      const result = await sendXlmTransaction(secretKey, destination.trim(), amount.trim(), memo.trim());
+
+      refreshWalletData();
+      router.replace({
+        pathname: '/payment-success',
+        params: {
+          hash: result.hash,
+          amount: amount.trim(),
+          destination: destination.trim(),
+        },
+      });
     } catch (error: any) {
       Alert.alert('Transaction Failed', error.message || 'An error occurred while sending.');
     } finally {
