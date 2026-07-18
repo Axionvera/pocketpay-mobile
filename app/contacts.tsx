@@ -11,7 +11,7 @@
  * Accessibility: interactive elements carry accessibilityLabel / accessibilityRole.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -23,10 +23,11 @@ import {
 import { Button } from '../src/components/Button';
 import { Input } from '../src/components/Input';
 import { QrScanner } from '../src/components/QrScanner';
-import { COLORS, SIZES, RADIUS } from '../src/constants/theme';
+import { SIZES, RADIUS, ThemeColors } from '../src/constants/theme';
+import { useTheme } from '../src/hooks/useTheme';
 import { useAppStore, Contact } from '../src/store/appStore';
 import { validateAddress } from '../src/utils/validation';
-import { Trash2, User, ScanLine } from 'lucide-react-native';
+import { Trash2, User } from 'lucide-react-native';
 
 // ── View modes ───────────────────────────────────────────────────────────────
 type Mode =
@@ -36,6 +37,8 @@ type Mode =
   | 'confirm-scan';  // Post-scan form: address pre-filled, enter name
 
 export default function ContactsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { contacts, addContact, removeContact } = useAppStore();
 
   // ── Form state ──────────────────────────────────────────────────────────────
@@ -302,7 +305,7 @@ export default function ContactsScreen() {
             ListEmptyComponent={
               <View style={styles.emptyState} accessibilityLiveRegion="polite">
                 <User
-                  color={COLORS.textMuted}
+                  color={colors.textMuted}
                   size={48}
                   style={{ marginBottom: SIZES.md }}
                 />
@@ -325,7 +328,7 @@ export default function ContactsScreen() {
                   </Text>
                 </View>
                 <Trash2
-                  color={COLORS.error}
+                  color={colors.error}
                   size={20}
                   onPress={() => handleRemove(item.id)}
                   accessibilityLabel={`Remove ${item.name}`}
@@ -341,10 +344,10 @@ export default function ContactsScreen() {
 }
 
 // ── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     padding: SIZES.lg,
   },
   // ── Header ──────────────────────────────────────────────────────────────────
@@ -359,14 +362,14 @@ const styles = StyleSheet.create({
   },
   // ── Add / confirm form ───────────────────────────────────────────────────────
   addForm: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     padding: SIZES.xl,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   title: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: SIZES.lg,
@@ -390,25 +393,25 @@ const styles = StyleSheet.create({
   contactItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     padding: SIZES.lg,
     borderRadius: RADIUS.md,
     marginBottom: SIZES.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   contactInfo: {
     flex: 1,
     marginRight: SIZES.md,
   },
   contactName: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
   contactKey: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 12,
   },
   // ── Empty state ───────────────────────────────────────────────────────────────
@@ -417,12 +420,12 @@ const styles = StyleSheet.create({
     marginTop: SIZES.xxl * 2,
   },
   emptyText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 16,
     marginBottom: SIZES.xs,
   },
   emptySubText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 14,
     textAlign: 'center',
   },

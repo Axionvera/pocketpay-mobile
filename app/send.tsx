@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../src/components/Button';
 import { FormField } from '../src/components/FormField';
-import { COLORS, SIZES, RADIUS } from '../src/constants/theme';
+import { SIZES, ThemeColors } from '../src/constants/theme';
+import { useTheme } from '../src/hooks/useTheme';
 import { sendXlmTransaction } from '../src/services/stellar';
 import { useWalletStore } from '../src/store/walletStore';
 import { validateAddress, validateAmount, validateMemo } from '../src/utils/validation';
-import { Send as SendIcon } from 'lucide-react-native';
 
 interface FieldErrors {
   destination?: string;
@@ -17,6 +17,8 @@ interface FieldErrors {
 
 export default function SendScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { publicKey, getSecretKey, refreshWalletData, balance } = useWalletStore();
 
   const [destination, setDestination] = useState('');
@@ -67,14 +69,14 @@ export default function SendScreen() {
       if (!secretKey) throw new Error('Secret key not found.');
 
       await sendXlmTransaction(secretKey, destination.trim(), amount.trim(), memo.trim());
-      
+
       Alert.alert('Success', 'Transaction sent successfully!', [
-        { 
-          text: 'OK', 
+        {
+          text: 'OK',
           onPress: () => {
             refreshWalletData();
             router.back();
-          } 
+          }
         }
       ]);
     } catch (error: any) {
@@ -85,7 +87,7 @@ export default function SendScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
@@ -106,7 +108,7 @@ export default function SendScreen() {
           autoCorrect={false}
           helperText="Enter the recipient's Stellar public key (starts with 'G')"
         />
-        
+
         <FormField
           label="Amount (XLM)"
           placeholder="0.00"
@@ -126,9 +128,9 @@ export default function SendScreen() {
         />
       </View>
 
-      <Button 
-        title="Send Payment" 
-        onPress={handleSend} 
+      <Button
+        title="Send Payment"
+        onPress={handleSend}
         isLoading={isLoading}
         style={styles.sendButton}
       />
@@ -136,10 +138,10 @@ export default function SendScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     padding: SIZES.xl,
   },
   header: {
@@ -149,12 +151,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SIZES.xs,
   },
   subtitle: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   form: {
     flex: 1,

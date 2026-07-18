@@ -89,12 +89,12 @@ const mockRemoveContact = jest.fn(async () => {});
 function setupStore(contacts: ReturnType<typeof makeContact>[] = []) {
   mockUseAppStore.mockReturnValue({
     contacts,
-    isDarkMode: true,
+    themeMode: 'dark',
     isInitialized: true,
     initializeApp: jest.fn(),
     addContact: mockAddContact,
     removeContact: mockRemoveContact,
-    toggleDarkMode: jest.fn(),
+    setThemeMode: jest.fn(),
   } as any);
 }
 

@@ -4,12 +4,15 @@
 
 const defaultState = {
   contacts: [],
-  isDarkMode: true,
+  themeMode: 'dark',
   isInitialized: true,
   initializeApp: jest.fn(async () => {}),
   addContact: jest.fn(async () => {}),
   removeContact: jest.fn(async () => {}),
-  toggleDarkMode: jest.fn(async () => {}),
+  setThemeMode: jest.fn(async () => {}),
 };
 
-export const useAppStore = jest.fn(() => defaultState);
+export const useAppStore = jest.fn(
+  (selector?: (state: typeof defaultState) => unknown) =>
+    selector ? selector(defaultState) : defaultState
+);

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Input } from '../../src/components/Input';
 import { VaultConfirmModal, VaultAction } from '../../src/components/VaultConfirmModal';
-import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
+import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useVaultStore } from '../../src/store/vaultStore';
 import { validateAmount } from '../../src/utils/validation';
@@ -12,6 +13,8 @@ import { PiggyBank, ShieldCheck, AlertTriangle } from 'lucide-react-native';
 const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
 export default function VaultScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { publicKey, getSecretKey, balance: walletBalance } = useWalletStore();
   const {
     balance,
@@ -87,11 +90,11 @@ export default function VaultScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.card}>
         <View style={styles.iconContainer}>
-          <PiggyBank color={COLORS.primary} size={40} />
+          <PiggyBank color={colors.primary} size={40} />
         </View>
         <Text style={styles.cardTitle}>Soroban Savings Vault</Text>
         {isLoadingBalance ? (
-          <ActivityIndicator size="large" color={COLORS.primary} style={styles.balanceLoader} />
+          <ActivityIndicator size="large" color={colors.primary} style={styles.balanceLoader} />
         ) : (
           <Text style={styles.balanceValue}>{balance} XLM</Text>
         )}
@@ -112,7 +115,7 @@ export default function VaultScreen() {
 
       {isConfigured ? (
         <View style={styles.infoBox}>
-          <ShieldCheck color={COLORS.success} size={24} style={{ marginRight: SIZES.sm }} />
+          <ShieldCheck color={colors.success} size={24} style={{ marginRight: SIZES.sm }} />
           <Text style={styles.infoText}>
             Connected to a live Soroban smart contract on{' '}
             {process.env.EXPO_PUBLIC_STELLAR_NETWORK || 'TESTNET'}. Deposits and withdrawals
@@ -121,7 +124,7 @@ export default function VaultScreen() {
         </View>
       ) : (
         <View style={styles.warningBox}>
-          <AlertTriangle color={COLORS.warning} size={24} style={{ marginRight: SIZES.sm }} />
+          <AlertTriangle color={colors.warning} size={24} style={{ marginRight: SIZES.sm }} />
           <Text style={styles.warningText}>
             No vault contract configured. Set EXPO_PUBLIC_VAULT_CONTRACT_ID in your .env file to
             connect to a deployed Soroban contract. Running in mock mode — no real funds are
@@ -185,22 +188,22 @@ export default function VaultScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   content: {
     padding: SIZES.xl,
   },
   card: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     padding: SIZES.xl,
     borderRadius: RADIUS.lg,
     alignItems: 'center',
     marginBottom: SIZES.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   iconContainer: {
     width: 80,
@@ -212,12 +215,12 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.md,
   },
   cardTitle: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 16,
     marginBottom: SIZES.sm,
   },
   balanceValue: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 32,
     fontWeight: 'bold',
     marginBottom: SIZES.xs,
@@ -226,7 +229,7 @@ const styles = StyleSheet.create({
     marginVertical: SIZES.sm,
   },
   cardSubtitle: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -235,13 +238,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   balanceErrorText: {
-    color: COLORS.error,
+    color: colors.error,
     fontSize: 12,
     textAlign: 'center',
     marginBottom: SIZES.xs,
   },
   retryText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -254,7 +257,7 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.xl,
   },
   infoText: {
-    color: COLORS.success,
+    color: colors.success,
     flex: 1,
     fontSize: 12,
     lineHeight: 18,
@@ -268,7 +271,7 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.xl,
   },
   warningText: {
-    color: COLORS.warning,
+    color: colors.warning,
     flex: 1,
     fontSize: 12,
     lineHeight: 18,

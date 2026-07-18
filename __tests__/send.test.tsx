@@ -17,6 +17,7 @@ import { Alert } from 'react-native';
 
 jest.mock('../src/services/stellar');
 jest.mock('../src/store/walletStore');
+jest.mock('../src/store/appStore');
 jest.mock('pocketpay-sdk', () => ({ validatePublicKey: jest.fn(() => true) }));
 jest.mock('expo-router');
 jest.mock('lucide-react-native', () => ({ Send: () => null }));

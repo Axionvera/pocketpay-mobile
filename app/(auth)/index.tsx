@@ -1,18 +1,21 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
-import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
+import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { Rocket, Info } from 'lucide-react-native';
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Rocket color={COLORS.primary} size={80} />
+          <Rocket color={colors.primary} size={80} />
         </View>
         <Text style={styles.title}>Stellar PocketPay</Text>
         <Text style={styles.subtitle}>
@@ -20,7 +23,7 @@ export default function OnboardingScreen() {
         </Text>
 
         <View style={styles.testnetBadge}>
-          <Info color={COLORS.primary} size={16} />
+          <Info color={colors.primary} size={16} />
           <Text style={styles.testnetText}>
             This app runs on Stellar <Text style={styles.testnetBold}>Testnet</Text> — a sandbox for learning. No real funds are used.
           </Text>
@@ -53,10 +56,10 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
@@ -68,23 +71,23 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: 80,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SIZES.xxl,
     borderWidth: 2,
-    borderColor: COLORS.primaryDark,
+    borderColor: colors.primaryDark,
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SIZES.sm,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: SIZES.lg,
@@ -103,12 +106,12 @@ const styles = StyleSheet.create({
   testnetText: {
     flex: 1,
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   testnetBold: {
     fontWeight: 'bold',
-    color: COLORS.primary,
+    color: colors.primary,
   },
   footer: {
     padding: SIZES.xl,
@@ -119,7 +122,7 @@ const styles = StyleSheet.create({
   },
   ctaLabel: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     marginBottom: SIZES.sm,
     textAlign: 'center',
     textTransform: 'uppercase',
@@ -134,10 +137,10 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.border,
+    backgroundColor: colors.border,
   },
   dividerText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 13,
   },
 });

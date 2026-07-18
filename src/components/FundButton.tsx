@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Button } from './Button';
-import { COLORS, SIZES, RADIUS } from '../constants/theme';
-import { Zap, AlertTriangle, CheckCircle } from 'lucide-react-native';
+import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+import { Zap, AlertTriangle } from 'lucide-react-native';
 
 interface FundButtonProps {
   isFunding: boolean;
@@ -23,6 +24,9 @@ export const FundButton: React.FC<FundButtonProps> = ({
   onFund,
   isFunded,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   // Do not render anything when the account is already funded
   if (isFunded) return null;
 
@@ -30,7 +34,7 @@ export const FundButton: React.FC<FundButtonProps> = ({
     <View style={styles.container}>
       <View style={styles.card}>
         <View style={styles.iconRow}>
-          <Zap color={COLORS.warning} size={24} />
+          <Zap color={colors.warning} size={24} />
           <Text style={styles.title}>Unfunded Testnet Account</Text>
         </View>
 
@@ -41,7 +45,7 @@ export const FundButton: React.FC<FundButtonProps> = ({
 
         {fundError ? (
           <View style={styles.errorBox}>
-            <AlertTriangle color={COLORS.error} size={18} style={{ marginRight: SIZES.xs }} />
+            <AlertTriangle color={colors.error} size={18} style={{ marginRight: SIZES.xs }} />
             <Text style={styles.errorText}>{fundError}</Text>
           </View>
         ) : null}
@@ -58,16 +62,16 @@ export const FundButton: React.FC<FundButtonProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: SIZES.lg,
   },
   card: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: RADIUS.lg,
     padding: SIZES.lg,
     borderWidth: 1,
-    borderColor: COLORS.warning,
+    borderColor: colors.warning,
   },
   iconRow: {
     flexDirection: 'row',
@@ -75,13 +79,13 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.sm,
   },
   title: {
-    color: COLORS.warning,
+    color: colors.warning,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: SIZES.sm,
   },
   description: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: SIZES.md,
@@ -95,7 +99,7 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.md,
   },
   errorText: {
-    color: COLORS.error,
+    color: colors.error,
     fontSize: 13,
     flex: 1,
   },

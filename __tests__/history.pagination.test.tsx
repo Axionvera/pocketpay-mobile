@@ -17,6 +17,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 
 jest.mock('../src/store/walletStore');
+jest.mock('../src/store/appStore');
 jest.mock('../src/services/stellar');
 jest.mock('expo-router');
 jest.mock('lucide-react-native', () => ({

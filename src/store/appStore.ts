@@ -7,9 +7,19 @@ export interface Contact {
   publicKey: string;
 }
 
+export type ThemeMode = 'light' | 'dark' | 'system';
+
+const VALID_THEME_MODES: ThemeMode[] = ['light', 'dark', 'system'];
+
+export function isValidThemeMode(value: unknown): value is ThemeMode {
+  return typeof value === 'string' && VALID_THEME_MODES.includes(value as ThemeMode);
+}
+
+const DEFAULT_THEME_MODE: ThemeMode = 'dark';
+
 interface AppState {
   contacts: Contact[];
-  isDarkMode: boolean;
+  themeMode: ThemeMode;
   isInitialized: boolean;
 
   // Actions
@@ -17,33 +27,44 @@ interface AppState {
   addContact: (contact: Contact) => Promise<void>;
   removeContact: (id: string) => Promise<void>;
   findContactByPublicKey: (publicKey: string) => Contact | undefined;
-  toggleDarkMode: () => Promise<void>;
+  setThemeMode: (mode: ThemeMode) => Promise<void>;
 }
 
 const STORAGE_KEYS = {
   CONTACTS: '@pocketpay_contacts',
-  DARK_MODE: '@pocketpay_theme',
+  THEME_MODE: '@pocketpay_theme',
 };
 
 export function normalizePublicKey(publicKey: string): string {
   return publicKey.trim().toUpperCase();
 }
 
+/** Parses a stored theme preference, falling back safely if it is missing, malformed, or not a recognized mode. */
+function parseStoredThemeMode(stored: string | null): ThemeMode {
+  if (!stored) return DEFAULT_THEME_MODE;
+  try {
+    const parsed = JSON.parse(stored);
+    return isValidThemeMode(parsed) ? parsed : DEFAULT_THEME_MODE;
+  } catch {
+    return DEFAULT_THEME_MODE;
+  }
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   contacts: [],
-  isDarkMode: true, // Default to a premium dark mode as suggested in plan
+  themeMode: DEFAULT_THEME_MODE,
   isInitialized: false,
 
   initializeApp: async () => {
     try {
       const [storedContacts, storedTheme] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.CONTACTS),
-        AsyncStorage.getItem(STORAGE_KEYS.DARK_MODE)
+        AsyncStorage.getItem(STORAGE_KEYS.THEME_MODE)
       ]);
 
       set({
         contacts: storedContacts ? JSON.parse(storedContacts) : [],
-        isDarkMode: storedTheme ? JSON.parse(storedTheme) : true,
+        themeMode: parseStoredThemeMode(storedTheme),
         isInitialized: true
       });
     } catch (e) {
@@ -79,11 +100,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     );
   },
 
-  toggleDarkMode: async () => {
-    const newMode = !get().isDarkMode;
-    set({ isDarkMode: newMode });
+  setThemeMode: async (mode: ThemeMode) => {
+    if (!isValidThemeMode(mode)) return;
+    set({ themeMode: mode });
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.DARK_MODE, JSON.stringify(newMode));
+      await AsyncStorage.setItem(STORAGE_KEYS.THEME_MODE, JSON.stringify(mode));
     } catch (e) {
       console.error('Failed to save theme setting:', e);
     }

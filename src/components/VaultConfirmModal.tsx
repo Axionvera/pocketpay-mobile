@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { COLORS, SIZES, RADIUS } from '../constants/theme';
+import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -30,46 +31,6 @@ interface VaultConfirmModalProps {
   onCancel: () => void;
 }
 
-const ACTION_CONFIG: Record<
-  VaultAction,
-  {
-    title: string;
-    icon: React.ReactNode;
-    iconBg: string;
-    accentColor: string;
-    actionLabel: string;
-    description: string;
-  }
-> = {
-  deposit: {
-    title: 'Confirm Deposit',
-    icon: <ArrowDownCircle color={COLORS.success} size={36} />,
-    iconBg: 'rgba(0, 230, 118, 0.12)',
-    accentColor: COLORS.success,
-    actionLabel: 'Confirm Deposit',
-    description:
-      'You are about to move funds into the Soroban Savings Vault. While this is a mock contract, the vault internally tracks your deposit.',
-  },
-  withdraw: {
-    title: 'Confirm Withdrawal',
-    icon: <ArrowUpCircle color={COLORS.warning} size={36} />,
-    iconBg: 'rgba(255, 196, 0, 0.12)',
-    accentColor: COLORS.warning,
-    actionLabel: 'Confirm Withdrawal',
-    description:
-      'You are about to withdraw funds from the Soroban Savings Vault. This is a mock interaction and does not represent real custody.',
-  },
-  lock: {
-    title: 'Confirm Lock',
-    icon: <Lock color={COLORS.secondary} size={36} />,
-    iconBg: 'rgba(123, 97, 255, 0.12)',
-    accentColor: COLORS.secondary,
-    actionLabel: 'Confirm Lock',
-    description:
-      'You are about to lock funds in the vault for a fixed period. Locked funds cannot be withdrawn until the unlock time is reached.',
-  },
-};
-
 export const VaultConfirmModal: React.FC<VaultConfirmModalProps> = ({
   visible,
   actionType,
@@ -80,7 +41,50 @@ export const VaultConfirmModal: React.FC<VaultConfirmModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
-  const config = ACTION_CONFIG[actionType];
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const actionConfig: Record<
+    VaultAction,
+    {
+      title: string;
+      icon: React.ReactNode;
+      iconBg: string;
+      accentColor: string;
+      actionLabel: string;
+      description: string;
+    }
+  > = {
+    deposit: {
+      title: 'Confirm Deposit',
+      icon: <ArrowDownCircle color={colors.success} size={36} />,
+      iconBg: 'rgba(0, 230, 118, 0.12)',
+      accentColor: colors.success,
+      actionLabel: 'Confirm Deposit',
+      description:
+        'You are about to move funds into the Soroban Savings Vault. While this is a mock contract, the vault internally tracks your deposit.',
+    },
+    withdraw: {
+      title: 'Confirm Withdrawal',
+      icon: <ArrowUpCircle color={colors.warning} size={36} />,
+      iconBg: 'rgba(255, 196, 0, 0.12)',
+      accentColor: colors.warning,
+      actionLabel: 'Confirm Withdrawal',
+      description:
+        'You are about to withdraw funds from the Soroban Savings Vault. This is a mock interaction and does not represent real custody.',
+    },
+    lock: {
+      title: 'Confirm Lock',
+      icon: <Lock color={colors.secondary} size={36} />,
+      iconBg: 'rgba(123, 97, 255, 0.12)',
+      accentColor: colors.secondary,
+      actionLabel: 'Confirm Lock',
+      description:
+        'You are about to lock funds in the vault for a fixed period. Locked funds cannot be withdrawn until the unlock time is reached.',
+    },
+  };
+
+  const config = actionConfig[actionType];
 
   return (
     <Modal
@@ -103,7 +107,7 @@ export const VaultConfirmModal: React.FC<VaultConfirmModalProps> = ({
               disabled={isLoading}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <X color={COLORS.textMuted} size={22} />
+              <X color={colors.textMuted} size={22} />
             </TouchableOpacity>
           </View>
 
@@ -131,7 +135,7 @@ export const VaultConfirmModal: React.FC<VaultConfirmModalProps> = ({
             {/* Network */}
             <View style={styles.detailRow}>
               <View style={styles.labelWithIcon}>
-                <Network color={COLORS.textMuted} size={14} style={{ marginRight: 4 }} />
+                <Network color={colors.textMuted} size={14} style={{ marginRight: 4 }} />
                 <Text style={styles.detailLabel}>Network</Text>
               </View>
               <View style={styles.networkBadge}>
@@ -153,7 +157,7 @@ export const VaultConfirmModal: React.FC<VaultConfirmModalProps> = ({
             {actionType === 'lock' && unlockTime ? (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Unlock Time</Text>
-                <Text style={[styles.detailValue, { color: COLORS.secondary }]}>
+                <Text style={[styles.detailValue, { color: colors.secondary }]}>
                   {unlockTime}
                 </Text>
               </View>
@@ -162,7 +166,7 @@ export const VaultConfirmModal: React.FC<VaultConfirmModalProps> = ({
 
           {/* Disclaimer */}
           <View style={styles.disclaimer}>
-            <ShieldAlert color={COLORS.textMuted} size={14} style={{ marginRight: 6 }} />
+            <ShieldAlert color={colors.textMuted} size={14} style={{ marginRight: 6 }} />
             <Text style={styles.disclaimerText}>
               This is a mock Soroban smart contract. Balances are tracked internally and do not
               represent real on-chain custody.
@@ -191,7 +195,7 @@ export const VaultConfirmModal: React.FC<VaultConfirmModalProps> = ({
               activeOpacity={0.7}
             >
               {isLoading ? (
-                <ActivityIndicator color={COLORS.background} size="small" />
+                <ActivityIndicator color={colors.background} size="small" />
               ) : (
                 <Text style={styles.confirmButtonText}>{config.actionLabel}</Text>
               )}
@@ -203,7 +207,7 @@ export const VaultConfirmModal: React.FC<VaultConfirmModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -214,11 +218,11 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: RADIUS.xl,
     padding: SIZES.xl,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   header: {
     flexDirection: 'row',
@@ -241,26 +245,26 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: COLORS.surfaceLight,
+    backgroundColor: colors.surfaceLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   title: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: SIZES.sm,
   },
   description: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: SIZES.lg,
   },
   detailsContainer: {
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderRadius: RADIUS.md,
     padding: SIZES.md,
     marginBottom: SIZES.md,
@@ -271,10 +275,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: SIZES.sm,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   detailLabel: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 14,
   },
   labelWithIcon: {
@@ -282,14 +286,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detailValue: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: '600',
     maxWidth: '55%',
     textAlign: 'right',
   },
   detailValueMono: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 12,
     fontFamily: 'monospace',
     maxWidth: '55%',
@@ -301,7 +305,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
   },
   networkBadgeText: {
-    color: COLORS.warning,
+    color: colors.warning,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -314,7 +318,7 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.lg,
   },
   disclaimerText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 11,
     lineHeight: 16,
     flex: 1,
@@ -331,18 +335,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: COLORS.surfaceLight,
+    backgroundColor: colors.surfaceLight,
   },
   cancelButtonText: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 15,
     fontWeight: '600',
   },
   confirmButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   confirmButtonText: {
-    color: COLORS.background,
+    color: colors.background,
     fontSize: 15,
     fontWeight: '600',
   },

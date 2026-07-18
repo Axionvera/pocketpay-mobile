@@ -10,7 +10,7 @@
  * Accessibility: all interactive elements carry accessibilityLabel / accessibilityRole.
  */
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,8 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { X, ScanLine } from 'lucide-react-native';
-import { COLORS, SIZES, RADIUS } from '../constants/theme';
+import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { validateAddress } from '../utils/validation';
 
 export interface QrScannerProps {
@@ -36,6 +37,8 @@ export interface QrScannerProps {
 const SCAN_DEBOUNCE_MS = 1500;
 
 export const QrScanner: React.FC<QrScannerProps> = ({ onScan, onError, onClose }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [permission, requestPermission] = useCameraPermissions();
   const lastScanTime = useRef<number>(0);
   const [hasScanned, setHasScanned] = useState(false);
@@ -73,7 +76,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({ onScan, onError, onClose }
   if (!permission) {
     return (
       <View style={styles.centred} accessibilityLiveRegion="polite">
-        <ActivityIndicator color={COLORS.primary} size="large" />
+        <ActivityIndicator color={colors.primary} size="large" />
         <Text style={styles.statusText}>Checking camera permission…</Text>
       </View>
     );
@@ -83,7 +86,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({ onScan, onError, onClose }
   if (!permission.granted) {
     return (
       <View style={styles.centred}>
-        <ScanLine color={COLORS.textMuted} size={48} style={{ marginBottom: SIZES.md }} />
+        <ScanLine color={colors.textMuted} size={48} style={{ marginBottom: SIZES.md }} />
         <Text style={styles.statusText}>Camera access is required to scan QR codes.</Text>
         {permission.canAskAgain ? (
           <TouchableOpacity
@@ -154,7 +157,7 @@ export const QrScanner: React.FC<QrScannerProps> = ({ onScan, onError, onClose }
         accessibilityRole="button"
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <X color={COLORS.textPrimary} size={24} />
+        <X color={colors.textPrimary} size={24} />
       </TouchableOpacity>
     </View>
   );
@@ -165,39 +168,39 @@ const SCAN_WINDOW_SIZE = 240;
 const CORNER_SIZE = 20;
 const CORNER_THICKNESS = 3;
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   centred: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     padding: SIZES.xl,
   },
   statusText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 16,
     textAlign: 'center',
     marginTop: SIZES.md,
   },
   subText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 14,
     textAlign: 'center',
     marginTop: SIZES.sm,
   },
   permissionButton: {
     marginTop: SIZES.lg,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingVertical: SIZES.sm,
     paddingHorizontal: SIZES.xl,
     borderRadius: RADIUS.round,
   },
   permissionButtonText: {
-    color: COLORS.background,
+    color: colors.background,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -207,10 +210,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: SIZES.xl,
     borderRadius: RADIUS.round,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   closeButtonFallbackText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 16,
   },
   // ── Camera overlay ──────────────────────────────────────────────────────────
@@ -242,7 +245,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: CORNER_SIZE,
     height: CORNER_SIZE,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
   },
   cornerTL: {
     top: 0,
@@ -281,7 +284,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   instructionText: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 15,
     textAlign: 'center',
     backgroundColor: 'rgba(0,0,0,0.55)',

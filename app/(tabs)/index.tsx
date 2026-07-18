@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useWalletStore } from '../../src/store/walletStore';
-import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
+import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { Button } from '../../src/components/Button';
 import { FundButton } from '../../src/components/FundButton';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
@@ -10,6 +11,8 @@ import { Clock } from 'lucide-react-native';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const {
     publicKey,
     balance,
@@ -29,13 +32,13 @@ export default function HomeScreen() {
   const recentTransactions = transactions.slice(0, 3); // Preview
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
       refreshControl={
-        <RefreshControl 
-          refreshing={isLoading} 
-          onRefresh={refreshWalletData} 
-          tintColor={COLORS.primary}
+        <RefreshControl
+          refreshing={isLoading}
+          onRefresh={refreshWalletData}
+          tintColor={colors.primary}
         />
       }
     >
@@ -55,23 +58,23 @@ export default function HomeScreen() {
       />
 
       <View style={styles.actionsContainer}>
-        <Button 
-          title="Send" 
-          onPress={() => router.push('/send')} 
+        <Button
+          title="Send"
+          onPress={() => router.push('/send')}
           style={styles.actionButton}
         />
-        <Button 
-          title="Receive" 
+        <Button
+          title="Receive"
           variant="secondary"
-          onPress={() => router.push('/receive')} 
+          onPress={() => router.push('/receive')}
           style={styles.actionButton}
         />
       </View>
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Recent Activity</Text>
-        <Text 
-          style={styles.seeAll} 
+        <Text
+          style={styles.seeAll}
           onPress={() => router.push('/(tabs)/history')}
         >
           See All
@@ -81,7 +84,7 @@ export default function HomeScreen() {
       <View style={styles.transactionsList}>
         {recentTransactions.length === 0 && !isLoading && (
           <View style={styles.emptyState}>
-            <Clock color={COLORS.textMuted} size={48} style={{ marginBottom: SIZES.md }} />
+            <Clock color={colors.textMuted} size={48} style={{ marginBottom: SIZES.md }} />
             <Text style={styles.emptyText}>No recent transactions</Text>
           </View>
         )}
@@ -99,36 +102,36 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     padding: SIZES.lg,
   },
   balanceCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     padding: SIZES.xl,
     borderRadius: RADIUS.lg,
     alignItems: 'center',
     marginBottom: SIZES.xl,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   balanceLabel: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 14,
     marginBottom: SIZES.xs,
   },
   balanceValue: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 36,
     fontWeight: 'bold',
     marginBottom: SIZES.sm,
   },
   publicKey: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 12,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     paddingHorizontal: SIZES.md,
     paddingVertical: SIZES.xs,
     borderRadius: RADIUS.round,
@@ -149,17 +152,17 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.md,
   },
   sectionTitle: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 18,
     fontWeight: '600',
   },
   seeAll: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 14,
     fontWeight: '500',
   },
   transactionsList: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: RADIUS.lg,
     padding: SIZES.md,
     marginBottom: SIZES.xxl,
@@ -169,7 +172,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 14,
   },
 });
