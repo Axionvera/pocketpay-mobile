@@ -12,6 +12,7 @@ React Native Expo wallet for Stellar Testnet. The app aims to feel polished and 
 ## Documentation
 
 - [Storage Guide](./docs/storage.md) - SecureStore vs AsyncStorage
+- [Contacts Guide](./docs/contacts.md) - Contact storage, backup limitations, and future export/import ideas
 - [Polyfills Guide](./docs/polyfills.md) - React Native polyfills and import order for Stellar SDK
 
 > ⚠️ **This app runs on the Stellar Testnet only.** Testnet XLM has no real monetary value. Read the [Security Guide](docs/security.md) before storing or sharing any keys.
@@ -35,21 +36,21 @@ PocketPay Mobile is part of a broader PocketPay stack:
 
 ## Documentation
 
-*   [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
+- [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
 
 ## Screenshots
 
 > 📸 Screenshots below are placeholders. To update them, capture each screen from a simulator or device (use dummy/funded Testnet data only — never real keys or mainnet funds) and replace the files in `docs/screenshots/`.
 
-| Wallet | Send | Receive |
-|:---:|:---:|:---:|
+|                    Wallet                     |                   Send                    |                     Receive                     |
+| :-------------------------------------------: | :---------------------------------------: | :---------------------------------------------: |
 | ![Wallet screen](docs/screenshots/wallet.png) | ![Send screen](docs/screenshots/send.png) | ![Receive screen](docs/screenshots/receive.png) |
-| *Balance overview and quick actions* | *Send XLM to any Stellar address* | *QR code for your public key* |
+|     _Balance overview and quick actions_      |     _Send XLM to any Stellar address_     |          _QR code for your public key_          |
 
-| Activity | Contacts | Vault |
-|:---:|:---:|:---:|
-| ![Activity screen](docs/screenshots/activity.png) | ![Contacts screen](docs/screenshots/contacts.png) | ![Vault screen](docs/screenshots/vault.png) |
-| *Transaction history with sent/received indicators* | *Saved addresses for quick access* | *Soroban Savings Vault (mock)* |
+|                      Activity                       |                     Contacts                      |                    Vault                    |
+| :-------------------------------------------------: | :-----------------------------------------------: | :-----------------------------------------: |
+|  ![Activity screen](docs/screenshots/activity.png)  | ![Contacts screen](docs/screenshots/contacts.png) | ![Vault screen](docs/screenshots/vault.png) |
+| _Transaction history with sent/received indicators_ |        _Saved addresses for quick access_         |       _Soroban Savings Vault (mock)_        |
 
 ### Updating screenshots
 
