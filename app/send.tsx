@@ -1,13 +1,16 @@
 import React, { useMemo, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../src/components/Button';
 import { FormField } from '../src/components/FormField';
 import { SIZES, ThemeColors } from '../src/constants/theme';
+import { SIZES, RADIUS, ThemeColors } from '../src/constants/theme';
 import { useTheme } from '../src/hooks/useTheme';
 import { sendXlmTransaction } from '../src/services/stellar';
 import { useWalletStore } from '../src/store/walletStore';
 import { validateAddress, validateAmount, validateMemo } from '../src/utils/validation';
+
 
 interface FieldErrors {
   destination?: string;
