@@ -5,13 +5,15 @@ import { Button } from '../../src/components/Button';
 import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useAppStore } from '../../src/store/appStore';
-import { Users, LogOut, Key, Moon, Sun } from 'lucide-react-native';
+import { useAppLockStore } from '../../src/store/appLockStore';
+import { Users, LogOut, Key, Moon, Sun, Shield } from 'lucide-react-native';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { clearWallet, getSecretKey } = useWalletStore();
   const { isDarkMode, toggleDarkMode } = useAppStore();
+  const { isLockEnabled, enableLock, disableLock, authenticate } = useAppLockStore();
   const [showSecret, setShowSecret] = useState(false);
   const [secretKey, setSecretKey] = useState<string | null>(null);
 
@@ -49,6 +51,28 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleToggleLock = async (enable: boolean) => {
+    if (enable) {
+      await enableLock();
+      await authenticate();
+    } else {
+      Alert.alert(
+        'Disable App Lock',
+        'Anyone with your device can access your wallet without app lock. Continue?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Disable',
+            style: 'destructive',
+            onPress: async () => {
+              await disableLock();
+            },
+          },
+        ]
+      );
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.section}>
@@ -56,8 +80,29 @@ export default function SettingsScreen() {
         <View style={styles.card}>
           <View style={styles.row}>
             <View style={styles.rowLeft}>
+              <Shield color={COLORS.primary} size={24} />
+              <View style={styles.rowTextGroup}>
+                <Text style={styles.rowText}>App Lock</Text>
+                <Text style={styles.rowHelper}>
+                  Require biometrics or passcode to open
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={isLockEnabled}
+              onValueChange={handleToggleLock}
+              trackColor={{ false: COLORS.border, true: COLORS.primary }}
+            />
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.row}>
+            <View style={styles.rowLeft}>
               {isDarkMode ? <Moon color={COLORS.textPrimary} size={24} /> : <Sun color={COLORS.textPrimary} size={24} />}
-              <Text style={styles.rowText}>Dark Mode</Text>
+              <View style={styles.rowTextGroup}>
+                <Text style={styles.rowText}>Dark Mode</Text>
+              </View>
             </View>
             <Switch 
               value={isDarkMode} 
@@ -143,11 +188,25 @@ const styles = StyleSheet.create({
   rowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+  },
+  rowTextGroup: {
+    marginLeft: SIZES.md,
+    flex: 1,
   },
   rowText: {
     color: COLORS.textPrimary,
     fontSize: 16,
-    marginLeft: SIZES.md,
+  },
+  rowHelper: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginHorizontal: SIZES.lg,
   },
   menuButton: {
     borderWidth: 0,
