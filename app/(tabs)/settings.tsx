@@ -7,6 +7,7 @@ import { useWalletStore } from '../../src/store/walletStore';
 import { useAppStore } from '../../src/store/appStore';
 import { Users, LogOut, Key, Moon, Sun } from 'lucide-react-native';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
+import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -14,6 +15,8 @@ export default function SettingsScreen() {
   const { isDarkMode, toggleDarkMode } = useAppStore();
   const [showSecret, setShowSecret] = useState(false);
   const [secretKey, setSecretKey] = useState<string | null>(null);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const handleExportKey = async () => {
     if (!showSecret) {
@@ -29,24 +32,17 @@ export default function SettingsScreen() {
   };
 
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to clear your wallet from this device? Make sure you have your secret key saved, otherwise your funds will be lost forever.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Sign Out & Clear', 
-          style: 'destructive',
-          onPress: async () => {
-            const cleared = await clearWallet();
-            if (!cleared) {
-              Alert.alert('Wallet Not Cleared', 'Failed to clear wallet securely. Please try again.');
-            }
-            // Router will handle redirect to auth due to _layout logic
-          }
-        }
-      ]
-    );
+    setShowResetModal(true);
+  };
+
+  const handleResetConfirm = async () => {
+    setIsResetting(true);
+    const cleared = await clearWallet();
+    setIsResetting(false);
+    setShowResetModal(false);
+    if (!cleared) {
+      Alert.alert('Wallet Not Cleared', 'Failed to clear wallet securely. Please try again.');
+    }
   };
 
   return (
@@ -107,6 +103,12 @@ export default function SettingsScreen() {
         <Text style={styles.footerText}>Network: Testnet</Text>
       </View>
     </ScrollView>
+    <WalletResetConfirmModal
+      visible={showResetModal}
+      isLoading={isResetting}
+      onConfirm={handleResetConfirm}
+      onCancel={() => setShowResetModal(false)}
+    />
   );
 }
 
