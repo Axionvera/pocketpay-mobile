@@ -48,6 +48,21 @@ The key is never written to plain `AsyncStorage`, logs, or the filesystem. It is
 
 There is no cloud backup or recovery phrase in this version of PocketPay. If you lose access to your device without a backup, **your wallet cannot be recovered**.
 
+---
+
+## App Lock (Biometric / Device Auth)
+
+PocketPay includes an optional app-level lock that uses [`expo-local-authentication`](https://docs.expo.dev/versions/latest/sdk/local-authentication/) to require biometric or device passcode authentication before wallet screens become accessible.
+
+**Behaviour:**
+- **Enable**: Toggle "App Lock" in Settings → Preferences. You'll be prompted to authenticate once to confirm.
+- **On launch / resume**: If lock is enabled, the app shows a lock screen. You must authenticate (Face ID, fingerprint, or device PIN) to proceed.
+- **Disable**: Toggle off in Settings. A confirmation dialog appears before disabling.
+- **Fallback**: If the device lacks biometric hardware or enrollment, the lock falls back to the device passcode / pattern.
+- **After 5 failed attempts**: The OS enforces its own lockout policy (e.g., requiring device passcode on iOS).
+
+The app lock protects *screen access only* — it is a UX-layer security measure on top of the keychain-backed secret key storage.
+
 Recommended backup steps:
 1. After creating a wallet, write your secret key down on paper and store it somewhere physically secure (e.g. a safe).
 2. Do not store it in a notes app, cloud drive, or screenshot unless it is encrypted with a strong password.

@@ -13,6 +13,17 @@
   },
   "jest": {
     "preset": "jest-expo",
+    "transform": {
+      "^.+\\.(js|jsx|ts|tsx)$": "babel-jest"
+    },
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ],
     "setupFilesAfterEnv": [
       "@testing-library/jest-native/extend-expect"
     ],
@@ -52,7 +63,8 @@
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
     "text-encoding": "^0.7.0",
-    "zustand": "^5.0.13"
+    "zustand": "^5.0.13",
+    "expo-local-authentication": "~16.0.5"
   },
   "devDependencies": {
     "@react-native/jest-preset": "^0.86.0",

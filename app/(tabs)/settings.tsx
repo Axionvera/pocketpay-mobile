@@ -4,10 +4,11 @@ import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useWalletStore } from '../../src/store/walletStore';
-import { ThemeMode } from '../../src/store/appStore';
-import { useTheme } from '../../src/hooks/useTheme';
-import { Moon, Sun, Monitor } from 'lucide-react-native';
+import { useAppStore } from '../../src/store/appStore';
+import { useAppLockStore } from '../../src/store/appLockStore';
+import { Users, LogOut, Key, Moon, Sun, Shield } from 'lucide-react-native';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
+import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
 
 const THEME_OPTIONS: { mode: ThemeMode; label: string; Icon: typeof Sun }[] = [
   { mode: 'light', label: 'Light', Icon: Sun },
@@ -18,10 +19,12 @@ const THEME_OPTIONS: { mode: ThemeMode; label: string; Icon: typeof Sun }[] = [
 export default function SettingsScreen() {
   const router = useRouter();
   const { clearWallet, getSecretKey } = useWalletStore();
-  const { colors, themeMode, setThemeMode } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isDarkMode, toggleDarkMode } = useAppStore();
+  const { isLockEnabled, enableLock, disableLock, authenticate } = useAppLockStore();
   const [showSecret, setShowSecret] = useState(false);
   const [secretKey, setSecretKey] = useState<string | null>(null);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const handleExportKey = async () => {
     if (!showSecret) {
@@ -37,24 +40,39 @@ export default function SettingsScreen() {
   };
 
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to clear your wallet from this device? Make sure you have your secret key saved, otherwise your funds will be lost forever.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out & Clear',
-          style: 'destructive',
-          onPress: async () => {
-            const cleared = await clearWallet();
-            if (!cleared) {
-              Alert.alert('Wallet Not Cleared', 'Failed to clear wallet securely. Please try again.');
-            }
-            // Router will handle redirect to auth due to _layout logic
-          }
-        }
-      ]
-    );
+    setShowResetModal(true);
+  };
+
+  const handleResetConfirm = async () => {
+    setIsResetting(true);
+    const cleared = await clearWallet();
+    setIsResetting(false);
+    setShowResetModal(false);
+    if (!cleared) {
+      Alert.alert('Wallet Not Cleared', 'Failed to clear wallet securely. Please try again.');
+    }
+  };
+
+  const handleToggleLock = async (enable: boolean) => {
+    if (enable) {
+      await enableLock();
+      await authenticate();
+    } else {
+      Alert.alert(
+        'Disable App Lock',
+        'Anyone with your device can access your wallet without app lock. Continue?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Disable',
+            style: 'destructive',
+            onPress: async () => {
+              await disableLock();
+            },
+          },
+        ]
+      );
+    }
   };
 
   return (
@@ -62,25 +80,37 @@ export default function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.card}>
-          <View style={styles.themeRow}>
-            {THEME_OPTIONS.map(({ mode, label, Icon }) => {
-              const isSelected = themeMode === mode;
-              return (
-                <TouchableOpacity
-                  key={mode}
-                  style={[styles.themeOption, isSelected && styles.themeOptionSelected]}
-                  onPress={() => setThemeMode(mode)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${label} theme`}
-                  accessibilityState={{ selected: isSelected }}
-                >
-                  <Icon color={isSelected ? colors.background : colors.textPrimary} size={20} />
-                  <Text style={[styles.themeOptionText, isSelected && styles.themeOptionTextSelected]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+          <View style={styles.row}>
+            <View style={styles.rowLeft}>
+              <Shield color={COLORS.primary} size={24} />
+              <View style={styles.rowTextGroup}>
+                <Text style={styles.rowText}>App Lock</Text>
+                <Text style={styles.rowHelper}>
+                  Require biometrics or passcode to open
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={isLockEnabled}
+              onValueChange={handleToggleLock}
+              trackColor={{ false: COLORS.border, true: COLORS.primary }}
+            />
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.row}>
+            <View style={styles.rowLeft}>
+              {isDarkMode ? <Moon color={COLORS.textPrimary} size={24} /> : <Sun color={COLORS.textPrimary} size={24} />}
+              <View style={styles.rowTextGroup}>
+                <Text style={styles.rowText}>Dark Mode</Text>
+              </View>
+            </View>
+            <Switch 
+              value={isDarkMode} 
+              onValueChange={toggleDarkMode}
+              trackColor={{ false: COLORS.border, true: COLORS.primary }}
+            />
           </View>
         </View>
       </View>
@@ -124,6 +154,12 @@ export default function SettingsScreen() {
         <Text style={styles.footerText}>Network: Testnet</Text>
       </View>
     </ScrollView>
+    <WalletResetConfirmModal
+      visible={showResetModal}
+      isLoading={isResetting}
+      onConfirm={handleResetConfirm}
+      onCancel={() => setShowResetModal(false)}
+    />
   );
 }
 
@@ -159,22 +195,25 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   themeOption: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SIZES.md,
-    borderRadius: RADIUS.md,
-    gap: 4,
+    flex: 1,
   },
-  themeOptionSelected: {
-    backgroundColor: colors.primary,
+  rowTextGroup: {
+    marginLeft: SIZES.md,
+    flex: 1,
   },
-  themeOptionText: {
-    color: colors.textPrimary,
-    fontSize: 13,
-    fontWeight: '500',
+  rowText: {
+    color: COLORS.textPrimary,
+    fontSize: 16,
   },
-  themeOptionTextSelected: {
-    color: colors.background,
-    fontWeight: '600',
+  rowHelper: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginHorizontal: SIZES.lg,
   },
   menuButton: {
     borderWidth: 0,

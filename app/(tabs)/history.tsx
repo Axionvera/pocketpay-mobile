@@ -8,10 +8,13 @@ import {
   View,
 } from 'react-native';
 import { Clock } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { useWalletStore, TransactionRecord } from '../../src/store/walletStore';
 import { SIZES, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
+import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
+import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -62,17 +65,19 @@ const EmptyState: React.FC<{ colors: ThemeColors; styles: ReturnType<typeof crea
 // ─── Screen ────────────────────────────────────────────────────────────────────
 
 export default function HistoryScreen() {
-  const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const router = useRouter();
   const {
     transactions,
     isLoading,
     isLoadingMore,
     hasMoreTransactions,
     publicKey,
+    error,
     refreshWalletData,
     loadMoreTransactions,
   } = useWalletStore();
+
+  const { networkErrorType, message } = useNetworkStatus(error);
 
   // Load the first page on mount.
   useEffect(() => {
@@ -86,9 +91,10 @@ export default function HistoryScreen() {
         transaction={item}
         currentPublicKey={publicKey}
         variant="card"
+        onPress={(tx) => router.push(`/transaction/${tx.id}`)}
       />
     ),
-    [publicKey]
+    [publicKey, router]
   );
 
   const keyExtractor = useCallback((item: TransactionRecord) => item.id, []);
@@ -137,6 +143,14 @@ export default function HistoryScreen() {
         // Trigger load-more when 20 % of the list remains below the viewport.
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.2}
+        ListHeaderComponent={
+          <NetworkStatusBanner
+            networkErrorType={networkErrorType}
+            message={message}
+            onRetry={refreshWalletData}
+            isRetrying={isLoading}
+          />
+        }
         ListFooterComponent={renderFooter}
         ListEmptyComponent={!isLoading ? <EmptyState colors={colors} styles={styles} /> : null}
         // Avoid stale closures while also keeping rendering performant.

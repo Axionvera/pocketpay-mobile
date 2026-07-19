@@ -4,6 +4,7 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useWalletStore } from '../src/store/walletStore';
 import { useAppStore } from '../src/store/appStore';
+import { LockScreen } from '../src/components/LockScreen';
 import { View, ActivityIndicator } from 'react-native';
 import { useTheme } from '../src/hooks/useTheme';
 
@@ -43,8 +44,10 @@ export default function RootLayout() {
 
   return (
     <>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      <Slot />
+      <StatusBar style="light" />
+      <LockScreen>
+        <Slot />
+      </LockScreen>
     </>
   );
 }
