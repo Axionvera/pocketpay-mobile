@@ -21,10 +21,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm install --legacy-peer-deps
 
       - name: Type-check
         run: npm run typecheck
 
       - name: Test
-        run: npx jest --config .github/workflows/jest.config.ci.js --watchAll=false --passWithNoTests
+        run: ./node_modules/.bin/jest --config .github/workflows/jest.config.ci.js --watchAll=false --passWithNoTests

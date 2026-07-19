@@ -1,117 +1,190 @@
-import React from 'react';
-import {
-  Linking,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import { ExternalLink } from 'lucide-react-native';
-import { COLORS, RADIUS, SIZES } from '../../src/constants/theme';
-
-interface TransactionDetailData {
-  id?: string;
-  hash?: string;
-  amount?: string;
-  asset?: string;
-  from?: string;
-  to?: string;
-  createdAt?: string;
-  memo?: string;
-  type?: string;
-}
-
-const normalizeTransaction = (transaction?: TransactionDetailData | null): TransactionDetailData => ({
-  id: transaction?.id,
-  hash: transaction?.hash || (transaction as any)?.transaction_hash || undefined,
-  amount: transaction?.amount,
-  asset: transaction?.asset || (transaction as any)?.asset_type || 'XLM',
-  from: transaction?.from || (transaction as any)?.source_account || undefined,
-  to: transaction?.to || (transaction as any)?.destination_account || undefined,
-  createdAt: transaction?.createdAt || (transaction as any)?.created_at || (transaction as any)?.timestamp,
-  memo: transaction?.memo || (transaction as any)?.memo_text || undefined,
-  type: transaction?.type || (transaction as any)?.type,
-});
-
-const getExplorerUrl = (hash?: string) =>
-  hash
-    ? `https://stellar.expert/explorer/testnet/tx/${hash}`
-    : 'https://stellar.expert/explorer/testnet';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
+import { Copy, Check, ArrowLeft, ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
+import { useWalletStore } from '../../src/store/walletStore';
+import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
+import { Button } from '../../src/components/Button';
 
 export default function TransactionDetailScreen() {
-  const params = useLocalSearchParams<{ id?: string; transaction?: string }>();
-  const transaction = React.useMemo<TransactionDetailData | null>(() => {
-    if (!params.transaction) return null;
-    try {
-      return JSON.parse(params.transaction) as TransactionDetailData;
-    } catch {
-      return null;
-    }
-  }, [params.transaction]);
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { transactions, publicKey } = useWalletStore();
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  const detail = normalizeTransaction(transaction);
-  const formattedDate = detail.createdAt
-    ? new Date(detail.createdAt).toLocaleString()
-    : 'Unavailable';
+  interface TransactionDetail {
+    id: string;
+    from?: string;
+    to?: string;
+    amount?: string;
+    asset?: string;
+    createdAt?: string;
+    timestamp?: string;
+    hash?: string;
+    transaction_hash?: string;
+  }
+
+  const transaction = transactions.find((tx) => tx.id === id);
+
+  if (!transaction) {
+    return (
+      <View style={styles.errorContainer} testID="error-container">
+        <Text style={styles.errorText}>Transaction not found</Text>
+        <Button title="Go Back" onPress={() => router.back()} />
+      </View>
+    );
+  }
+
+  const tx = transaction as TransactionDetail;
+
+  const isSent = !!publicKey && tx.from === publicKey;
+  const directionLabel = isSent ? 'Sent' : 'Received';
+  const amountColor = isSent ? COLORS.textPrimary : COLORS.success;
+  const formattedAmount = `${isSent ? '-' : '+'}${tx.amount || 'N/A'} ${tx.asset || 'XLM'}`;
+  const formattedDate = tx.createdAt 
+    ? new Date(tx.createdAt).toLocaleString() 
+    : tx.timestamp 
+    ? new Date(tx.timestamp).toLocaleString()
+    : 'Unknown date';
+
+  const txHash = tx.hash || tx.transaction_hash || '';
+  const senderAddress = tx.from || '';
+  const recipientAddress = tx.to || '';
+
+  const handleCopy = async (text: string, fieldName: string) => {
+    if (!text) return;
+    try {
+      await Clipboard.setStringAsync(text);
+      setCopiedField(fieldName);
+      setTimeout(() => {
+        setCopiedField(null);
+      }, 2000);
+    } catch (error: any) {
+      console.error('Clipboard copy failed:', error);
+      Alert.alert('Copy Failed', 'Failed to copy to clipboard. Please try again.');
+    }
+  };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Transaction Details</Text>
-        <Text style={styles.subtitle}>A concise view of the selected payment.</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <Stack.Screen 
+        options={{
+          headerShown: true,
+          title: 'Transaction Details',
+          headerStyle: { backgroundColor: COLORS.background },
+          headerTintColor: COLORS.textPrimary,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <ArrowLeft color={COLORS.textPrimary} size={24} />
+            </TouchableOpacity>
+          ),
+        }} 
+      />
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Hash</Text>
-          <Text style={styles.value} numberOfLines={4}>
-            {detail.hash || 'Unavailable'}
-          </Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Amount</Text>
-          <Text style={styles.value}>
-            {detail.amount || '—'}
-          </Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Asset</Text>
-          <Text style={styles.value}>{detail.asset || 'Unknown'}</Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Source</Text>
-          <Text style={styles.value} numberOfLines={3}>
-            {detail.from || 'Unavailable'}
-          </Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Destination</Text>
-          <Text style={styles.value} numberOfLines={3}>
-            {detail.to || 'Unavailable'}
-          </Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Date</Text>
-          <Text style={styles.value}>{formattedDate}</Text>
-        </View>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Memo</Text>
-          <Text style={styles.value}>{detail.memo || '—'}</Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={() => Linking.openURL(getExplorerUrl(detail.hash))}
+      <View style={styles.heroSection}>
+        <View
+          style={[
+            styles.iconWrapper,
+            { backgroundColor: isSent ? 'rgba(255, 61, 0, 0.1)' : 'rgba(0, 230, 118, 0.1)' },
+          ]}
         >
-          <Text style={styles.linkText}>View on explorer</Text>
-          <ExternalLink size={16} color={COLORS.primary} />
-        </TouchableOpacity>
+          {isSent ? (
+            <ArrowUpRight color={COLORS.error} size={32} />
+          ) : (
+            <ArrowDownLeft color={COLORS.success} size={32} />
+          )}
+        </View>
+        <Text style={[styles.amountText, { color: amountColor }]} testID="detail-amount">
+          {formattedAmount}
+        </Text>
+        <Text style={styles.dateText}>{formattedDate}</Text>
+      </View>
+
+      <View style={styles.detailsCard}>
+        {/* Type / Direction */}
+        <View style={styles.detailRow}>
+          <Text style={styles.rowLabel}>Type</Text>
+          <Text style={styles.rowValue}>{directionLabel} XLM</Text>
+        </View>
+
+        {/* Transaction Hash */}
+        {txHash ? (
+          <View style={styles.detailRow}>
+            <View style={styles.labelWithAction}>
+              <Text style={styles.rowLabel}>Transaction Hash</Text>
+              <TouchableOpacity 
+                onPress={() => handleCopy(txHash, 'hash')} 
+                style={styles.copyBtn}
+                testID="copy-hash-btn"
+              >
+                {copiedField === 'hash' ? (
+                  <View style={styles.copiedFeedback}>
+                    <Check color={COLORS.success} size={16} />
+                    <Text style={styles.copiedText}>Copied</Text>
+                  </View>
+                ) : (
+                  <Copy color={COLORS.primary} size={16} />
+                )}
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.addressText} selectable numberOfLines={2}>
+              {txHash}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Sender Address */}
+        {senderAddress ? (
+          <View style={styles.detailRow}>
+            <View style={styles.labelWithAction}>
+              <Text style={styles.rowLabel}>Sender (From)</Text>
+              <TouchableOpacity 
+                onPress={() => handleCopy(senderAddress, 'sender')} 
+                style={styles.copyBtn}
+                testID="copy-sender-btn"
+              >
+                {copiedField === 'sender' ? (
+                  <View style={styles.copiedFeedback}>
+                    <Check color={COLORS.success} size={16} />
+                    <Text style={styles.copiedText}>Copied</Text>
+                  </View>
+                ) : (
+                  <Copy color={COLORS.primary} size={16} />
+                )}
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.addressText} selectable numberOfLines={2}>
+              {senderAddress}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Recipient Address */}
+        {recipientAddress ? (
+          <View style={styles.detailRow}>
+            <View style={styles.labelWithAction}>
+              <Text style={styles.rowLabel}>Recipient (To)</Text>
+              <TouchableOpacity 
+                onPress={() => handleCopy(recipientAddress, 'recipient')} 
+                style={styles.copyBtn}
+                testID="copy-recipient-btn"
+              >
+                {copiedField === 'recipient' ? (
+                  <View style={styles.copiedFeedback}>
+                    <Check color={COLORS.success} size={16} />
+                    <Text style={styles.copiedText}>Copied</Text>
+                  </View>
+                ) : (
+                  <Copy color={COLORS.primary} size={16} />
+                )}
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.addressText} selectable numberOfLines={2}>
+              {recipientAddress}
+            </Text>
+          </View>
+        ) : null}
       </View>
     </ScrollView>
   );
@@ -122,54 +195,95 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  content: {
+  contentContainer: {
     padding: SIZES.lg,
+    paddingBottom: SIZES.xxl,
   },
-  card: {
+  backButton: {
+    marginRight: SIZES.md,
+  },
+  errorContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SIZES.xl,
+  },
+  errorText: {
+    color: COLORS.textPrimary,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: SIZES.lg,
+  },
+  heroSection: {
+    alignItems: 'center',
+    marginVertical: SIZES.xl,
+  },
+  iconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SIZES.md,
+  },
+  amountText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: SIZES.xs,
+  },
+  dateText: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+  },
+  detailsCard: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
     padding: SIZES.lg,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  title: {
-    color: COLORS.textPrimary,
-    fontSize: 22,
-    fontWeight: '700',
-    marginBottom: SIZES.xs,
+  detailRow: {
+    marginBottom: SIZES.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    paddingBottom: SIZES.md,
   },
-  subtitle: {
+  rowLabel: {
     color: COLORS.textSecondary,
     fontSize: 14,
-    marginBottom: SIZES.lg,
+    fontWeight: '500',
   },
-  row: {
-    marginBottom: SIZES.md,
-  },
-  label: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    textTransform: 'uppercase',
+  labelWithAction: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: SIZES.xs,
   },
-  value: {
+  rowValue: {
     color: COLORS.textPrimary,
-    fontSize: 15,
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: SIZES.xs,
   },
-  linkButton: {
+  addressText: {
+    color: COLORS.textPrimary,
+    fontSize: 13,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    lineHeight: 18,
+    marginTop: SIZES.xs,
+  },
+  copyBtn: {
+    padding: SIZES.xs,
+  },
+  copiedFeedback: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: SIZES.sm,
-    marginTop: SIZES.md,
-    paddingVertical: SIZES.md,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    gap: 4,
   },
-  linkText: {
-    color: COLORS.primary,
-    fontWeight: '600',
+  copiedText: {
+    color: COLORS.success,
+    fontSize: 12,
+    fontWeight: '500',
   },
 });

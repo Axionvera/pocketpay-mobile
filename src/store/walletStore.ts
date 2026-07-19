@@ -1,9 +1,11 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
-import { fetchXlmBalance, fetchRecentTransactions, fundWithFriendbot } from '../services/stellar';
+import * as StellarSdk from '@stellar/stellar-sdk';
+import { fetchXlmBalance, fetchTransactionsPage, fundWithFriendbot, PaymentRecord } from '../services/stellar';
 
 const WALLET_KEY = 'pocketpay_wallet_secret';
 const DEFAULT_BALANCE = '0.0000000';
+const TX_PAGE_SIZE = 20;
 const PERSIST_WALLET_ERROR = 'Failed to persist wallet securely';
 const RESTORE_WALLET_ERROR = 'Failed to restore wallet securely';
 const CLEAR_WALLET_ERROR = 'Failed to clear wallet securely';
@@ -19,11 +21,17 @@ interface WalletState {
   fundError: string | null;
   error: string | null;
 
+  // Pagination
+  isLoadingMore: boolean;
+  hasMoreTransactions: boolean;
+  nextCursor: string | null;
+
   // Actions
   setWallet: (publicKey: string, secretKey: string) => Promise<boolean>;
   loadWalletFromStorage: () => Promise<boolean>;
   /** Pull-to-refresh: resets pagination and loads the first page fresh. */
   refreshWalletData: () => Promise<void>;
+  loadMoreTransactions: () => Promise<void>;
   clearWallet: () => Promise<boolean>;
   getSecretKey: () => Promise<string | null>;
   fundWallet: () => Promise<void>;
@@ -33,6 +41,9 @@ const resetWalletState = () => ({
   publicKey: null,
   balance: DEFAULT_BALANCE,
   transactions: [],
+  isLoadingMore: false,
+  hasMoreTransactions: false,
+  nextCursor: null,
 });
 
 const parseStoredSecret = (storedValue: string): string | null => {
@@ -76,6 +87,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   isFunding: false,
   fundError: null,
   error: null,
+  isLoadingMore: false,
+  hasMoreTransactions: false,
+  nextCursor: null,
 
   setWallet: async (publicKey: string, secretKey: string) => {
     try {
@@ -119,13 +133,19 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     const { publicKey } = get();
     if (!publicKey) return;
 
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null, isLoadingMore: false, nextCursor: null, hasMoreTransactions: false });
     try {
       const [balance, page] = await Promise.all([
         fetchXlmBalance(publicKey),
         fetchTransactionsPage(publicKey, TX_PAGE_SIZE),
       ]);
-      set({ balance, transactions: txs, isLoading: false });
+      set({
+        balance,
+        transactions: page.records,
+        nextCursor: page.nextCursor,
+        hasMoreTransactions: page.hasMore,
+        isLoading: false,
+      });
     } catch (err: any) {
       console.error('Failed to refresh wallet data');
       set({ isLoading: false, error: err.message || 'Failed to sync data' });

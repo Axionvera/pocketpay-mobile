@@ -12,6 +12,8 @@ import { useRouter } from 'expo-router';
 import { useWalletStore, TransactionRecord } from '../../src/store/walletStore';
 import { COLORS, SIZES } from '../../src/constants/theme';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
+import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
+import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -67,9 +69,12 @@ export default function HistoryScreen() {
     isLoadingMore,
     hasMoreTransactions,
     publicKey,
+    error,
     refreshWalletData,
     loadMoreTransactions,
   } = useWalletStore();
+
+  const { networkErrorType, message } = useNetworkStatus(error);
 
   // Load the first page on mount.
   useEffect(() => {
@@ -83,15 +88,7 @@ export default function HistoryScreen() {
         transaction={item}
         currentPublicKey={publicKey}
         variant="card"
-        onPress={(transaction) =>
-          router.push({
-            pathname: '/transaction/[id]',
-            params: {
-              id: transaction.id || 'transaction',
-              transaction: JSON.stringify(transaction),
-            },
-          })
-        }
+        onPress={(tx) => router.push(`/transaction/${tx.id}`)}
       />
     ),
     [publicKey, router]
@@ -141,6 +138,14 @@ export default function HistoryScreen() {
         // Trigger load-more when 20 % of the list remains below the viewport.
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.2}
+        ListHeaderComponent={
+          <NetworkStatusBanner
+            networkErrorType={networkErrorType}
+            message={message}
+            onRetry={refreshWalletData}
+            isRetrying={isLoading}
+          />
+        }
         ListFooterComponent={renderFooter}
         ListEmptyComponent={!isLoading ? <EmptyState /> : null}
         // Avoid stale closures while also keeping rendering performant.

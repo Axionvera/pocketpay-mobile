@@ -34,34 +34,25 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
   style,
   ...props
 }) => {
-  const normalizedTransaction = {
-    id: transaction.id,
-    amount: transaction.amount,
-    asset: transaction.asset || (transaction as any).asset_type || 'XLM',
-    createdAt: transaction.createdAt || (transaction as any).created_at || (transaction as any).timestamp,
-    from: transaction.from || (transaction as any).source_account || null,
-    to: transaction.to || (transaction as any).destination_account || null,
-    hash: transaction.hash || (transaction as any).transaction_hash || null,
-  };
-
-  const isSent = !!currentPublicKey && normalizedTransaction.from === currentPublicKey;
+  const tx = transaction as any;
+  const isSent = !!currentPublicKey && tx.from === currentPublicKey;
 
   const direction = isSent ? 'sent' : 'received';
 
   const label = isSent ? 'Sent XLM' : 'Received XLM';
 
-  const formattedAmount = normalizedTransaction.amount
-    ? `${isSent ? '-' : '+'}${normalizedTransaction.amount}`
+  const formattedAmount = tx.amount
+    ? `${isSent ? '-' : '+'}${tx.amount}`
     : null;
 
-  const formattedDate = normalizedTransaction.createdAt
-    ? new Date(normalizedTransaction.createdAt).toLocaleString()
+  const formattedDate = tx.created_at
+    ? new Date(tx.created_at).toLocaleString()
     : null;
 
   // Counterparty: for sent txs show the recipient, for received show the sender
   const counterparty = isSent
-    ? normalizedTransaction.to || null
-    : normalizedTransaction.from || null;
+    ? tx.to || null
+    : tx.from || null;
 
   const Container = onPress ? TouchableOpacity : View;
   const containerProps = onPress
@@ -123,9 +114,9 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
           <Text style={styles.amountMissing}>—</Text>
         )}
 
-        {normalizedTransaction.asset ? (
+        {tx.asset ? (
           <Text style={styles.assetType}>
-            {normalizedTransaction.asset}
+            {tx.asset}
           </Text>
         ) : null}
       </View>

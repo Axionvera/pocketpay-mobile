@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
-import { COLORS, SIZES, FONTS } from '../../src/constants/theme';
-import { Rocket } from 'lucide-react-native';
+import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
+import { Rocket, Info } from 'lucide-react-native';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -16,20 +16,37 @@ export default function OnboardingScreen() {
         </View>
         <Text style={styles.title}>Stellar PocketPay</Text>
         <Text style={styles.subtitle}>
-          Your gateway to the Stellar Network. Fast, secure, and easy to use.
+          Fast, secure payments on the Stellar network.
         </Text>
+
+        <View style={styles.testnetBadge}>
+          <Info color={COLORS.primary} size={16} />
+          <Text style={styles.testnetText}>
+            This app runs on Stellar <Text style={styles.testnetBold}>Testnet</Text> — a sandbox for learning. No real funds are used.
+          </Text>
+        </View>
       </View>
-      
+
       <View style={styles.footer}>
-        <Button 
-          title="Create New Wallet" 
-          onPress={() => router.push('/(auth)/create')} 
-          style={{ marginBottom: SIZES.md }}
-        />
-        <Button 
-          title="Import Existing Wallet" 
+        <View style={styles.ctaSection}>
+          <Text style={styles.ctaLabel}>New to Stellar?</Text>
+          <Button
+            title="Create New Wallet"
+            onPress={() => router.push('/(auth)/create')}
+            style={{ marginBottom: SIZES.md }}
+          />
+        </View>
+
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <Button
+          title="Import Existing Wallet"
           variant="outline"
-          onPress={() => router.push('/(auth)/import')} 
+          onPress={() => router.push('/(auth)/import')}
         />
       </View>
     </SafeAreaView>
@@ -62,7 +79,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: COLORS.textPrimary,
-    marginBottom: SIZES.md,
+    marginBottom: SIZES.sm,
     textAlign: 'center',
   },
   subtitle: {
@@ -70,9 +87,57 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
+    marginBottom: SIZES.lg,
+  },
+  testnetBadge: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(0, 229, 255, 0.08)',
+    paddingHorizontal: SIZES.md,
+    paddingVertical: SIZES.sm,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
+    gap: SIZES.sm,
+  },
+  testnetText: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+  },
+  testnetBold: {
+    fontWeight: 'bold',
+    color: COLORS.primary,
   },
   footer: {
     padding: SIZES.xl,
     paddingBottom: SIZES.xxl,
+  },
+  ctaSection: {
+    marginBottom: SIZES.md,
+  },
+  ctaLabel: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginBottom: SIZES.sm,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SIZES.md,
+    gap: SIZES.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  dividerText: {
+    color: COLORS.textMuted,
+    fontSize: 13,
   },
 });

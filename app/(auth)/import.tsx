@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
 import { FormField } from '../../src/components/FormField';
-import { COLORS, SIZES } from '../../src/constants/theme';
+import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { importWallet } from 'pocketpay-sdk';
+import { Info, Shield, CheckCircle } from 'lucide-react-native';
+
+const SECRET_KEY_LENGTH = 56;
 
 export default function ImportWalletScreen() {
   const router = useRouter();
@@ -13,30 +16,70 @@ export default function ImportWalletScreen() {
   const [secretKey, setSecretKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleImport = async () => {
     setError('');
-    if (!secretKey.trim()) {
-      setError('Please enter a secret key');
+
+    const trimmedKey = secretKey.trim();
+
+    if (!trimmedKey) {
+      setError('Please enter your secret key.');
+      return;
+    }
+
+    if (!trimmedKey.startsWith('S')) {
+      setError('Secret keys start with "S". Please check and try again.');
+      return;
+    }
+
+    if (trimmedKey.length !== SECRET_KEY_LENGTH) {
+      setError(`Secret keys are ${SECRET_KEY_LENGTH} characters. Yours is ${trimmedKey.length}.`);
       return;
     }
 
     try {
       setIsLoading(true);
-      const { publicKey } = importWallet(secretKey.trim());
-      
-      const saved = await setWallet(publicKey, secretKey.trim());
+      const { publicKey } = await importWallet(trimmedKey);
+
+      const saved = await setWallet(publicKey, trimmedKey);
       if (!saved) {
-        setError('Failed to persist wallet securely. Please try again.');
+        setError('Failed to persist wallet. Please try again.');
+        setIsLoading(false);
+        return;
       }
-      // Router will automatically redirect to (main)
+
+      setIsLoading(false);
+      setIsSuccess(true);
     } catch {
-      setError('Invalid secret key. Please check and try again.');
-    } finally {
+      setError('Invalid secret key. It may be malformed or from the wrong network.');
       setIsLoading(false);
     }
   };
 
+  const handleGoToWallet = () => {
+    router.replace('/(tabs)');
+  };
+
+  // ── Success State ──────────────────────────────────────────
+  if (isSuccess) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.contentCenter}>
+          <View style={styles.successIcon}>
+            <CheckCircle color={COLORS.success} size={64} />
+          </View>
+          <Text style={styles.title}>Wallet Imported!</Text>
+          <Text style={styles.subtitle}>
+            Your Testnet wallet has been restored. You can now send and receive test XLM.
+          </Text>
+        </View>
+        <Button title="Go to Wallet" onPress={handleGoToWallet} />
+      </View>
+    );
+  }
+
+  // ── Import Form ────────────────────────────────────────────
   return (
     <KeyboardAvoidingView 
       style={styles.container}
@@ -44,15 +87,29 @@ export default function ImportWalletScreen() {
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>Import Existing Wallet</Text>
+          <Text style={styles.title}>Import Wallet</Text>
           <Text style={styles.subtitle}>
-            Enter your 56-character Stellar secret key (starts with 'S').
+            Enter your Stellar secret key to restore your wallet.
+          </Text>
+        </View>
+
+        <View style={styles.infoBanner}>
+          <Info color={COLORS.primary} size={18} />
+          <Text style={styles.infoText}>
+            This app runs on <Text style={styles.infoBold}>Testnet</Text>. Only test-net secret keys will work.
+          </Text>
+        </View>
+
+        <View style={styles.warningCard}>
+          <Shield color={COLORS.warning} size={18} />
+          <Text style={styles.warningText}>
+            Never paste your secret key from an untrusted source. Anyone with this key can access your funds.
           </Text>
         </View>
 
         <FormField
           label="Secret Key"
-          placeholder="S..."
+          placeholder="S…"
           value={secretKey}
           onChangeText={(text) => {
             setSecretKey(text);
@@ -60,7 +117,7 @@ export default function ImportWalletScreen() {
           }}
           secureTextEntry
           error={error}
-          helperText="Enter your 56-character Stellar secret key starting with 'S'"
+          helperText={`${SECRET_KEY_LENGTH}-character key starting with "S"`}
           autoCapitalize="none"
           autoCorrect={false}
         />
@@ -86,8 +143,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  contentCenter: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   header: {
-    marginBottom: SIZES.xl,
+    marginBottom: SIZES.lg,
     marginTop: SIZES.md,
   },
   title: {
@@ -100,5 +161,47 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.textSecondary,
     lineHeight: 24,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(0, 229, 255, 0.08)',
+    padding: SIZES.md,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
+    marginBottom: SIZES.md,
+    gap: SIZES.sm,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
+  infoBold: {
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
+  warningCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255, 196, 0, 0.1)',
+    padding: SIZES.md,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 196, 0, 0.25)',
+    marginBottom: SIZES.lg,
+    gap: SIZES.sm,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.warning,
+    lineHeight: 18,
+  },
+  successIcon: {
+    alignItems: 'center',
+    marginBottom: SIZES.lg,
   },
 });
