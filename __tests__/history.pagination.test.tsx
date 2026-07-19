@@ -33,10 +33,10 @@ const mockUseWalletStore = useWalletStore as jest.MockedFunction<typeof useWalle
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const makeTx = (id: string) => ({
+const makeTx = (id: string, createdAt = '2024-01-01T00:00:00Z') => ({
   id,
   type: 'payment',
-  created_at: '2024-01-01T00:00:00Z',
+  created_at: createdAt,
   amount: '10.0000000',
   asset_type: 'native',
   source_account: 'GOTHER',
@@ -94,6 +94,36 @@ describe('AC-H2 – transaction rows are rendered', () => {
     // Each TransactionListItem renders "Received XLM" or "Sent XLM".
     // With our fixture data (from !== publicKey) all are "Received XLM".
     expect(getAllByText('Received XLM')).toHaveLength(3);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Activity grouping
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('activity grouping', () => {
+  it('renders date section headers for transactions from today and yesterday', () => {
+    setup({
+      transactions: [
+        makeTx('tx1', new Date().toISOString()),
+        makeTx('tx2', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
+      ] as any,
+    });
+
+    const { getByText } = render(<HistoryScreen />);
+
+    expect(getByText('Today')).toBeTruthy();
+    expect(getByText('Yesterday')).toBeTruthy();
+  });
+
+  it('uses a fallback label for transactions with invalid dates', () => {
+    setup({
+      transactions: [makeTx('tx1', 'not-a-date') as any],
+    });
+
+    const { getByText } = render(<HistoryScreen />);
+
+    expect(getByText('Unknown date')).toBeTruthy();
   });
 });
 
@@ -209,11 +239,11 @@ describe('AC-H7 – loadMoreTransactions called on end-reached', () => {
     });
 
     const { UNSAFE_getByType } = render(<HistoryScreen />);
-    const { FlatList } = require('react-native');
-    const flatList = UNSAFE_getByType(FlatList);
+    const { SectionList } = require('react-native');
+    const sectionList = UNSAFE_getByType(SectionList);
 
-    // Simulate the FlatList reaching its end.
-    flatList.props.onEndReached();
+    // Simulate the SectionList reaching its end.
+    sectionList.props.onEndReached();
 
     expect(store.loadMoreTransactions).toHaveBeenCalledTimes(1);
   });
@@ -226,10 +256,10 @@ describe('AC-H7 – loadMoreTransactions called on end-reached', () => {
     });
 
     const { UNSAFE_getByType } = render(<HistoryScreen />);
-    const { FlatList } = require('react-native');
-    const flatList = UNSAFE_getByType(FlatList);
+    const { SectionList } = require('react-native');
+    const sectionList = UNSAFE_getByType(SectionList);
 
-    flatList.props.onEndReached();
+    sectionList.props.onEndReached();
 
     expect(store.loadMoreTransactions).not.toHaveBeenCalled();
   });
@@ -242,10 +272,10 @@ describe('AC-H7 – loadMoreTransactions called on end-reached', () => {
     });
 
     const { UNSAFE_getByType } = render(<HistoryScreen />);
-    const { FlatList } = require('react-native');
-    const flatList = UNSAFE_getByType(FlatList);
+    const { SectionList } = require('react-native');
+    const sectionList = UNSAFE_getByType(SectionList);
 
-    flatList.props.onEndReached();
+    sectionList.props.onEndReached();
 
     expect(store.loadMoreTransactions).not.toHaveBeenCalled();
   });

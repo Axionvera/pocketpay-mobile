@@ -48,6 +48,10 @@ export const LIGHT_COLORS = {
   border: '#DDE2ED',
 };
 
+export const COLORS = {
+  ...DARK_COLORS,
+};
+
 export type ThemeColors = typeof DARK_COLORS;
 
 export function getColors(isDark: boolean): ThemeColors {

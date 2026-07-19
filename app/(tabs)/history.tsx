@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   RefreshControl,
+  SectionList,
   StyleSheet,
   Text,
   View,
@@ -15,6 +15,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
 import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
 import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
+import { groupTransactionsByDate } from '../../src/utils/transactions';
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -78,12 +79,19 @@ export default function HistoryScreen() {
   } = useWalletStore();
 
   const { networkErrorType, message } = useNetworkStatus(error);
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Load the first page on mount.
   useEffect(() => {
     refreshWalletData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const groupedTransactions = useMemo(
+    () => groupTransactionsByDate(transactions),
+    [transactions]
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: TransactionRecord }) => (
@@ -98,6 +106,15 @@ export default function HistoryScreen() {
   );
 
   const keyExtractor = useCallback((item: TransactionRecord) => item.id, []);
+
+  const renderSectionHeader = useCallback(
+    ({ section: { title } }: { section: { title: string } }) => (
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionHeaderText}>{title}</Text>
+      </View>
+    ),
+    [styles]
+  );
 
   /**
    * Triggered when the FlatList scrolls close to the end.
@@ -124,10 +141,11 @@ export default function HistoryScreen() {
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={transactions}
+      <SectionList
+        sections={groupedTransactions}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
         contentContainerStyle={[
           styles.listContent,
           transactions.length === 0 && styles.listContentEmpty,
@@ -154,7 +172,7 @@ export default function HistoryScreen() {
         ListFooterComponent={renderFooter}
         ListEmptyComponent={!isLoading ? <EmptyState colors={colors} styles={styles} /> : null}
         // Avoid stale closures while also keeping rendering performant.
-        extraData={{ isLoadingMore, hasMoreTransactions }}
+        extraData={{ isLoadingMore, hasMoreTransactions, colors, styles }}
       />
     </View>
   );
@@ -203,5 +221,17 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   footerText: {
     color: colors.textMuted,
     fontSize: 13,
+  },
+  sectionHeader: {
+    paddingTop: SIZES.sm,
+    paddingBottom: SIZES.xs,
+    marginBottom: SIZES.xs,
+  },
+  sectionHeaderText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
 });
