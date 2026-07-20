@@ -1,25 +1,20 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
-import { useAppStore } from '../../src/store/appStore';
 import { useAppLockStore } from '../../src/store/appLockStore';
-import { Users, LogOut, Key, Moon, Sun, Shield } from 'lucide-react-native';
+import { Moon, Sun, Shield } from 'lucide-react-native';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
 import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
 
-const THEME_OPTIONS: { mode: ThemeMode; label: string; Icon: typeof Sun }[] = [
-  { mode: 'light', label: 'Light', Icon: Sun },
-  { mode: 'dark', label: 'Dark', Icon: Moon },
-  { mode: 'system', label: 'System', Icon: Monitor },
-];
-
 export default function SettingsScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { clearWallet, getSecretKey } = useWalletStore();
-  const { isDarkMode, toggleDarkMode } = useAppStore();
   const { isLockEnabled, enableLock, disableLock, authenticate } = useAppLockStore();
   const [showSecret, setShowSecret] = useState(false);
   const [secretKey, setSecretKey] = useState<string | null>(null);
@@ -76,90 +71,102 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferences</Text>
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <View style={styles.rowLeft}>
-              <Shield color={COLORS.primary} size={24} />
-              <View style={styles.rowTextGroup}>
-                <Text style={styles.rowText}>App Lock</Text>
-                <Text style={styles.rowHelper}>
-                  Require biometrics or passcode to open
+    <>
+      <ScrollView style={styles.container}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Preferences</Text>
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <View style={styles.rowLeft}>
+                <Shield color={colors.primary} size={24} />
+                <View style={styles.rowTextGroup}>
+                  <Text style={styles.rowText}>App Lock</Text>
+                  <Text style={styles.rowHelper}>
+                    Require biometrics or passcode to open
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={isLockEnabled}
+                onValueChange={handleToggleLock}
+                trackColor={{ false: colors.border, true: colors.primary }}
+              />
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.row}>
+              <View style={styles.rowLeft}>
+                {isDark ? <Moon color={colors.textPrimary} size={24} /> : <Sun color={colors.textPrimary} size={24} />}
+                <View style={styles.rowTextGroup}>
+                  <Text style={styles.rowText}>Dark Mode</Text>
+                  <Text style={styles.rowHelper}>Currently using {isDark ? 'dark' : 'light'} theme</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Management</Text>
+          <View style={styles.card}>
+            <Button
+              title="Address Book / Contacts"
+              variant="outline"
+              onPress={() => router.push('/contacts')}
+              style={styles.menuButton}
+            />
+            <Button
+              title={showSecret ? "Hide Export Menu" : "Export Secret Key"}
+              variant="outline"
+              onPress={handleExportKey}
+              style={styles.menuButton}
+            />
+            {showSecret && secretKey && (
+              <View style={{ padding: SIZES.lg, paddingTop: 0, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <Text style={{ color: colors.textSecondary, marginBottom: SIZES.sm, fontSize: 14 }}>
+                  Your secret key is highly sensitive. Proceed with caution.
                 </Text>
+                <SecretKeyReveal secretKey={secretKey} />
               </View>
-            </View>
-            <Switch
-              value={isLockEnabled}
-              onValueChange={handleToggleLock}
-              trackColor={{ false: COLORS.border, true: COLORS.primary }}
-            />
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.row}>
-            <View style={styles.rowLeft}>
-              {isDarkMode ? <Moon color={COLORS.textPrimary} size={24} /> : <Sun color={COLORS.textPrimary} size={24} />}
-              <View style={styles.rowTextGroup}>
-                <Text style={styles.rowText}>Dark Mode</Text>
-              </View>
-            </View>
-            <Switch 
-              value={isDarkMode} 
-              onValueChange={toggleDarkMode}
-              trackColor={{ false: COLORS.border, true: COLORS.primary }}
-            />
+            )}
           </View>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Management</Text>
-        <View style={styles.card}>
-          <Button
-            title="Address Book / Contacts"
-            variant="outline"
-            onPress={() => router.push('/contacts')}
-            style={styles.menuButton}
-          />
-          <Button
-            title={showSecret ? "Hide Export Menu" : "Export Secret Key"}
-            variant="outline"
-            onPress={handleExportKey}
-            style={styles.menuButton}
-          />
-          {showSecret && secretKey && (
-            <View style={{ padding: SIZES.lg, paddingTop: 0, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-              <Text style={{ color: colors.textSecondary, marginBottom: SIZES.sm, fontSize: 14 }}>
-                Your secret key is highly sensitive. Proceed with caution.
-              </Text>
-              <SecretKeyReveal secretKey={secretKey} />
+        {__DEV__ && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Developer</Text>
+            <View style={styles.card}>
+              <Button
+                title="App Diagnostics"
+                variant="outline"
+                onPress={() => router.push('/diagnostics')}
+                style={styles.menuButton}
+              />
             </View>
-          )}
+          </View>
+        )}
+
+        <View style={[styles.section, { marginTop: SIZES.xl }]}>
+          <Button
+            title="Sign Out & Clear Wallet"
+            variant="destructive"
+            onPress={handleSignOut}
+          />
         </View>
-      </View>
 
-      <View style={[styles.section, { marginTop: SIZES.xl }]}>
-        <Button
-          title="Sign Out & Clear Wallet"
-          variant="danger"
-          onPress={handleSignOut}
-        />
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Stellar PocketPay v1.0.0</Text>
-        <Text style={styles.footerText}>Network: Testnet</Text>
-      </View>
-    </ScrollView>
-    <WalletResetConfirmModal
-      visible={showResetModal}
-      isLoading={isResetting}
-      onConfirm={handleResetConfirm}
-      onCancel={() => setShowResetModal(false)}
-    />
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Stellar PocketPay v1.0.0</Text>
+          <Text style={styles.footerText}>Network: Testnet</Text>
+        </View>
+      </ScrollView>
+      <WalletResetConfirmModal
+        visible={showResetModal}
+        isLoading={isResetting}
+        onConfirm={handleResetConfirm}
+        onCancel={() => setShowResetModal(false)}
+      />
+    </>
   );
 }
 
@@ -187,13 +194,14 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  themeRow: {
+  row: {
     flexDirection: 'row',
-    padding: SIZES.sm,
-    gap: SIZES.sm,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: SIZES.lg,
   },
-  themeOption: {
-    flex: 1,
+  rowLeft: {
+    flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
@@ -202,17 +210,17 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flex: 1,
   },
   rowText: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 16,
   },
   rowHelper: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 12,
     marginTop: 2,
   },
   divider: {
     height: 1,
-    backgroundColor: COLORS.border,
+    backgroundColor: colors.border,
     marginHorizontal: SIZES.lg,
   },
   menuButton: {
@@ -232,5 +240,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     marginBottom: 4,
-  }
+  },
 });
