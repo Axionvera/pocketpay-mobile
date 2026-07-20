@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, Switch, Share } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
 import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
@@ -7,6 +7,7 @@ import { useWalletStore } from '../../src/store/walletStore';
 import { useAppStore } from '../../src/store/appStore';
 import { Users, LogOut, Key, Moon, Sun } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
+import { getDiagnostics } from '../../src/utils/diagnostics';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -52,6 +53,19 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleExportDiagnostics = async () => {
+    try {
+      const diagnostics = getDiagnostics();
+      await Share.share({
+        message: diagnostics,
+        title: 'App Diagnostics',
+      });
+    } catch (error) {
+      console.error('Failed to export diagnostics:', error);
+      Alert.alert('Error', 'Failed to export diagnostics.');
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.section}>
@@ -88,6 +102,20 @@ export default function SettingsScreen() {
           />
         </View>
       </View>
+
+      {__DEV__ && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Development</Text>
+          <View style={styles.card}>
+            <Button 
+              title="Export Diagnostics" 
+              variant="outline" 
+              onPress={handleExportDiagnostics}
+              style={[styles.menuButton, { borderBottomWidth: 0 }]}
+            />
+          </View>
+        </View>
+      )}
 
       <View style={[styles.section, { marginTop: SIZES.xl }]}>
         <Button 
