@@ -38,7 +38,7 @@ export default function HomeScreen() {
       <View style={styles.actionsContainer}>
         <Button 
           title="Send" 
-          onPress={() => router.push('/send')} 
+          onPress={() => router.push('/scan')} 
           style={styles.actionButton}
         />
         <Button 

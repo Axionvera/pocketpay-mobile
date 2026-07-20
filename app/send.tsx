@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Button } from '../src/components/Button';
 import { Input } from '../src/components/Input';
 import { COLORS, SIZES, RADIUS } from '../src/constants/theme';
@@ -10,12 +10,19 @@ import { Send as SendIcon } from 'lucide-react-native';
 
 export default function SendScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ destination?: string }>();
   const { getSecretKey, refreshWalletData, balance } = useWalletStore();
   
-  const [destination, setDestination] = useState('');
+  const [destination, setDestination] = useState(params.destination || '');
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (params.destination) {
+      setDestination(params.destination);
+    }
+  }, [params.destination]);
 
   const handleSend = async () => {
     if (!destination.trim() || !amount.trim()) {
