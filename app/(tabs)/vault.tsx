@@ -1,16 +1,19 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from '../../src/components/Button';
 import { Input } from '../../src/components/Input';
 import { VaultConfirmModal, VaultAction } from '../../src/components/VaultConfirmModal';
+import { VaultIntroModal } from '../../src/components/VaultIntroModal';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useVaultStore } from '../../src/store/vaultStore';
 import { validateAmount } from '../../src/utils/validation';
-import { PiggyBank, ShieldCheck, AlertTriangle } from 'lucide-react-native';
+import { PiggyBank, ShieldCheck, AlertTriangle, Info } from 'lucide-react-native';
 
 const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
+const VAULT_INTRO_SEEN_KEY = '@pocketpay_vault_intro_seen';
 
 export default function VaultScreen() {
   const { colors } = useTheme();
@@ -36,11 +39,29 @@ export default function VaultScreen() {
   const [pendingAction, setPendingAction] = useState<VaultAction>('deposit');
   const [pendingUnlockTime, setPendingUnlockTime] = useState('');
 
+  // Vault introduction modal state
+  const [introVisible, setIntroVisible] = useState(false);
+
   useEffect(() => {
     if (publicKey) {
       loadBalance(publicKey);
     }
   }, [publicKey]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(VAULT_INTRO_SEEN_KEY)
+      .then((seen) => {
+        if (!seen) setIntroVisible(true);
+      })
+      .catch(() => setIntroVisible(true));
+  }, []);
+
+  const dismissIntro = () => {
+    setIntroVisible(false);
+    AsyncStorage.setItem(VAULT_INTRO_SEEN_KEY, 'true').catch((e) =>
+      console.error('Failed to save vault intro state:', e)
+    );
+  };
 
   const handleAmountChange = (value: string) => {
     setAmount(value);
@@ -88,7 +109,15 @@ export default function VaultScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <VaultIntroModal visible={introVisible} onContinue={dismissIntro} />
       <View style={styles.card}>
+        <TouchableOpacity
+          style={styles.infoButton}
+          onPress={() => setIntroVisible(true)}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Info color={colors.textMuted} size={18} />
+        </TouchableOpacity>
         <View style={styles.iconContainer}>
           <PiggyBank color={colors.primary} size={40} />
         </View>
@@ -204,6 +233,19 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     marginBottom: SIZES.lg,
     borderWidth: 1,
     borderColor: colors.border,
+    position: 'relative',
+  },
+  infoButton: {
+    position: 'absolute',
+    top: SIZES.md,
+    right: SIZES.md,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
   },
   iconContainer: {
     width: 80,
