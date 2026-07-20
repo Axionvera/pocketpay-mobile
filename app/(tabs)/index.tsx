@@ -9,7 +9,17 @@ import { FundButton } from '../../src/components/FundButton';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
 import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
 import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
-import { Clock } from 'lucide-react-native';
+import { Clock, RefreshCw } from 'lucide-react-native';
+
+function formatRelativeTime(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -19,6 +29,7 @@ export default function HomeScreen() {
     publicKey,
     balance,
     transactions,
+    lastRefreshed,
     isLoading,
     isFunding,
     fundError,
@@ -60,6 +71,14 @@ export default function HomeScreen() {
         <Text style={styles.publicKey} numberOfLines={1} ellipsizeMode="middle">
           {publicKey}
         </Text>
+        {lastRefreshed !== null && (
+          <View style={styles.lastRefreshed}>
+            <RefreshCw color={colors.textMuted} size={12} />
+            <Text style={styles.lastRefreshedText}>
+              Updated {formatRelativeTime(lastRefreshed)}
+            </Text>
+          </View>
+        )}
       </View>
 
       <FundButton
@@ -147,6 +166,16 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: SIZES.md,
     paddingVertical: SIZES.xs,
     borderRadius: RADIUS.round,
+  },
+  lastRefreshed: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: SIZES.sm,
+  },
+  lastRefreshedText: {
+    color: colors.textMuted,
+    fontSize: 11,
   },
   actionsContainer: {
     flexDirection: 'row',
