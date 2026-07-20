@@ -1,0 +1,91 @@
+# Vault UI Guidance
+
+This document describes how the mobile app should present the Soroban Savings Vault to users. It covers Testnet language, current contract limitations, and communication best practices.
+
+---
+
+## Testnet Wording
+
+The vault connects to **Stellar Testnet** only. All UI text must make this clear:
+
+- Use "Testnet" or "TESTNET" in labels, footnotes, and info banners.
+- Never refer to the vault as a "savings account", "bank", or any term that implies production financial custody.
+- Balance displays and transaction confirmations should carry a Testnet disclaimer where appropriate.
+
+**Examples:**
+
+| Do | Don't |
+|---|---|
+| "Soroban Savings Vault (Testnet)" | "Savings Account" |
+| "Connected to Soroban contract on TESTNET" | "Live on Mainnet" |
+| "Testnet XLM has no real value" | (omit the disclaimer entirely) |
+
+The vault screen in `app/(tabs)/vault.tsx` already shows a TESTNET badge when a contract is configured. Any new vault-related screens or components must follow the same pattern.
+
+---
+
+## Internal Balance Tracking Limitation
+
+The vault contract tracks user balances internally via the `balance(id: Address) -> i128` function. This means:
+
+- **No external indexing.** The vault does not emit events or maintain an off-chain ledger. Balance queries rely on simulating the `balance` contract call (see `src/services/vault.ts:79`).
+- **Mock fallback.** When `EXPO_PUBLIC_VAULT_CONTRACT_ID` is not set, the app falls back to a mock balance (`src/services/stellar.ts`) that does not reflect real on-chain state.
+- **UI must not claim real-time accuracy.** Display a warning when running in mock mode, and avoid promising "live" balance tracking even when connected.
+
+**Relevant code:**
+- `src/store/vaultStore.ts` — switches between real and mock balance fetching.
+- `src/services/vault.ts:79-106` — real balance via Soroban simulation.
+- `app/(tabs)/vault.tsx:96-105` — shows "Mock balance" or contract ID snippet.
+
+---
+
+## Avoiding Production Custody Claims
+
+Do not represent the vault as a production-grade custody solution. Specifically:
+
+- Do not use terms like "insured", "guaranteed", "secured by contract", or "safe storage" without clear Testnet qualification.
+- The "Lock Funds (30 days)" button in `app/(tabs)/vault.tsx:164-185` is a placeholder. It must not be described as an active time-lock feature until Soroban time-lock logic is implemented in the contract and wired in the mobile app.
+- When displaying transaction hashes (e.g. `app/(tabs)/vault.tsx:77-78`), clearly distinguish between real contract transactions and mock operations.
+
+**Acceptable language:**
+- "Soroban Savings Vault — experimental Testnet feature"
+- "Deposit and withdraw XLM via a Soroban smart contract on Testnet"
+- "No real funds moved (mock mode)"
+
+**Unacceptable language:**
+- "Secure your XLM in the vault"
+- "Your funds are protected by the contract"
+- "Production-ready savings"
+
+---
+
+## Linking to Contract Docs
+
+When the vault UI references the on-chain contract, link to or cite the relevant PocketPay Contracts documentation:
+
+- **Contract repository:** [PocketPay Contracts](https://github.com/Axionvera/pocketpay-contracts)
+- **Contract interface:** `deposit(from, amount)`, `withdraw(to, amount)`, `balance(id)` — documented in `src/services/vault.ts:5-9`
+- **Environment configuration:** `EXPO_PUBLIC_VAULT_CONTRACT_ID` and `EXPO_PUBLIC_SOROBAN_RPC_URL` in `.env`
+
+Any new vault UI that displays contract interaction details (transaction hashes, contract IDs, method names) should include a footnote or tooltip linking to the contract source and its README.
+
+---
+
+## Summary Checklist
+
+| Guideline | Status |
+|---|---|
+| Testnet language used consistently | Required |
+| Internal balance tracking limitation documented in UI | Required |
+| No production custody claims | Required |
+| Lock funds placeholder clearly marked as not-yet-implemented | Required |
+| Contract docs referenced in UI footnotes or tooltips | Recommended |
+| Mock mode distinguished from real contract mode | Required |
+
+---
+
+## Related Documentation
+
+- [Security Guide](./security.md) — key handling, Testnet risks, and safe development practices
+- [Storage Guide](./storage.md) — how SecureStore and AsyncStorage are used
+- [Soroban Savings Vault contract](https://github.com/Axionvera/pocketpay-contracts) — contract source and interface
