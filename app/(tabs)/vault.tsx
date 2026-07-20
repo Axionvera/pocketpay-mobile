@@ -8,7 +8,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useVaultStore } from '../../src/store/vaultStore';
 import { validateAmount } from '../../src/utils/validation';
-import { PiggyBank, ShieldCheck, AlertTriangle } from 'lucide-react-native';
+import { PiggyBank, ShieldCheck, AlertTriangle, Clock } from 'lucide-react-native';
 
 const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
@@ -30,6 +30,7 @@ export default function VaultScreen() {
 
   const [amount, setAmount] = useState('');
   const [amountError, setAmountError] = useState<string | undefined>();
+  const [isLoadingActivity] = useState(false);
 
   // Confirmation modal state
   const [confirmVisible, setConfirmVisible] = useState(false);
@@ -184,6 +185,25 @@ export default function VaultScreen() {
           style={styles.lockButton}
         />
       </View>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Activity</Text>
+      </View>
+      {isLoadingActivity ? (
+        <View style={styles.activityCard}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={styles.activityLoadingText}>Loading activity…</Text>
+        </View>
+      ) : (
+        <View style={styles.activityCard}>
+          <Clock color={colors.textMuted} size={32} />
+          <Text style={styles.activityEmptyTitle}>No vault activity yet</Text>
+          <Text style={styles.activityEmptyText}>
+            Vault transaction history is not available in this version. Deposit and
+            withdrawal records will appear here once contract event indexing is added.
+          </Text>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -290,5 +310,41 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   lockButton: {
     marginTop: SIZES.md,
+  },
+  sectionHeader: {
+    marginTop: SIZES.xl,
+    marginBottom: SIZES.md,
+  },
+  sectionTitle: {
+    color: colors.textSecondary,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  activityCard: {
+    backgroundColor: colors.surface,
+    padding: SIZES.xl,
+    borderRadius: RADIUS.lg,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  activityLoadingText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    marginTop: SIZES.sm,
+  },
+  activityEmptyTitle: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: SIZES.md,
+    marginBottom: SIZES.xs,
+  },
+  activityEmptyText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
