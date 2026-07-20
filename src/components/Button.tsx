@@ -5,7 +5,7 @@ import { useTheme } from '../hooks/useTheme';
 
 interface ButtonProps extends TouchableOpacityProps {
   title: string;
-  variant?: 'primary' | 'secondary' | 'outline' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'destructive' | 'muted';
   isLoading?: boolean;
 }
 
@@ -25,8 +25,10 @@ export const Button: React.FC<ButtonProps> = ({
     switch (variant) {
       case 'primary': return colors.primary;
       case 'secondary': return colors.secondary;
-      case 'danger': return colors.error;
+      case 'danger':
+      case 'destructive': return colors.error;
       case 'outline': return 'transparent';
+      case 'muted': return colors.surfaceLight;
       default: return colors.primary;
     }
   };
@@ -34,6 +36,7 @@ export const Button: React.FC<ButtonProps> = ({
   const getTextColor = () => {
     if (disabled) return colors.textMuted;
     if (variant === 'outline') return colors.primary;
+    if (variant === 'muted') return colors.textPrimary;
     return colors.background; // Dark text on bright primary/secondary buttons looks premium
   };
 

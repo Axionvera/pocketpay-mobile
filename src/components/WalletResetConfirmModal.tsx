@@ -5,11 +5,11 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { COLORS, SIZES, RADIUS } from '../constants/theme';
 import { X, ShieldAlert, Trash2 } from 'lucide-react-native';
 import { Input } from './Input';
+import { Button } from './Button';
 
 interface WalletResetConfirmModalProps {
   visible: boolean;
@@ -83,31 +83,22 @@ export const WalletResetConfirmModal: React.FC<WalletResetConfirmModalProps> = (
 
           {/* Actions */}
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.cancelButton]}
+            <Button
+              title="Cancel"
+              variant="muted"
               onPress={onCancel}
               disabled={isLoading}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
+              style={styles.actionButton}
+            />
 
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                styles.confirmButton,
-                !isConfirmed || isLoading ? styles.confirmButtonDisabled : null,
-              ]}
+            <Button
+              title="Reset Wallet"
+              variant="destructive"
               onPress={onConfirm}
-              disabled={!isConfirmed || isLoading}
-              activeOpacity={0.7}
-            >
-              {isLoading ? (
-                <ActivityIndicator color={COLORS.background} size="small" />
-              ) : (
-                <Text style={styles.confirmButtonText}>Reset Wallet</Text>
-              )}
-            </TouchableOpacity>
+              disabled={!isConfirmed}
+              isLoading={isLoading}
+              style={styles.actionButton}
+            />
           </View>
         </View>
       </View>
@@ -193,27 +184,5 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     height: 50,
-    borderRadius: RADIUS.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: COLORS.surfaceLight,
-  },
-  cancelButtonText: {
-    color: COLORS.textPrimary,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  confirmButton: {
-    backgroundColor: COLORS.error,
-  },
-  confirmButtonDisabled: {
-    backgroundColor: COLORS.border,
-  },
-  confirmButtonText: {
-    color: COLORS.background,
-    fontSize: 15,
-    fontWeight: '600',
   },
 });
