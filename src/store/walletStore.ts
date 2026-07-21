@@ -10,7 +10,9 @@ const PERSIST_WALLET_ERROR = 'Failed to persist wallet securely';
 const RESTORE_WALLET_ERROR = 'Failed to restore wallet securely';
 const CLEAR_WALLET_ERROR = 'Failed to clear wallet securely';
 
-export type TransactionRecord = PaymentRecord;
+// Transaction records from the Stellar Horizon API – use a flexible type
+// until a proper typed SDK wrapper is available.
+export type TransactionRecord = Record<string, any> & { id: string };
 
 interface WalletState {
   publicKey: string | null;

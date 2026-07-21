@@ -69,7 +69,7 @@ export const fetchXlmBalance = async (publicKey: string): Promise<string> => {
 export const fetchRecentTransactions = async (
   publicKey: string,
   limit: number = 20
-): Promise<PaymentRecord[]> => {
+): Promise<any[]> => {
   try {
     const response = await server
       .operations()
@@ -197,6 +197,19 @@ const isAccountNotFoundError = (error: unknown): boolean =>
   error !== null &&
   'code' in error &&
   error.code === 'ACCOUNT_NOT_FOUND';
+
+/**
+ * Fund a Stellar testnet account using Friendbot.
+ * Only works on testnet; throws on mainnet or if funding fails.
+ */
+export const fundWithFriendbot = async (publicKey: string): Promise<void> => {
+  const friendbotUrl = process.env.EXPO_PUBLIC_FRIENDBOT_URL || 'https://friendbot.stellar.org';
+  const response = await fetch(`${friendbotUrl}?addr=${encodeURIComponent(publicKey)}`);
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(body || `Friendbot funding failed (HTTP ${response.status})`);
+  }
+};
 
 /**
  * MOCK SERVICE WRAPPERS FOR SOROBAN SAVINGS VAULT
