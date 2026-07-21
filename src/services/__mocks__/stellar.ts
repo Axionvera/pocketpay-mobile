@@ -11,6 +11,7 @@ export const generateKeypair = jest.fn(() => ({
   secretKey: 'SABC123',
 }));
 export const fetchAccountDetails = jest.fn();
+export const fundWithFriendbot = jest.fn(async () => {});
 export const mockConnectVault = jest.fn(async () => true);
 export const mockFetchVaultBalance = jest.fn(async () => '0.0000000');
 export const mockDepositToVault = jest.fn(async () => true);

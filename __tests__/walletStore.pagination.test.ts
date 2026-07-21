@@ -18,6 +18,16 @@ import { act } from 'react-test-renderer';
 // but mock the stellar service so no network calls are made.
 jest.mock('../src/services/stellar');
 
+jest.mock('@stellar/stellar-sdk', () => ({
+  Keypair: { fromSecret: jest.fn(() => ({ publicKey: () => 'GPUBLIC123' })) },
+  Horizon: { Server: jest.fn() },
+  TransactionBuilder: jest.fn(),
+  Operation: { payment: jest.fn() },
+  Asset: { native: jest.fn() },
+  Memo: { text: jest.fn() },
+  Networks: { TESTNET: 'Test SDF Network ; September 2015' },
+}));
+
 import { fetchTransactionsPage, fetchXlmBalance } from '../src/services/stellar';
 import { useWalletStore } from '../src/store/walletStore';
 

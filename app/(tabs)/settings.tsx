@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { Button } from '../../src/components/Button';
 import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useAppStore } from '../../src/store/appStore';
-import { Users, LogOut, Key, Moon, Sun } from 'lucide-react-native';
+import { Users, LogOut, Key, Moon, Sun, Info } from 'lucide-react-native';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
 
 export default function SettingsScreen() {
@@ -14,6 +15,10 @@ export default function SettingsScreen() {
   const { isDarkMode, toggleDarkMode } = useAppStore();
   const [showSecret, setShowSecret] = useState(false);
   const [secretKey, setSecretKey] = useState<string | null>(null);
+
+  // Read version from Expo manifest, with graceful fallback
+  const appVersion = Constants.expoConfig?.version ?? Constants.nativeAppVersion ?? '1.0.0';
+  const appName = Constants.expoConfig?.name ?? 'Stellar PocketPay';
 
   const handleExportKey = async () => {
     if (!showSecret) {
@@ -94,17 +99,41 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>About</Text>
+        <View style={styles.card}>
+          <View style={styles.aboutRow}>
+            <Info color={COLORS.textSecondary} size={20} />
+            <View style={styles.aboutTextGroup}>
+              <Text style={styles.aboutLabel}>App Name</Text>
+              <Text style={styles.aboutValue}>{appName}</Text>
+            </View>
+          </View>
+          <View style={styles.aboutDivider} />
+          <View style={styles.aboutRow}>
+            <Info color={COLORS.textSecondary} size={20} />
+            <View style={styles.aboutTextGroup}>
+              <Text style={styles.aboutLabel}>Version</Text>
+              <Text style={styles.aboutValue}>{appVersion}</Text>
+            </View>
+          </View>
+          <View style={styles.aboutDivider} />
+          <View style={styles.aboutRow}>
+            <Info color={COLORS.textSecondary} size={20} />
+            <View style={styles.aboutTextGroup}>
+              <Text style={styles.aboutLabel}>Network</Text>
+              <Text style={styles.aboutValue}>Testnet</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
       <View style={[styles.section, { marginTop: SIZES.xl }]}>
         <Button 
           title="Sign Out & Clear Wallet" 
           variant="danger" 
           onPress={handleSignOut}
         />
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Stellar PocketPay v1.0.0</Text>
-        <Text style={styles.footerText}>Network: Testnet</Text>
       </View>
     </ScrollView>
   );
@@ -157,14 +186,28 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingHorizontal: SIZES.lg,
   },
-  footer: {
+  aboutRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: SIZES.xl,
-    paddingBottom: SIZES.xxl * 2,
+    paddingVertical: SIZES.md,
+    paddingHorizontal: SIZES.lg,
   },
-  footerText: {
-    color: COLORS.textMuted,
+  aboutTextGroup: {
+    marginLeft: SIZES.md,
+  },
+  aboutLabel: {
+    color: COLORS.textSecondary,
     fontSize: 12,
-    marginBottom: 4,
-  }
+    marginBottom: 2,
+  },
+  aboutValue: {
+    color: COLORS.textPrimary,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  aboutDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginHorizontal: SIZES.lg,
+  },
 });

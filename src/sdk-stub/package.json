@@ -1,0 +1,5 @@
+{
+  "name": "pocketpay-sdk",
+  "version": "1.0.0",
+  "main": "pocketpay-sdk.js"
+}

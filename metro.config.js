@@ -10,23 +10,17 @@ config.resolver.extraNodeModules = {
   buffer: require.resolve("buffer"),
 };
 
-const defaultResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // Shim Node-only modules for React Native compatibility
   if (moduleName === "eventsource") {
     return {
       filePath: path.resolve(__dirname, "src/shims/eventsource.js"),
       type: "sourceFile",
     };
   }
-  if (defaultResolveRequest) {
-    return defaultResolveRequest(context, moduleName, platform);
-  }
-  return context.resolveRequest(context, moduleName, platform);
-};
 
-// The SDK loads dotenv for Node consumers. Expo injects EXPO_PUBLIC_* variables
-// itself, so resolve dotenv to a no-op instead of bundling Node-only modules.
-config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // The SDK loads dotenv for Node consumers. Expo injects EXPO_PUBLIC_* variables
+  // itself, so resolve dotenv to a no-op instead of bundling Node-only modules.
   if (moduleName === 'dotenv') {
     return {
       filePath: path.resolve(__dirname, 'src/shims/dotenv.js'),
@@ -34,6 +28,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     };
   }
 
+  // Resolve @stellar/stellar-sdk from the pocketpay-sdk bundled copy
   if (moduleName === '@stellar/stellar-sdk') {
     return {
       filePath: path.resolve(
