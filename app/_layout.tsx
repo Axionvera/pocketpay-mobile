@@ -7,6 +7,7 @@ import { useAppStore } from '../src/store/appStore';
 import { LockScreen } from '../src/components/LockScreen';
 import { View, ActivityIndicator } from 'react-native';
 import { useTheme } from '../src/hooks/useTheme';
+import { ErrorBoundary } from '../src/components/ErrorBoundary';
 
 export default function RootLayout() {
   const { loadWalletFromStorage, publicKey } = useWalletStore();
@@ -43,11 +44,11 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <ErrorBoundary>
       <StatusBar style="light" />
       <LockScreen>
         <Slot />
       </LockScreen>
-    </>
+    </ErrorBoundary>
   );
 }

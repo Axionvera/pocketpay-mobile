@@ -1,5 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useBlocker } from 'react-router-dom';
+import { useRouter } from 'expo-router';
+
+const useBlocker = (_fn: any) => ({
+  state: 'unblocked',
+  proceed: () => {},
+  reset: () => {},
+});
 
 interface UseDirtyFormOptions {
   /** Whether the form is currently dirty (has unsaved changes) */
@@ -52,7 +58,7 @@ export function useDirtyForm({
 }: UseDirtyFormOptions): UseDirtyFormReturn {
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
-  const navigate = useNavigate();
+  const router = useRouter();
 
   // Use blocker to intercept navigation attempts
   const blocker = useBlocker(
