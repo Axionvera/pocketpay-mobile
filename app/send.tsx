@@ -166,7 +166,8 @@ export default function SendScreen() {
             label="Memo (Optional)"
             placeholder="Payment reference"
             value={memo}
-            onChangeText={setMemo}
+            onChangeText={handleMemoChange}
+            error={errors.memo}
             helperText="Add a note for the recipient"
           />
         </View>
