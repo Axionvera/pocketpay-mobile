@@ -1,14 +1,41 @@
-import 'react-native-get-random-values';
-import 'text-encoding';
-import { Buffer } from 'buffer';
+import "react-native-get-random-values";
+import * as ExpoCrypto from "expo-crypto";
+import "text-encoding";
+import { Buffer } from "buffer";
 
 global.Buffer = Buffer;
 
-// Polyfill process for Stellar SDK
-if (typeof process === 'undefined') {
-  global.process = require('process');
+if (
+  typeof global.crypto !== "object" ||
+  typeof global.crypto.getRandomValues !== "function"
+) {
+  const cryptoPolyfill = {
+    ...(typeof global.crypto === "object" ? global.crypto : null),
+    getRandomValues: (array) => ExpoCrypto.getRandomValues(array),
+  };
+  try {
+    Object.defineProperty(global, "crypto", {
+      configurable: true,
+      enumerable: true,
+      value: cryptoPolyfill,
+    });
+  } catch (e) {
+    global.crypto = cryptoPolyfill;
+  }
+}
+
+console.log(
+  "[shim] crypto.getRandomValues installed:",
+  typeof global.crypto === "object" &&
+    typeof global.crypto.getRandomValues === "function",
+);
+
+// Polyfill process for Stellar SDK.
+// 'process/browser' avoids Metro treating this as the Node built-in module.
+const bProcess = require("process/browser");
+if (typeof process === "undefined") {
+  global.process = bProcess;
 } else {
-  const bProcess = require('process');
   for (var p in bProcess) {
     if (!(p in process)) {
       process[p] = bProcess[p];
@@ -20,4 +47,4 @@ if (typeof process === 'undefined') {
 if (!global.process.env) {
   global.process.env = {};
 }
-global.process.env.NODE_ENV = __DEV__ ? 'development' : 'production';
+global.process.env.NODE_ENV = __DEV__ ? "development" : "production";

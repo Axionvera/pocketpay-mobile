@@ -1,54 +1,56 @@
 import { Tabs } from 'expo-router';
 import { Home, History, PiggyBank, Settings } from 'lucide-react-native';
-import { COLORS } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 
 export default function TabsLayout() {
+  const { colors } = useTheme();
+
   return (
     <Tabs screenOptions={{
       headerStyle: {
-        backgroundColor: COLORS.background,
+        backgroundColor: colors.background,
         shadowColor: 'transparent',
         elevation: 0,
       },
-      headerTintColor: COLORS.textPrimary,
+      headerTintColor: colors.textPrimary,
       tabBarStyle: {
-        backgroundColor: COLORS.surface,
+        backgroundColor: colors.surface,
         borderTopWidth: 1,
-        borderTopColor: COLORS.border,
+        borderTopColor: colors.border,
       },
-      tabBarActiveTintColor: COLORS.primary,
-      tabBarInactiveTintColor: COLORS.textMuted,
+      tabBarActiveTintColor: colors.primary,
+      tabBarInactiveTintColor: colors.textMuted,
       sceneStyle: {
-        backgroundColor: COLORS.background,
+        backgroundColor: colors.background,
       }
     }}>
-      <Tabs.Screen 
-        name="index" 
+      <Tabs.Screen
+        name="index"
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />
-        }} 
+        }}
       />
-      <Tabs.Screen 
-        name="history" 
+      <Tabs.Screen
+        name="history"
         options={{
           title: 'Activity',
           tabBarIcon: ({ color, size }) => <History color={color} size={size} />
-        }} 
+        }}
       />
-      <Tabs.Screen 
-        name="vault" 
+      <Tabs.Screen
+        name="vault"
         options={{
           title: 'Vault',
           tabBarIcon: ({ color, size }) => <PiggyBank color={color} size={size} />
-        }} 
+        }}
       />
-      <Tabs.Screen 
-        name="settings" 
+      <Tabs.Screen
+        name="settings"
         options={{
           title: 'Settings',
           tabBarIcon: ({ color, size }) => <Settings color={color} size={size} />
-        }} 
+        }}
       />
     </Tabs>
   );

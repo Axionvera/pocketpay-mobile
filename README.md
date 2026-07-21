@@ -1,73 +1,97 @@
-# Stellar PocketPay 🚀
+# Stellar PocketPay
 
-A production-quality React Native Expo application for interacting with the Stellar Testnet. This mobile wallet allows users to securely generate and store keypairs, view XLM balances, send and receive Testnet XLM, view transaction history, manage contacts, and includes a placeholder for a Soroban Savings Vault.
+React Native Expo wallet for Stellar Testnet. The app aims to feel polished and usable for core wallet flows while still evolving as the PocketPay ecosystem matures.
+
+## Project Status
+
+- This project is best described as a polished but still-evolving wallet experience rather than a production-ready product.
+- Core flows such as wallet creation and import, balance checks, sending and receiving, contacts, and the vault UI are implemented and actively refined.
+- The app is intentionally focused on Stellar Testnet for development and experimentation. Testnet XLM has no real monetary value.
+- The vault experience is currently mock-backed by default. A real Soroban contract integration can be enabled with configuration, but the default experience remains a safe placeholder.
+
+## Documentation
+
+- [Storage Guide](./docs/storage.md) - SecureStore vs AsyncStorage
+- [Contacts Guide](./docs/contacts.md) - Contact storage, backup limitations, and future export/import ideas
+- [Polyfills Guide](./docs/polyfills.md) - React Native polyfills and import order for Stellar SDK
+- [Vault UI Guidance](./docs/vault-ui-guidance.md) - How to present the Soroban Savings Vault, Testnet risks, and contract limitations
+
+> ⚠️ **This app runs on the Stellar Testnet only.** Testnet XLM has no real monetary value. Read the [Security Guide](docs/security.md) before storing or sharing any keys.
 
 ## Features
 
-*   **Wallet Management**: Create a new Stellar Testnet wallet or import an existing one using a secret key. Keys are securely stored on the device using `expo-secure-store`.
-*   **Balance & Activity**: View your real-time XLM balance and recent transactions.
-*   **Send & Receive**: Send XLM to any Stellar address. Receive XLM easily by sharing your auto-generated QR code.
-*   **Address Book**: Save frequently used addresses in your contacts for quick access.
-*   **Soroban Vault (Mock)**: A UI placeholder demonstrating where future Soroban smart contract integrations (like a savings vault) would live.
-*   **Premium UI**: Clean, modern fintech aesthetic with dark mode support.
+- Wallet creation and import
+- XLM balance and transactions
+- Send and receive with QR codes
+- Address book contacts
+- Soroban vault placeholder
+
+For the expected screen sequence, validation, and UI states behind these features, see [Main wallet user flows](docs/user-flows.md).
+
+## Ecosystem
+
+PocketPay Mobile is part of a broader PocketPay stack:
+
+- [PocketPay SDK](https://github.com/Axionvera/pocketpay-sdk)
+- [PocketPay Contracts](https://github.com/Axionvera/pocketpay-contracts)
+
+## Documentation
+
+- [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
+- [Mobile Onboarding Checklist](docs/mobile-onboarding-checklist.md) - Quick-reference setup checklist for new contributors
+
+## Screenshots
+
+> 📸 Screenshots below are placeholders. To update them, capture each screen from a simulator or device (use dummy/funded Testnet data only — never real keys or mainnet funds) and replace the files in `docs/screenshots/`.
+
+|                    Wallet                     |                   Send                    |                     Receive                     |
+| :-------------------------------------------: | :---------------------------------------: | :---------------------------------------------: |
+| ![Wallet screen](docs/screenshots/wallet.png) | ![Send screen](docs/screenshots/send.png) | ![Receive screen](docs/screenshots/receive.png) |
+|     _Balance overview and quick actions_      |     _Send XLM to any Stellar address_     |          _QR code for your public key_          |
+
+|                      Activity                       |                     Contacts                      |                    Vault                    |
+| :-------------------------------------------------: | :-----------------------------------------------: | :-----------------------------------------: |
+|  ![Activity screen](docs/screenshots/activity.png)  | ![Contacts screen](docs/screenshots/contacts.png) | ![Vault screen](docs/screenshots/vault.png) |
+| _Transaction history with sent/received indicators_ |        _Saved addresses for quick access_         |       _Soroban Savings Vault (mock)_        |
+
+### Updating screenshots
+
+1. Run the app in a simulator with a funded Testnet account.
+2. Navigate to the relevant screen.
+3. Take a screenshot and export it at roughly **390 × 844 px** (iPhone 14 logical resolution) or equivalent Android size.
+4. Save it to `docs/screenshots/<screen-name>.png` using the filenames shown above.
+5. Commit only the image files — never include screenshots that reveal a real secret key or personal data.
 
 ## Tech Stack
 
-*   **Framework**: React Native with Expo (Managed Workflow)
-*   **Navigation**: Expo Router (File-based routing)
-*   **State Management**: Zustand
-*   **Storage**: `expo-secure-store`, `@react-native-async-storage/async-storage`
-*   **Blockchain**: `@stellar/stellar-sdk` (with required React Native polyfills)
+React Native, Expo Router, Zustand, PocketPay SDK, SecureStore, AsyncStorage
 
-## Getting Started
-
-### Prerequisites
-
-*   Node.js (v18+ recommended)
-*   npm or yarn
-*   Expo CLI (`npm install -g expo-cli`)
-*   Expo Go app on your physical device, or an iOS Simulator / Android Emulator.
-
-### Installation
-
-1.  **Clone the repository** (if applicable) or navigate to the project directory:
-    ```bash
-    cd stellar-pocketpay-mobile
-    ```
-
-2.  **Install dependencies**:
-    ```bash
-    npm install --legacy-peer-deps
-    ```
-    *(Note: `--legacy-peer-deps` is required due to React 19 peer dependency conflicts in some React Native libraries)*
-
-3.  **Environment Variables**:
-    The project includes a `.env.example` file. Copy it to `.env`:
-    ```bash
-    cp .env.example .env
-    ```
-    The default values are configured for the Stellar Testnet.
-
-### Running the App
-
-Start the Expo development server:
+## Quick Start
 
 ```bash
+npm install --legacy-peer-deps
+cp .env.example .env
 npm start
 ```
 
-Press `i` to open in iOS simulator, `a` to open in Android emulator, or scan the QR code with the Expo Go app on your physical device.
+The PocketPay SDK is pinned to an official source commit and built by the
+app's `postinstall` script because the SDK is not currently published to npm.
 
-## Important Note on Polyfills
+## Contributing
 
-The Stellar SDK is designed for Node.js and Browser environments. To make it work in React Native, this project uses specific polyfills (`buffer`, `react-native-get-random-values`, `events`, etc.) which are configured in `shim.js` and imported at the very top of `app/_layout.tsx`.
+Before adding new screens or components, read the [Design System guide](docs/design-system.md). It covers colour tokens, typography, spacing, card patterns, buttons, inputs, and dark mode rules derived directly from the existing codebase.
 
-## Funding Your Testnet Account
+## Contributing
 
-When you create a new wallet, it will have a balance of 0 XLM and won't exist on the ledger until funded. To fund it:
-1. Copy your new Public Key from the app.
-2. Go to the [Stellar Laboratory Friendbot](https://laboratory.stellar.org/#create-account).
-3. Paste your Public Key and click "Get test network XLM".
+Please read our [Contributing Guidelines](CONTRIBUTING.md) and review our [Accessibility Checklist](docs/accessibility.md) before making UI changes.
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for a full list of notable changes across releases.
+
+## Security
+
+See the full [Security Guide](docs/security.md) for details on secret key handling, device storage, backups, and safe development practices.
 
 ## License
 
