@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Button } from "../src/components/Button";
+import { AsyncActionButton } from "../src/components/AsyncActionButton";
 import { FormField } from "../src/components/FormField";
 import { QrScanner } from "../src/components/QrScanner";
 import { SIZES, RADIUS, ThemeColors } from "../src/constants/theme";
@@ -24,6 +24,7 @@ import {
   validateMemo,
 } from "../src/utils/validation";
 import { resolveAddressLabel } from "../src/utils/contacts";
+import { formatAmount } from "../src/utils/amount";
 import {
   Send as SendIcon,
   ScanLine,
@@ -162,7 +163,7 @@ export default function SendScreen() {
       >
         <ScreenHeader
           title="Send XLM"
-          subtitle={`Available Balance: ${balance} XLM`}
+          subtitle={`Available Balance: ${formatAmount(balance)} XLM`}
         />
 
         <View style={styles.form}>
@@ -242,7 +243,7 @@ export default function SendScreen() {
             onChangeText={handleAmountChange}
             error={errors.amount}
             keyboardType="decimal-pad"
-            helperText={`Available balance: ${balance} XLM`}
+            helperText={`Available balance: ${formatAmount(balance)} XLM`}
           />
 
           <FormField
@@ -254,10 +255,11 @@ export default function SendScreen() {
           />
         </View>
 
-        <Button
+        <AsyncActionButton
           title="Send Payment"
           onPress={handleSend}
           isLoading={isLoading}
+          loadingText="Sending…"
           style={styles.sendButton}
         />
       </KeyboardAvoidingView>

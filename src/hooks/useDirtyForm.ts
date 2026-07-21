@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useRouter } from 'expo-router';
 
 interface UseDirtyFormOptions {
   /** Whether the form is currently dirty (has unsaved changes) */
@@ -25,7 +26,7 @@ interface UseDirtyFormReturn {
 }
 
 /**
- * Hook to handle dirty form protection in React Native / Expo Router
+ * Hook to handle dirty form protection
  */
 export function useDirtyForm({
   isDirty,
@@ -34,6 +35,7 @@ export function useDirtyForm({
   onCancelLeave,
 }: UseDirtyFormOptions): UseDirtyFormReturn {
   const [showConfirm, setShowConfirm] = useState(false);
+  const router = useRouter();
 
   const handleConfirmLeave = useCallback(() => {
     setShowConfirm(false);

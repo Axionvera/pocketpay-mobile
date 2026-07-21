@@ -171,6 +171,7 @@ export default function SettingsScreen() {
           />
         </View>
       </ScrollView>
+
       <WalletResetConfirmModal
         visible={showResetModal}
         isLoading={isResetting}
@@ -224,7 +225,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyIn: 'space-between',
     padding: SIZES.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,

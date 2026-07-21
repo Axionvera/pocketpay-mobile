@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useDirtyForm } from '../hooks/useDirtyForm';
 import { DirtyFormConfirm } from './DirtyFormConfirm';
@@ -39,7 +39,7 @@ export const SendPaymentForm: React.FC = () => {
   });
 
   const handleInputChange = (field: keyof SendPaymentFormData) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: any
   ) => {
     setFormData((prev) => ({
       ...prev,
@@ -47,7 +47,7 @@ export const SendPaymentForm: React.FC = () => {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
