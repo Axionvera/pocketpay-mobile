@@ -11,7 +11,7 @@ import { useWalletStore } from '../src/store/walletStore';
 import { useAppStore } from '../src/store/appStore';
 import { validateAddress, validateAmount, validateMemo } from '../src/utils/validation';
 import { resolveAddressLabel } from '../src/utils/contacts';
-import { Send as SendIcon, ScanLine } from 'lucide-react-native';
+import { Send as SendIcon, ScanLine, ChevronDown, User } from 'lucide-react-native';
 
 interface FieldErrors {
   destination?: string;
@@ -32,6 +32,7 @@ export default function SendScreen() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [showContactPicker, setShowContactPicker] = useState(false);
 
   const destinationContact = destination.trim() && !errors.destination
     ? resolveAddressLabel(destination.trim(), contacts)
@@ -59,6 +60,15 @@ export default function SendScreen() {
       ...prev,
       memo: validateMemo(value) ?? undefined,
     }));
+  };
+
+  const handleSelectContact = (contactPublicKey: string) => {
+    setDestination(contactPublicKey);
+    setErrors((prev) => ({
+      ...prev,
+      destination: validateAddress(contactPublicKey, publicKey) ?? undefined,
+    }));
+    setShowContactPicker(false);
   };
 
   const handleScanSuccess = (address: string) => {
@@ -112,7 +122,7 @@ export default function SendScreen() {
 
   return (
     <>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
@@ -144,6 +154,40 @@ export default function SendScreen() {
             }
           />
 
+          {contacts.length > 0 && (
+            <View style={styles.contactPickerContainer}>
+              <TouchableOpacity
+                style={styles.contactPickerButton}
+                onPress={() => setShowContactPicker((prev) => !prev)}
+                accessibilityLabel="Choose from saved contacts"
+                accessibilityRole="button"
+              >
+                <User size={18} color={colors.primary} />
+                <Text style={styles.contactPickerText}>
+                  {showContactPicker ? 'Hide contacts' : 'Choose from saved contacts'}
+                </Text>
+                <ChevronDown size={16} color={colors.textSecondary} />
+              </TouchableOpacity>
+
+              {showContactPicker && (
+                <View style={styles.contactList}>
+                  {contacts.map((contact) => (
+                    <TouchableOpacity
+                      key={contact.id}
+                      style={styles.contactItem}
+                      onPress={() => handleSelectContact(contact.publicKey)}
+                    >
+                      <Text style={styles.contactName}>{contact.name}</Text>
+                      <Text style={styles.contactKey} numberOfLines={1} ellipsizeMode="middle">
+                        {contact.publicKey}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+
           {destinationContact?.isContact ? (
             <View style={styles.contactMatch}>
               <Text style={styles.contactMatchText}>
@@ -151,7 +195,7 @@ export default function SendScreen() {
               </Text>
             </View>
           ) : null}
-          
+
           <FormField
             label="Amount (XLM)"
             placeholder="0.00"
@@ -167,14 +211,13 @@ export default function SendScreen() {
             placeholder="Payment reference"
             value={memo}
             onChangeText={handleMemoChange}
-            error={errors.memo}
             helperText="Add a note for the recipient"
           />
         </View>
 
-        <Button 
-          title="Send Payment" 
-          onPress={handleSend} 
+        <Button
+          title="Send Payment"
+          onPress={handleSend}
           isLoading={isLoading}
           style={styles.sendButton}
         />
@@ -219,6 +262,51 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   form: {
     flex: 1,
   },
+  contactPickerContainer: {
+    marginBottom: SIZES.md,
+  },
+  contactPickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SIZES.md,
+    paddingVertical: SIZES.md,
+    gap: SIZES.sm,
+  },
+  contactPickerText: {
+    flex: 1,
+    color: colors.primary,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  contactList: {
+    marginTop: SIZES.xs,
+    backgroundColor: colors.surface,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: SIZES.sm,
+    maxHeight: 200,
+  },
+  contactItem: {
+    paddingVertical: SIZES.sm,
+    paddingHorizontal: SIZES.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  contactName: {
+    color: colors.textPrimary,
+    fontWeight: '600',
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  contactKey: {
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
   contactMatch: {
     marginTop: -SIZES.sm,
     marginBottom: SIZES.md,
@@ -230,5 +318,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   sendButton: {
     marginBottom: SIZES.xxl,
-  }
+  },
 });
