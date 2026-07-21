@@ -79,21 +79,18 @@ export default function SettingsScreen() {
   };
 
   return (
-    <>
-      <ScrollView style={styles.container}>
-        {/* Appearance */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Appearance</Text>
-          <View style={styles.card}>
-            <View style={styles.row}>
-              <View style={styles.rowLeft}>
-                <Shield color={colors.primary} size={24} />
-                <View style={styles.rowTextGroup}>
-                  <Text style={styles.rowText}>App Lock</Text>
-                  <Text style={styles.rowHelper}>
-                    Require biometrics or passcode to open
-                  </Text>
-                </View>
+    <><ScrollView style={styles.container}>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Preferences</Text>
+        <View style={styles.card}>
+          <View style={styles.row}>
+            <View style={styles.rowLeft}>
+              <Shield color={COLORS.primary} size={24} />
+              <View style={styles.rowTextGroup}>
+                <Text style={styles.rowText}>App Lock</Text>
+                <Text style={styles.rowHelper}>
+                  Require biometrics or passcode to open
+                </Text>
               </View>
               <Switch
                 value={isLockEnabled}
@@ -152,48 +149,40 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Danger Zone */}
+      {__DEV__ && (
         <View style={styles.section}>
-          <View style={styles.dangerTitleRow}>
-            <AlertTriangle color={colors.error} size={16} />
-            <Text style={styles.dangerSectionTitle}>Danger Zone</Text>
-          </View>
-          <View style={[styles.card, styles.dangerCard]}>
-            <Button
-              title={showSecret ? "Hide Export Menu" : "Export Secret Key"}
-              variant="outline"
-              onPress={handleExportKey}
-              style={styles.menuButton}
-            />
-            {showSecret && secretKey && (
-              <View style={{ padding: SIZES.lg, paddingTop: 0, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-                <Text style={{ color: colors.textSecondary, marginBottom: SIZES.sm, fontSize: 14 }}>
-                  Your secret key is highly sensitive. Proceed with caution.
-                </Text>
-                <SecretKeyReveal secretKey={secretKey} />
-              </View>
-            )}
-            <Button
-              title="Sign Out & Clear Wallet"
-              variant="danger"
-              onPress={handleSignOut}
-              style={styles.menuButtonLast}
+          <Text style={styles.sectionTitle}>Development</Text>
+          <View style={styles.card}>
+            <Button 
+              title="Export Diagnostics" 
+              variant="outline" 
+              onPress={handleExportDiagnostics}
+              style={[styles.menuButton, { borderBottomWidth: 0 }]}
             />
           </View>
         </View>
+      )}
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Stellar PocketPay v1.0.0</Text>
-        </View>
-      </ScrollView>
+      <View style={[styles.section, { marginTop: SIZES.xl }]}>
+        <Button
+          title="Sign Out & Clear Wallet"
+          variant="danger"
+          onPress={handleSignOut}
+        />
+      </View>
+
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>Stellar PocketPay v1.0.0</Text>
+        <Text style={styles.footerText}>Network: Testnet</Text>
+      </View>
+    </ScrollView>
       <WalletResetConfirmModal
         visible={showResetModal}
         isLoading={isResetting}
         onConfirm={handleResetConfirm}
         onCancel={() => setShowResetModal(false)}
       />
-    </>
-  );
+    </>);
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({

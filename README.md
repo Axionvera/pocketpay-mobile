@@ -38,6 +38,7 @@ PocketPay Mobile is part of a broader PocketPay stack:
 ## Documentation
 
 - [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
+- [Mobile Onboarding Checklist](docs/mobile-onboarding-checklist.md) - Quick-reference setup checklist for new contributors
 
 ## Screenshots
 
