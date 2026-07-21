@@ -1,14 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from '../../src/components/Button';
 import { Input } from '../../src/components/Input';
-import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
+import { VaultConfirmModal, VaultAction } from '../../src/components/VaultConfirmModal';
+import { VaultIntroModal } from '../../src/components/VaultIntroModal';
+import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useVaultStore } from '../../src/store/vaultStore';
 import { validateAmount } from '../../src/utils/validation';
-import { PiggyBank, ShieldCheck, AlertTriangle } from 'lucide-react-native';
+import { PiggyBank, ShieldCheck, AlertTriangle, XCircle, Info } from 'lucide-react-native';
+
+const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
+const VAULT_INTRO_SEEN_KEY = '@pocketpay_vault_intro_seen';
 
 export default function VaultScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { publicKey, getSecretKey, balance: walletBalance } = useWalletStore();
   const {
     balance,
@@ -24,6 +33,20 @@ export default function VaultScreen() {
 
   const [amount, setAmount] = useState('');
   const [amountError, setAmountError] = useState<string | undefined>();
+  const [isLoadingActivity] = useState(false);
+
+  // Vault unavailable state
+  const isMissingContractId = !isConfigured;
+  const isMissingRpcUrl = !process.env.EXPO_PUBLIC_SOROBAN_RPC_URL;
+  const isVaultUnavailable = isMissingContractId || isMissingRpcUrl;
+
+  // Confirmation modal state
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [pendingAction, setPendingAction] = useState<VaultAction>('deposit');
+  const [pendingUnlockTime, setPendingUnlockTime] = useState('');
+
+  // Vault introduction modal state
+  const [introVisible, setIntroVisible] = useState(false);
 
   useEffect(() => {
     if (publicKey) {
@@ -31,12 +54,27 @@ export default function VaultScreen() {
     }
   }, [publicKey]);
 
+  useEffect(() => {
+    AsyncStorage.getItem(VAULT_INTRO_SEEN_KEY)
+      .then((seen) => {
+        if (!seen) setIntroVisible(true);
+      })
+      .catch(() => setIntroVisible(true));
+  }, []);
+
+  const dismissIntro = () => {
+    setIntroVisible(false);
+    AsyncStorage.setItem(VAULT_INTRO_SEEN_KEY, 'true').catch((e) =>
+      console.error('Failed to save vault intro state:', e)
+    );
+  };
+
   const handleAmountChange = (value: string) => {
     setAmount(value);
     setAmountError(value.trim() ? validateAmount(value) ?? undefined : undefined);
   };
 
-  const handleAction = async (action: 'deposit' | 'withdraw') => {
+  const handleAction = (action: VaultAction) => {
     if (!publicKey) return;
 
     // Deposits are limited by the wallet balance; withdrawals by the vault balance.
@@ -48,18 +86,39 @@ export default function VaultScreen() {
     setAmountError(error);
     if (error) return;
 
+    setPendingAction(action);
+    if (action === 'lock') {
+      const unlockDate = new Date(Date.now() + LOCK_PERIOD_SECONDS * 1000);
+      setPendingUnlockTime(unlockDate.toLocaleDateString());
+    }
+    setConfirmVisible(true);
+  };
+
+  const handleConfirmAction = async () => {
+    if (!publicKey || !pendingAction) return;
+
     try {
       const secret = await getSecretKey();
       if (!secret) throw new Error('Secret key not found');
 
+      if (pendingAction === 'lock') {
+        setConfirmVisible(false);
+        Alert.alert(
+          'Notice',
+          'Vault lock is not yet implemented. This is a placeholder for Soroban time-lock functionality.'
+        );
+        return;
+      }
+
       const hash =
-        action === 'deposit'
+        pendingAction === 'deposit'
           ? await deposit(secret, publicKey, amount)
           : await withdraw(secret, publicKey, amount);
 
       setAmount('');
       setAmountError(undefined);
-      const verb = action === 'deposit' ? 'deposited into' : 'withdrawn from';
+      setConfirmVisible(false);
+      const verb = pendingAction === 'deposit' ? 'deposited into' : 'withdrawn from';
       Alert.alert(
         'Success',
         hash
@@ -67,19 +126,45 @@ export default function VaultScreen() {
           : `Funds ${verb} the vault (mock — no real funds moved).`
       );
     } catch (e: any) {
-      Alert.alert(`${action === 'deposit' ? 'Deposit' : 'Withdrawal'} failed`, e.message);
+      setConfirmVisible(false);
+      Alert.alert(
+        `${pendingAction === 'deposit' ? 'Deposit' : 'Withdrawal'} failed`,
+        e.message
+      );
     }
+  };
+
+  const cancelAction = () => {
+    setConfirmVisible(false);
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <VaultIntroModal visible={introVisible} onContinue={dismissIntro} />
+      <VaultConfirmModal
+        visible={confirmVisible}
+        actionType={pendingAction}
+        amount={amount}
+        isLoading={isSubmitting}
+        contractId={isConfigured ? contractId : undefined}
+        unlockTime={pendingAction === 'lock' ? pendingUnlockTime : undefined}
+        onConfirm={handleConfirmAction}
+        onCancel={cancelAction}
+      />
       <View style={styles.card}>
+        <TouchableOpacity
+          style={styles.infoButton}
+          onPress={() => setIntroVisible(true)}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Info color={colors.textMuted} size={18} />
+        </TouchableOpacity>
         <View style={styles.iconContainer}>
-          <PiggyBank color={COLORS.primary} size={40} />
+          <PiggyBank color={colors.primary} size={40} />
         </View>
         <Text style={styles.cardTitle}>Soroban Savings Vault</Text>
         {isLoadingBalance ? (
-          <ActivityIndicator size="large" color={COLORS.primary} style={styles.balanceLoader} />
+          <ActivityIndicator size="large" color={colors.primary} style={styles.balanceLoader} />
         ) : (
           <Text style={styles.balanceValue}>{balance} XLM</Text>
         )}
@@ -100,7 +185,7 @@ export default function VaultScreen() {
 
       {isConfigured ? (
         <View style={styles.infoBox}>
-          <ShieldCheck color={COLORS.success} size={24} style={{ marginRight: SIZES.sm }} />
+          <ShieldCheck color={colors.success} size={24} style={{ marginRight: SIZES.sm }} />
           <Text style={styles.infoText}>
             Connected to a live Soroban smart contract on{' '}
             {process.env.EXPO_PUBLIC_STELLAR_NETWORK || 'TESTNET'}. Deposits and withdrawals
@@ -109,7 +194,7 @@ export default function VaultScreen() {
         </View>
       ) : (
         <View style={styles.warningBox}>
-          <AlertTriangle color={COLORS.warning} size={24} style={{ marginRight: SIZES.sm }} />
+          <AlertTriangle color={colors.warning} size={24} style={{ marginRight: SIZES.sm }} />
           <Text style={styles.warningText}>
             No vault contract configured. Set EXPO_PUBLIC_VAULT_CONTRACT_ID in your .env file to
             connect to a deployed Soroban contract. Running in mock mode — no real funds are
@@ -118,54 +203,110 @@ export default function VaultScreen() {
         </View>
       )}
 
-      <View style={styles.form}>
-        <Input
-          label="Amount to Deposit/Withdraw (XLM)"
-          placeholder="0.00"
-          value={amount}
-          onChangeText={handleAmountChange}
-          keyboardType="decimal-pad"
-          error={amountError}
-          editable={!isSubmitting}
-        />
-        <View style={styles.actions}>
-          <Button
-            title="Deposit"
-            onPress={() => handleAction('deposit')}
-            isLoading={isSubmitting}
-            disabled={isLoadingBalance}
-            style={styles.actionButton}
+      {isVaultUnavailable ? (
+        <View style={styles.unavailableCard}>
+          <XCircle color={colors.error} size={48} />
+          <Text style={styles.unavailableTitle}>Vault Unavailable</Text>
+          <Text style={styles.unavailableText}>
+            The Soroban Savings Vault cannot be used right now because the required configuration is
+            missing.
+          </Text>
+          {isMissingContractId && (
+            <View style={styles.unavailableDetail}>
+              <Text style={styles.unavailableDetailLabel}>Missing configuration:</Text>
+              <Text style={styles.unavailableDetailValue}>EXPO_PUBLIC_VAULT_CONTRACT_ID</Text>
+              <Text style={styles.unavailableDetailHint}>
+                Set this in your .env file to the deployed Soroban contract ID.
+              </Text>
+            </View>
+          )}
+          {isMissingRpcUrl && (
+            <View style={styles.unavailableDetail}>
+              <Text style={styles.unavailableDetailLabel}>Missing configuration:</Text>
+              <Text style={styles.unavailableDetailValue}>EXPO_PUBLIC_SOROBAN_RPC_URL</Text>
+              <Text style={styles.unavailableDetailHint}>
+                Set this in your .env file to a Soroban RPC endpoint.
+              </Text>
+            </View>
+          )}
+          <Text style={styles.unavailableDocsLink}>
+            See docs/vault-ui-guidance.md for more information.
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.form}>
+          <Input
+            label="Amount (XLM)"
+            placeholder="0.00"
+            value={amount}
+            onChangeText={handleAmountChange}
+            keyboardType="decimal-pad"
+            error={amountError}
+            editable={!isSubmitting}
           />
+          <View style={styles.actions}>
+            <Button
+              title="Deposit"
+              onPress={() => handleAction('deposit')}
+              isLoading={isSubmitting && pendingAction === 'deposit'}
+              loadingText="Depositing…"
+              disabled={isLoadingBalance}
+              style={styles.actionButton}
+            />
+            <Button
+              title="Withdraw"
+              variant="secondary"
+              onPress={() => handleAction('withdraw')}
+              isLoading={isSubmitting && pendingAction === 'withdraw'}
+              loadingText="Withdrawing…"
+              disabled={isLoadingBalance}
+              style={styles.actionButton}
+            />
+          </View>
           <Button
-            title="Withdraw"
-            variant="secondary"
-            onPress={() => handleAction('withdraw')}
-            isLoading={isSubmitting}
-            disabled={isLoadingBalance}
-            style={styles.actionButton}
+            title="Lock Funds (30 days)"
+            variant="outline"
+            onPress={() => handleAction('lock')}
+            isLoading={isSubmitting && pendingAction === 'lock'}
+            loadingText="Locking…"
+            disabled={isSubmitting}
+            style={styles.lockButton}
           />
         </View>
-      </View>
+      )}
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   content: {
     padding: SIZES.xl,
   },
   card: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     padding: SIZES.xl,
     borderRadius: RADIUS.lg,
     alignItems: 'center',
     marginBottom: SIZES.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
+    position: 'relative',
+  },
+  infoButton: {
+    position: 'absolute',
+    top: SIZES.md,
+    right: SIZES.md,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
   },
   iconContainer: {
     width: 80,
@@ -177,12 +318,12 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.md,
   },
   cardTitle: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 16,
     marginBottom: SIZES.sm,
   },
   balanceValue: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 32,
     fontWeight: 'bold',
     marginBottom: SIZES.xs,
@@ -191,7 +332,7 @@ const styles = StyleSheet.create({
     marginVertical: SIZES.sm,
   },
   cardSubtitle: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -200,13 +341,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   balanceErrorText: {
-    color: COLORS.error,
+    color: colors.error,
     fontSize: 12,
     textAlign: 'center',
     marginBottom: SIZES.xs,
   },
   retryText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -219,7 +360,7 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.xl,
   },
   infoText: {
-    color: COLORS.success,
+    color: colors.success,
     flex: 1,
     fontSize: 12,
     lineHeight: 18,
@@ -233,7 +374,7 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.xl,
   },
   warningText: {
-    color: COLORS.warning,
+    color: colors.warning,
     flex: 1,
     fontSize: 12,
     lineHeight: 18,
@@ -249,5 +390,64 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     marginHorizontal: SIZES.xs,
+  },
+  lockButton: {
+    marginTop: SIZES.md,
+  },
+  unavailableCard: {
+    backgroundColor: colors.surface,
+    padding: SIZES.xl,
+    borderRadius: RADIUS.lg,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.error,
+    marginBottom: SIZES.xl,
+  },
+  unavailableTitle: {
+    color: colors.textPrimary,
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: SIZES.md,
+    marginBottom: SIZES.sm,
+  },
+  unavailableText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: SIZES.lg,
+  },
+  unavailableDetail: {
+    backgroundColor: 'rgba(255, 61, 0, 0.06)',
+    padding: SIZES.md,
+    borderRadius: RADIUS.md,
+    width: '100%',
+    marginBottom: SIZES.sm,
+  },
+  unavailableDetailLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  unavailableDetailValue: {
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontFamily: 'monospace',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  unavailableDetailHint: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  unavailableDocsLink: {
+    color: colors.textMuted,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: SIZES.sm,
   },
 });

@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TouchableOpacityProps } from 'react-native';
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
-import { COLORS, SIZES, RADIUS } from '../constants/theme';
+import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { TransactionRecord } from '../store/walletStore';
+import { useAppStore } from '../store/appStore';
+import { resolveAddressLabel } from '../utils/contacts';
 
 export interface TransactionListItemProps extends Omit<TouchableOpacityProps, 'onPress'> {
   /** The transaction data to display. */
@@ -34,24 +37,31 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
   style,
   ...props
 }) => {
-  const isSent = !!currentPublicKey && transaction.from === currentPublicKey;
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const contacts = useAppStore((state) => state.contacts);
 
-  const direction = isSent ? 'sent' : 'received';
+  const tx = transaction as any;
+  const isSent = !!currentPublicKey && tx.from === currentPublicKey;
 
   const label = isSent ? 'Sent XLM' : 'Received XLM';
 
-  const formattedAmount = transaction.amount
-    ? `${isSent ? '-' : '+'}${transaction.amount}`
+  const formattedAmount = tx.amount
+    ? `${isSent ? '-' : '+'}${tx.amount}`
     : null;
 
-  const formattedDate = transaction.createdAt
-    ? new Date(transaction.createdAt).toLocaleString()
+  const formattedDate = tx.created_at
+    ? new Date(tx.created_at).toLocaleString()
     : null;
 
   // Counterparty: for sent txs show the recipient, for received show the sender
-  const counterparty = isSent
-    ? transaction.to || null
-    : transaction.from || null;
+  const counterpartyAddress = isSent
+    ? tx.to || null
+    : tx.from || null;
+
+  const counterpartyLabel = counterpartyAddress
+    ? resolveAddressLabel(counterpartyAddress, contacts)
+    : null;
 
   const Container = onPress ? TouchableOpacity : View;
   const containerProps = onPress
@@ -75,9 +85,9 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
         ]}
       >
         {isSent ? (
-          <ArrowUpRight color={COLORS.error} size={20} />
+          <ArrowUpRight color={colors.error} size={20} />
         ) : (
-          <ArrowDownLeft color={COLORS.success} size={20} />
+          <ArrowDownLeft color={colors.success} size={20} />
         )}
       </View>
 
@@ -87,9 +97,9 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
           {label}
         </Text>
 
-        {counterparty ? (
+        {counterpartyLabel ? (
           <Text style={styles.counterparty} numberOfLines={1} ellipsizeMode="middle">
-            {counterparty}
+            {counterpartyLabel.label}
           </Text>
         ) : null}
 
@@ -104,7 +114,7 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
           <Text
             style={[
               styles.amount,
-              { color: isSent ? COLORS.textPrimary : COLORS.success },
+              { color: isSent ? colors.textPrimary : colors.success },
             ]}
           >
             {formattedAmount}
@@ -113,9 +123,9 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
           <Text style={styles.amountMissing}>—</Text>
         )}
 
-        {transaction.asset ? (
+        {tx.asset ? (
           <Text style={styles.assetType}>
-            {transaction.asset}
+            {tx.asset}
           </Text>
         ) : null}
       </View>
@@ -126,26 +136,26 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
 const SENT_BG = 'rgba(255, 61, 0, 0.10)';
 const RECEIVED_BG = 'rgba(0, 230, 118, 0.10)';
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   base: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   /** Stand-alone card row (History screen). */
   card: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     paddingHorizontal: SIZES.lg,
     paddingVertical: SIZES.md,
     borderRadius: RADIUS.md,
     marginBottom: SIZES.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   /** Inline row inside an existing card (Home screen). */
   inline: {
     paddingVertical: SIZES.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   iconWrapper: {
     width: 44,
@@ -160,18 +170,18 @@ const styles = StyleSheet.create({
     marginRight: SIZES.sm,
   },
   label: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 15,
     fontWeight: '500',
     marginBottom: 2,
   },
   counterparty: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 12,
     marginBottom: 2,
   },
   date: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 12,
   },
   right: {
@@ -182,12 +192,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   amountMissing: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 15,
     fontWeight: '700',
   },
   assetType: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 11,
     marginTop: 2,
   },

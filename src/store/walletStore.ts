@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import * as StellarSdk from '@stellar/stellar-sdk';
-import { fetchXlmBalance, fetchTransactionsPage, fundWithFriendbot } from '../services/stellar';
+import { fetchXlmBalance, fetchTransactionsPage, fundWithFriendbot, PaymentRecord } from '../services/stellar';
 
 const WALLET_KEY = 'pocketpay_wallet_secret';
 const DEFAULT_BALANCE = '0.0000000';
@@ -24,16 +24,15 @@ interface WalletState {
   error: string | null;
 
   // Pagination
-  nextCursor: string | null;
-  hasMoreTransactions: boolean;
   isLoadingMore: boolean;
+  hasMoreTransactions: boolean;
+  nextCursor: string | null;
 
   // Actions
   setWallet: (publicKey: string, secretKey: string) => Promise<boolean>;
   loadWalletFromStorage: () => Promise<boolean>;
   /** Pull-to-refresh: resets pagination and loads the first page fresh. */
   refreshWalletData: () => Promise<void>;
-  /** Load the next page of older transactions (cursor-based pagination). */
   loadMoreTransactions: () => Promise<void>;
   clearWallet: () => Promise<boolean>;
   getSecretKey: () => Promise<string | null>;
@@ -44,8 +43,9 @@ const resetWalletState = () => ({
   publicKey: null,
   balance: DEFAULT_BALANCE,
   transactions: [],
-  nextCursor: null,
+  isLoadingMore: false,
   hasMoreTransactions: false,
+  nextCursor: null,
 });
 
 const parseStoredSecret = (storedValue: string): string | null => {
@@ -89,9 +89,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   isFunding: false,
   fundError: null,
   error: null,
-  nextCursor: null,
-  hasMoreTransactions: false,
   isLoadingMore: false,
+  hasMoreTransactions: false,
+  nextCursor: null,
 
   setWallet: async (publicKey: string, secretKey: string) => {
     try {
@@ -135,7 +135,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     const { publicKey } = get();
     if (!publicKey) return;
 
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null, isLoadingMore: false, nextCursor: null, hasMoreTransactions: false });
     try {
       const [balance, page] = await Promise.all([
         fetchXlmBalance(publicKey),
@@ -143,7 +143,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       ]);
       set({
         balance,
-        transactions: page.records as TransactionRecord[],
+        transactions: page.records,
         nextCursor: page.nextCursor,
         hasMoreTransactions: page.hasMore,
         isLoading: false,
