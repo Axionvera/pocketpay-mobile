@@ -114,26 +114,34 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   },
 
   loadWalletFromStorage: async () => {
+    let storedValue: string | null = null;
     try {
-      const storedValue = await SecureStore.getItemAsync(WALLET_KEY);
-      if (storedValue === null) {
-        set({ ...resetWalletState(), error: null });
-        return false;
-      }
+      storedValue = await SecureStore.getItemAsync(WALLET_KEY);
+    } catch {
+      console.error(RESTORE_WALLET_ERROR);
+      set({ ...resetWalletState(), error: RESTORE_WALLET_ERROR });
+      return false;
+    }
 
-      const secretKey = parseStoredSecret(storedValue);
-      if (!secretKey) {
-        await clearStoredWalletValue();
-        set({ ...resetWalletState(), error: RESTORE_WALLET_ERROR });
-        return false;
-      }
+    if (storedValue === null) {
+      set({ ...resetWalletState(), error: null });
+      return false;
+    }
 
+    const secretKey = parseStoredSecret(storedValue);
+    if (!secretKey) {
+      await clearStoredSecrets();
+      set({ ...resetWalletState(), error: RESTORE_WALLET_ERROR });
+      return false;
+    }
+
+    try {
       const keypair = StellarSdk.Keypair.fromSecret(secretKey);
       set({ publicKey: keypair.publicKey(), error: null });
       return true;
     } catch {
       console.error(RESTORE_WALLET_ERROR);
-      await clearStoredWalletValue();
+      await clearStoredSecrets();
       set({ ...resetWalletState(), error: RESTORE_WALLET_ERROR });
       return false;
     }

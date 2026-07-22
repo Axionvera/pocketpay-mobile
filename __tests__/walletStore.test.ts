@@ -99,6 +99,18 @@ describe('walletStore secure storage handling', () => {
     }
   );
 
+  it('does not delete credentials if secure storage read throws an error', async () => {
+    mockedSecureStore.getItemAsync.mockRejectedValueOnce(new Error('Device locked or permission denied'));
+
+    const restored = await useWalletStore.getState().loadWalletFromStorage();
+
+    expect(restored).toBe(false);
+    expect(useWalletStore.getState().publicKey).toBeNull();
+    expect(useWalletStore.getState().error).toBe('Failed to restore wallet securely');
+    expect(mockedSecureStore.deleteItemAsync).not.toLocaleString(); // not called
+    expect(mockedSecureStore.deleteItemAsync).not.toHaveBeenCalled();
+  });
+
   it('does not clear active wallet state when secure storage deletion fails', async () => {
     useWalletStore.setState({ publicKey: 'GPUBLICKEY', balance: '10.0000000' });
     mockedSecureStore.deleteItemAsync.mockRejectedValueOnce(new Error('delete failed'));
