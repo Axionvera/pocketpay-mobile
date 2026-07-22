@@ -2,43 +2,50 @@
 
 A practical style guide for contributors adding screens and components to Stellar PocketPay. All design tokens live in `src/constants/theme.ts`. Import them instead of hardcoding values.
 
+Colour values are theme-aware — use the `useTheme()` hook to get the palette for the user's current light/dark/system preference, and import `SIZES`, `RADIUS`, `FONTS` directly since those don't change between themes:
+
 ```ts
-import { COLORS, SIZES, RADIUS, FONTS } from '../constants/theme';
+import { SIZES, RADIUS, FONTS } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+
+const { colors } = useTheme();
 ```
+
+Because colours are resolved per-render, any `StyleSheet.create({...})` that uses `colors.*` should live in a `createStyles(colors)` function called with `useMemo(() => createStyles(colors), [colors])` inside the component, rather than as a static module-level object.
 
 ---
 
 ## Colour Palette
 
-The app uses a premium dark-only palette inspired by fintech and crypto wallets. There is no light theme — the UI is always dark.
+The app uses a premium palette inspired by fintech and crypto wallets, available in both dark and light variants (`DARK_COLORS` / `LIGHT_COLORS` in `src/constants/theme.ts`). The tables below describe the dark palette; the light palette mirrors the same token names with inverted surfaces and darkened accents for contrast.
 
 ### Backgrounds
 
 | Token | Hex | Use |
 |---|---|---|
-| `COLORS.background` | `#0B0D17` | Screen background, page root |
-| `COLORS.surface` | `#15192B` | Cards, modals, list containers |
-| `COLORS.surfaceLight` | `#1E243D` | Elevated surfaces, disabled button fills |
+| `colors.background` | `#0B0D17` | Screen background, page root |
+| `colors.surface` | `#15192B` | Cards, modals, list containers |
+| `colors.surfaceLight` | `#1E243D` | Elevated surfaces, disabled button fills |
 
-Screens always set `backgroundColor: COLORS.background`. Cards sit on top using `COLORS.surface`.
+Screens always set `backgroundColor: colors.background`. Cards sit on top using `colors.surface`.
 
 ### Accents
 
 | Token | Hex | Use |
 |---|---|---|
-| `COLORS.primary` | `#00E5FF` | Primary actions, active tab, links, focus rings |
-| `COLORS.primaryDark` | `#00B8CC` | Pressed/active state of primary |
-| `COLORS.secondary` | `#7B61FF` | Secondary actions, "Receive" button, alternating accents |
+| `colors.primary` | `#00E5FF` | Primary actions, active tab, links, focus rings |
+| `colors.primaryDark` | `#00B8CC` | Pressed/active state of primary |
+| `colors.secondary` | `#7B61FF` | Secondary actions, "Receive" button, alternating accents |
 
-Use `COLORS.primary` for the most important action on a screen. Use `COLORS.secondary` for a second competing action (e.g. Send / Receive side by side).
+Use `colors.primary` for the most important action on a screen. Use `colors.secondary` for a second competing action (e.g. Send / Receive side by side).
 
 ### Status Colours
 
 | Token | Hex | Use |
 |---|---|---|
-| `COLORS.success` | `#00E676` | Received funds, confirmation states, positive info banners |
-| `COLORS.error` | `#FF3D00` | Sent funds, destructive actions, validation errors |
-| `COLORS.warning` | `#FFC400` | Warning banners (e.g. secret key exposure) |
+| `colors.success` | `#00E676` | Received funds, confirmation states, positive info banners |
+| `colors.error` | `#FF3D00` | Sent funds, destructive actions, validation errors |
+| `colors.warning` | `#FFC400` | Warning banners (e.g. secret key exposure) |
 
 Status colours are also used at reduced opacity for icon container backgrounds:
 
@@ -54,15 +61,15 @@ backgroundColor: 'rgba(255, 196, 0, 0.1)'  // warning tint
 
 | Token | Hex | Use |
 |---|---|---|
-| `COLORS.textPrimary` | `#FFFFFF` | Headings, primary body text, values |
-| `COLORS.textSecondary` | `#A0AABF` | Labels, subtitles, supporting text |
-| `COLORS.textMuted` | `#637087` | Placeholder text, timestamps, footer copy |
+| `colors.textPrimary` | `#FFFFFF` | Headings, primary body text, values |
+| `colors.textSecondary` | `#A0AABF` | Labels, subtitles, supporting text |
+| `colors.textMuted` | `#637087` | Placeholder text, timestamps, footer copy |
 
 ### Borders
 
 | Token | Hex | Use |
 |---|---|---|
-| `COLORS.border` | `#2A314A` | Card borders, input borders, dividers |
+| `colors.border` | `#2A314A` | Card borders, input borders, dividers |
 
 ---
 
@@ -92,7 +99,7 @@ Section headers in settings use uppercase + letter-spacing to create visual sepa
 {
   fontSize: 14,
   fontWeight: '500',
-  color: COLORS.textSecondary,
+  color: colors.textSecondary,
   textTransform: 'uppercase',
   letterSpacing: 1,
 }
@@ -104,7 +111,7 @@ Button text is `fontSize: 16`, `fontWeight: '600'`, `letterSpacing: 0.5`.
 
 ### Monospace / Key display
 
-Public and secret keys are displayed in the default system font at `fontSize: 14`. Secret keys use `COLORS.error` and `fontWeight: 'bold'` to visually communicate their sensitivity.
+Public and secret keys are displayed in the default system font at `fontSize: 14`. Secret keys use `colors.error` and `fontWeight: 'bold'` to visually communicate their sensitivity.
 
 ---
 
@@ -129,7 +136,7 @@ All screens use consistent horizontal padding. Use `SIZES.lg` (24) or `SIZES.xl`
 // Standard screen container
 container: {
   flex: 1,
-  backgroundColor: COLORS.background,
+  backgroundColor: colors.background,
   padding: SIZES.lg,  // or SIZES.xl for less-dense screens
 }
 ```
@@ -154,17 +161,17 @@ Add `paddingBottom: SIZES.xxl` (or a multiple) to scroll view content to prevent
 
 ## Cards
 
-Cards group related content on the `COLORS.surface` background with a 1px `COLORS.border` border.
+Cards group related content on the `colors.surface` background with a 1px `colors.border` border.
 
 ### Standard card
 
 ```tsx
 <View style={{
-  backgroundColor: COLORS.surface,
+  backgroundColor: colors.surface,
   borderRadius: RADIUS.lg,
   padding: SIZES.xl,
   borderWidth: 1,
-  borderColor: COLORS.border,
+  borderColor: colors.border,
   marginBottom: SIZES.lg,
 }}>
   {/* content */}
@@ -179,7 +186,7 @@ For lists of items (transactions, contacts), wrap the whole list in a single car
 
 ```tsx
 <View style={{
-  backgroundColor: COLORS.surface,
+  backgroundColor: colors.surface,
   borderRadius: RADIUS.lg,
   padding: SIZES.md,
 }}>
@@ -189,7 +196,7 @@ For lists of items (transactions, contacts), wrap the whole list in a single car
       alignItems: 'center',
       paddingVertical: SIZES.md,
       borderBottomWidth: i < items.length - 1 ? 1 : 0,
-      borderBottomColor: COLORS.border,
+      borderBottomColor: colors.border,
     }}>
       {/* row content */}
     </View>
@@ -210,8 +217,8 @@ Tinted banners use a 10% opacity background of the relevant status colour with a
   borderRadius: RADIUS.lg,
   padding: SIZES.lg,
 }}>
-  <AlertTriangle color={COLORS.warning} />
-  <Text style={{ color: COLORS.warning }}>Warning message</Text>
+  <AlertTriangle color={colors.warning} />
+  <Text style={{ color: colors.warning }}>Warning message</Text>
 </View>
 
 // Info/success banner
@@ -222,8 +229,8 @@ Tinted banners use a 10% opacity background of the relevant status colour with a
   padding: SIZES.md,
   alignItems: 'center',
 }}>
-  <ShieldCheck color={COLORS.success} size={24} />
-  <Text style={{ color: COLORS.success, flex: 1, fontSize: 12, lineHeight: 18 }}>
+  <ShieldCheck color={colors.success} size={24} />
+  <Text style={{ color: colors.success, flex: 1, fontSize: 12, lineHeight: 18 }}>
     Info message
   </Text>
 </View>
@@ -242,7 +249,7 @@ Circular tinted containers for transaction type icons or feature icons:
   justifyContent: 'center',
   alignItems: 'center',
 }}>
-  <ArrowDownLeft color={COLORS.success} />
+  <ArrowDownLeft color={colors.success} />
 </View>
 ```
 
@@ -262,10 +269,10 @@ import { Button } from '../components/Button';
 
 | Variant | Background | Text colour | Use |
 |---|---|---|---|
-| `primary` (default) | `COLORS.primary` (`#00E5FF`) | `COLORS.background` (dark) | Main CTA per screen |
-| `secondary` | `COLORS.secondary` (`#7B61FF`) | `COLORS.background` (dark) | Second competing action |
-| `outline` | transparent | `COLORS.primary` | Tertiary or menu-style actions |
-| `danger` | `COLORS.error` (`#FF3D00`) | `COLORS.background` (dark) | Destructive actions (sign out, delete) |
+| `primary` (default) | `colors.primary` (`#00E5FF`) | `colors.background` (dark) | Main CTA per screen |
+| `secondary` | `colors.secondary` (`#7B61FF`) | `colors.background` (dark) | Second competing action |
+| `outline` | transparent | `colors.primary` | Tertiary or menu-style actions |
+| `danger` | `colors.error` (`#FF3D00`) | `colors.background` (dark) | Destructive actions (sign out, delete) |
 
 ### Loading state
 
@@ -277,7 +284,7 @@ Pass `isLoading` to show an `ActivityIndicator` in place of the label. The butto
 
 ### Disabled state
 
-Pass `disabled` prop. Background becomes `COLORS.surfaceLight`, text becomes `COLORS.textMuted`.
+Pass `disabled` prop. Background becomes `colors.surfaceLight`, text becomes `colors.textMuted`.
 
 ### Sizing and layout
 
@@ -341,8 +348,8 @@ Use `leftIcon` and `rightIcon` for inline icons (e.g. a scan QR button on the ri
 ```tsx
 <Input
   label="Recipient"
-  leftIcon={<User color={COLORS.textMuted} size={20} />}
-  rightIcon={<QrCode color={COLORS.primary} size={20} onPress={openScanner} />}
+  leftIcon={<User color={colors.textMuted} size={20} />}
+  rightIcon={<QrCode color={colors.primary} size={20} onPress={openScanner} />}
   {...inputProps}
 />
 ```
@@ -350,13 +357,13 @@ Use `leftIcon` and `rightIcon` for inline icons (e.g. a scan QR button on the ri
 ### Anatomy
 
 - Height: `56` (matches buttons)
-- Background: `COLORS.surface`
-- Border: `1px COLORS.border`, error state switches to `COLORS.error`
+- Background: `colors.surface`
+- Border: `1px colors.border`, error state switches to `colors.error`
 - Border radius: `RADIUS.lg` (16)
-- Label: `fontSize: 14`, `fontWeight: '500'`, `COLORS.textSecondary`, `marginBottom: SIZES.sm`
-- Placeholder text: `COLORS.textMuted`
-- Input text: `COLORS.textPrimary`, `fontSize: 16`
-- Error text: `COLORS.error`, `fontSize: 12`, `marginTop: SIZES.xs`
+- Label: `fontSize: 14`, `fontWeight: '500'`, `colors.textSecondary`, `marginBottom: SIZES.sm`
+- Placeholder text: `colors.textMuted`
+- Input text: `colors.textPrimary`, `fontSize: 16`
+- Error text: `colors.error`, `fontSize: 12`, `marginTop: SIZES.xs`
 - Inputs include `marginBottom: SIZES.md` (16) by default via the container
 
 ---
@@ -365,16 +372,16 @@ Use `leftIcon` and `rightIcon` for inline icons (e.g. a scan QR button on the ri
 
 ### Tab bar
 
-The bottom tab bar uses `COLORS.surface` as its background with a `1px COLORS.border` top border:
+The bottom tab bar uses `colors.surface` as its background with a `1px colors.border` top border:
 
 ```ts
 tabBarStyle: {
-  backgroundColor: COLORS.surface,
+  backgroundColor: colors.surface,
   borderTopWidth: 1,
-  borderTopColor: COLORS.border,
+  borderTopColor: colors.border,
 }
-tabBarActiveTintColor: COLORS.primary
-tabBarInactiveTintColor: COLORS.textMuted
+tabBarActiveTintColor: colors.primary
+tabBarInactiveTintColor: colors.textMuted
 ```
 
 Icons come from `lucide-react-native`. Use the icon that best describes the tab's purpose — keep icon size at the default provided by the tab navigator.
@@ -385,36 +392,41 @@ Headers are transparent over the dark background (no shadow/elevation):
 
 ```ts
 headerStyle: {
-  backgroundColor: COLORS.background,
+  backgroundColor: colors.background,
   shadowColor: 'transparent',
   elevation: 0,
 }
-headerTintColor: COLORS.textPrimary
+headerTintColor: colors.textPrimary
 ```
 
 ---
 
-## Dark Mode
+## Theming (Light / Dark / System)
 
-The app is built dark-first. The `isDarkMode` toggle in `appStore` exists for future extension, but currently the colour tokens are fixed. All screens should consume `COLORS` tokens — never hardcode hex values — so that if a light mode is ever introduced, switching theme only requires updating `theme.ts`.
+The app supports light, dark, and system-driven theme preferences. The user's choice is persisted (`@pocketpay_theme` in AsyncStorage, via `src/store/appStore.ts`) and survives app restarts; an invalid or missing stored value falls back to the dark palette.
 
-### Rules for dark-mode-safe components
-
-1. **Always use `COLORS.*` tokens** for every colour value (background, text, border, icon).
-2. **Never hardcode** `'#fff'`, `'#000'`, `'white'`, or `'black'`.
-3. **Use opacity variants** for tinted surfaces (e.g. `rgba(0, 229, 255, 0.1)`) rather than mixing opaque colours manually.
-4. **Icons** from `lucide-react-native` should receive `color={COLORS.textPrimary}`, `color={COLORS.primary}`, or a status colour — not a hardcoded hex.
-5. **`RefreshControl`** and other system components: set `tintColor={COLORS.primary}` to keep them on-brand in dark mode.
-6. **Switch** component: set `trackColor={{ false: COLORS.border, true: COLORS.primary }}` so the track matches the palette.
-
-### appStore dark mode toggle
-
-The `isDarkMode` state is in `src/store/appStore.ts`. If you need to conditionally apply a style based on theme (e.g. a component that has a different layout in light mode), consume it via:
+`src/hooks/useTheme.ts` resolves the persisted preference against the device's live colour scheme (via React Native's `useColorScheme`) and returns the palette to render with:
 
 ```ts
-import { useAppStore } from '../store/appStore';
-const { isDarkMode } = useAppStore();
+import { useTheme } from '../hooks/useTheme';
+
+const { colors, isDark, themeMode, setThemeMode } = useTheme();
+// colors      -> ThemeColors for the resolved theme (DARK_COLORS or LIGHT_COLORS)
+// isDark      -> boolean, the resolved theme after applying "system"
+// themeMode   -> 'light' | 'dark' | 'system' (the raw stored preference)
+// setThemeMode -> persists a new preference and updates the store
 ```
+
+Users change their preference from Settings → Preferences, which renders a Light/Dark/System selector.
+
+### Rules for theme-safe components
+
+1. **Always use `colors.*` tokens** for every colour value (background, text, border, icon) — get `colors` from `useTheme()`, never import a static palette.
+2. **Never hardcode** `'#fff'`, `'#000'`, `'white'`, or `'black'`.
+3. **Use opacity variants** for tinted surfaces (e.g. `rgba(0, 229, 255, 0.1)`) rather than mixing opaque colours manually.
+4. **Icons** from `lucide-react-native` should receive `color={colors.textPrimary}`, `color={colors.primary}`, or a status colour — not a hardcoded hex.
+5. **`RefreshControl`** and other system components: set `tintColor={colors.primary}` to keep them on-brand.
+6. **Styles**: define `const createStyles = (colors: ThemeColors) => StyleSheet.create({...})` at module scope, then call `const styles = useMemo(() => createStyles(colors), [colors])` inside the component — never a static `StyleSheet.create` that closes over a fixed palette.
 
 ---
 
@@ -445,12 +457,12 @@ Empty states are centred in their container with a large icon and muted label te
 
 ```tsx
 <View style={{ alignItems: 'center', marginTop: SIZES.xxl * 2 }}>
-  <Clock color={COLORS.textMuted} size={48} style={{ marginBottom: SIZES.md }} />
-  <Text style={{ color: COLORS.textMuted, fontSize: 14 }}>No recent transactions</Text>
+  <Clock color={colors.textMuted} size={48} style={{ marginBottom: SIZES.md }} />
+  <Text style={{ color: colors.textMuted, fontSize: 14 }}>No recent transactions</Text>
 </View>
 ```
 
-Use a `48px` icon from lucide, `COLORS.textMuted` for both the icon and the label, and a descriptive but brief label.
+Use a `48px` icon from lucide, `colors.textMuted` for both the icon and the label, and a descriptive but brief label.
 
 ---
 
