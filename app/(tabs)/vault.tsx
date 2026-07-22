@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert, ScrollView } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Input } from '../../src/components/Input';
 import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
@@ -8,12 +8,15 @@ import { mockFetchVaultBalance, mockDepositToVault, mockWithdrawFromVault } from
 import { validateAmount } from '../../src/utils/validation';
 import { PiggyBank, ShieldCheck } from 'lucide-react-native';
 import { VaultConfirmationModal } from '../../src/components/VaultConfirmationModal';
+import { LockDurationSelector, DurationOption } from '../../src/components/LockDurationSelector';
 
 export default function VaultScreen() {
   const { publicKey, getSecretKey, balance } = useWalletStore();
   const [vaultBalance, setVaultBalance] = useState('0.0000000');
   const [amount, setAmount] = useState('');
   const [amountError, setAmountError] = useState<string | undefined>();
+  const [selectedDuration, setSelectedDuration] = useState<DurationOption | null>(null);
+  const [durationError, setDurationError] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [modalConfig, setModalConfig] = useState<{
@@ -57,6 +60,8 @@ export default function VaultScreen() {
       Alert.alert('Success', 'Funds deposited into Soroban Vault (Mock)');
       setAmount('');
       setAmountError(undefined);
+      setSelectedDuration(null);
+      setDurationError(undefined);
       setModalVisible(false);
       loadVaultBalance();
     } catch (e: any) {
@@ -88,14 +93,23 @@ export default function VaultScreen() {
   };
 
   const initiateDeposit = () => {
-    const error = validateAmount(amount, balance) ?? undefined;
-    setAmountError(error);
-    if (error) return;
+    const amountErr = validateAmount(amount, balance) ?? undefined;
+    setAmountError(amountErr);
+
+    let durErr = undefined;
+    if (!selectedDuration) {
+      durErr = 'Please select a lock duration';
+      setDurationError(durErr);
+    } else {
+      setDurationError(undefined);
+    }
+
+    if (amountErr || durErr) return;
 
     setModalConfig({
       title: 'Confirm Deposit',
       amount: `${amount} XLM`,
-      description: 'You are depositing XLM into the Soroban Savings Vault. These funds will be locked/deposited into the smart contract.',
+      description: `You are depositing XLM into the Soroban Savings Vault. These funds will be locked for ${selectedDuration?.label} (${selectedDuration?.apy}) and cannot be withdrawn until the duration expires.`,
       confirmText: 'Deposit',
       onConfirm: handleDeposit,
     });
@@ -118,7 +132,7 @@ export default function VaultScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.card}>
         <View style={styles.iconContainer}>
           <PiggyBank color={COLORS.primary} size={40} />
@@ -144,6 +158,16 @@ export default function VaultScreen() {
           error={amountError}
           keyboardType="decimal-pad"
         />
+
+        <LockDurationSelector
+          selectedId={selectedDuration?.id ?? null}
+          onSelect={(option) => {
+            setSelectedDuration(option);
+            setDurationError(undefined);
+          }}
+          error={durationError}
+        />
+
         <View style={styles.actions}>
           <Button 
             title="Deposit" 
@@ -173,7 +197,7 @@ export default function VaultScreen() {
           isLoading={isLoading}
         />
       )}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -181,6 +205,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  scrollContent: {
     padding: SIZES.xl,
   },
   card: {

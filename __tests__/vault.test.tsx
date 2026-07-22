@@ -9,6 +9,8 @@ jest.mock('expo-router');
 jest.mock('lucide-react-native', () => ({
   PiggyBank: () => null,
   ShieldCheck: () => null,
+  Lock: () => null,
+  Info: () => null,
 }));
 
 import { mockFetchVaultBalance, mockDepositToVault, mockWithdrawFromVault } from '../src/services/stellar';
@@ -49,6 +51,23 @@ describe('VaultScreen & Confirmation Modal', () => {
     
     expect(getByText('50.0000000 XLM')).toBeTruthy();
     expect(getByPlaceholderText('0.00')).toBeTruthy();
+    expect(getByText('Lock Duration')).toBeTruthy();
+  });
+
+  it('shows validation error if lock duration is not selected when depositing', async () => {
+    const { getByPlaceholderText, getByText, queryByText } = render(<VaultScreen />);
+    
+    await waitFor(() => expect(mockFetchVaultBalanceFn).toHaveBeenCalled());
+    
+    const amountInput = getByPlaceholderText('0.00');
+    fireEvent.changeText(amountInput, '10');
+    
+    fireEvent.press(getByText('Deposit'));
+    
+    await waitFor(() => {
+      expect(getByText('Please select a lock duration')).toBeTruthy();
+    });
+    expect(queryByText('Confirm Deposit')).toBeNull();
   });
 
   it('opens confirmation modal on deposit click and completes action on confirm', async () => {
@@ -59,6 +78,9 @@ describe('VaultScreen & Confirmation Modal', () => {
     const amountInput = getByPlaceholderText('0.00');
     fireEvent.changeText(amountInput, '10');
     
+    // Select a lock duration option
+    fireEvent.press(getByText('3 Months'));
+    
     fireEvent.press(getByText('Deposit'));
     
     // Modal should be visible now
@@ -67,6 +89,7 @@ describe('VaultScreen & Confirmation Modal', () => {
     });
     
     expect(getByText('10 XLM')).toBeTruthy();
+    expect(getByText(/locked for 3 Months/)).toBeTruthy();
     
     // Confirm the action
     fireEvent.press(getByText('Deposit'));
