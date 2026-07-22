@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'rea
 import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useRouter } from 'expo-router';
-import { Lock, CheckCircle, Clock } from 'lucide-react-native';
+import { Lock, CheckCircle, Clock, Info } from 'lucide-react-native';
 import { Lock as LockType } from '../hooks/useVault';
 import { formatTimeRemaining } from '../utils/lockTime';
 

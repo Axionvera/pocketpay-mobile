@@ -225,7 +225,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyIn: 'space-between',
+    justifyContent: 'space-between',
     padding: SIZES.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,

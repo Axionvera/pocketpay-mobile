@@ -12,6 +12,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useVault } from '../../src/hooks/useVault';
 import { useVaultDepositForm } from '../../src/features/vault/useVaultDepositForm';
 import { useWalletStore } from '../../src/store/walletStore';
+import { formatTimeRemaining } from '../../src/utils/lockTime';
 import { validateAmount } from '../../src/utils/validation';
 import { PiggyBank, Info, Lock, HelpCircle, ShieldCheck, AlertTriangle, XCircle } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
