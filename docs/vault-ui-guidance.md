@@ -62,6 +62,21 @@ The UI now supports displaying multiple independent locks per user, each with:
 - `src/components/VaultLockEducationModal.tsx` — updated education modal
 - `src/store/vaultStore.ts` — `locks` state, `loadLocks`, `addLock`, `unlockLock` functions
 - `app/(tabs)/vault.tsx` — uses `VaultLockList` and integrates with store
+## Locked Funds Education
+
+To avoid user confusion when funds are locked, the UI provides:
+
+- A **locked funds box** showing locked amount and unlock time (when applicable), using AsyncStorage for mock persistence
+- A **help icon** in the locked funds box that opens `VaultLockEducationModal`
+- The `VaultLockEducationModal` explains:
+  - Lock period and why early withdrawal isn't possible
+  - Unlock time calculation
+  - That this is currently a mock/test feature
+
+**Relevant code:**
+- `src/components/VaultLockEducationModal.tsx` — modal implementation
+- `src/store/vaultStore.ts` — `lockedBalance`, `unlockTime`, `loadLockedState`, `lockFunds`
+- `app/(tabs)/vault.tsx` — UI integration
 
 ---
 

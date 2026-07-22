@@ -13,7 +13,7 @@ import { useWalletStore } from '../../src/store/walletStore';
 import { useVaultStore } from '../../src/store/vaultStore';
 import { validateAmount } from '../../src/utils/validation';
 import { useVaultDepositForm } from '../../src/features/vault/useVaultDepositForm';
-import { PiggyBank, ShieldCheck, AlertTriangle, XCircle, Info } from 'lucide-react-native';
+import { PiggyBank, ShieldCheck, AlertTriangle, XCircle, Info, Lock, HelpCircle } from 'lucide-react-native';
 
 const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const VAULT_INTRO_SEEN_KEY = '@pocketpay_vault_intro_seen';
@@ -25,6 +25,8 @@ export default function VaultScreen() {
   const {
     balance,
     locks,
+    lockedBalance,
+    unlockTime,
     isConfigured,
     contractId,
     isLoadingBalance,
@@ -35,6 +37,8 @@ export default function VaultScreen() {
     loadLocks,
     addLock,
     unlockLock,
+    loadLockedState,
+    lockFunds,
     deposit,
     withdraw,
   } = useVaultStore();
@@ -68,6 +72,7 @@ export default function VaultScreen() {
       loadBalance(publicKey);
     }
     loadLocks();
+    loadLockedState();
   }, [publicKey]);
 
   useEffect(() => {
@@ -121,6 +126,9 @@ export default function VaultScreen() {
         await addLock(amount, pendingUnlockDate);
         setConfirmVisible(false);
         Alert.alert('Success', `Locked ${amount} XLM until ${pendingUnlockDate} (mock)`);
+        await lockFunds(amount, pendingUnlockTime);
+        setConfirmVisible(false);
+        Alert.alert('Success', `Locked ${amount} XLM until ${pendingUnlockTime} (mock)`);
         depositForm.setAmount('');
         depositForm.setAmountError(undefined);
         return;
@@ -166,6 +174,7 @@ export default function VaultScreen() {
       Alert.alert('Unlock failed', e.message);
     }
   };
+  const isLocked = parseFloat(lockedBalance) > 0;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -173,6 +182,8 @@ export default function VaultScreen() {
       <VaultLockEducationModal
         visible={lockEducationVisible}
         onClose={() => setLockEducationVisible(false)}
+        lockedBalance={lockedBalance}
+        unlockTime={unlockTime}
       />
       <VaultConfirmModal
         visible={confirmVisible}
@@ -222,6 +233,22 @@ export default function VaultScreen() {
         onUnlock={handleUnlock}
         onInfoPress={() => setLockEducationVisible(true)}
       />
+      {isLocked && unlockTime ? (
+        <View style={styles.lockedFundsBox}>
+          <View style={styles.lockedFundsHeader}>
+            <Lock color={colors.secondary} size={20} style={{ marginRight: SIZES.sm }} />
+            <Text style={styles.lockedFundsTitle}>Locked Funds</Text>
+            <TouchableOpacity
+              onPress={() => setLockEducationVisible(true)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <HelpCircle color={colors.textMuted} size={18} />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.lockedAmount}>{lockedBalance} XLM</Text>
+          <Text style={styles.unlockTime}>Unlocks on {unlockTime}</Text>
+        </View>
+      ) : null}
 
       {isConfigured ? (
         <View style={styles.infoBox}>
@@ -390,6 +417,35 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.primary,
     fontSize: 14,
     fontWeight: '600',
+  },
+  lockedFundsBox: {
+    backgroundColor: 'rgba(123, 97, 255, 0.08)',
+    padding: SIZES.lg,
+    borderRadius: RADIUS.lg,
+    marginBottom: SIZES.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(123, 97, 255, 0.2)',
+  },
+  lockedFundsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SIZES.sm,
+  },
+  lockedFundsTitle: {
+    color: colors.secondary,
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+  },
+  lockedAmount: {
+    color: colors.textPrimary,
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: SIZES.xs,
+  },
+  unlockTime: {
+    color: colors.textSecondary,
+    fontSize: 14,
   },
   infoBox: {
     flexDirection: 'row',
