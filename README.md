@@ -17,6 +17,7 @@ React Native Expo wallet for Stellar Testnet. The app aims to feel polished and 
 - [Vault UI Guidance](./docs/vault-ui-guidance.md) - How to present the Soroban Savings Vault, Testnet risks, and contract limitations
 - [Vault Integration Risks](./docs/vault-integration-risks.md) - Assumptions, risks, and integration points between the mobile UI, PocketPay SDK, and Soroban contract
 - [Mobile Wallet Security FAQ](./docs/WALLET_SECURITY_FAQ.md) - Local storage, secret handling, reset behaviors, and security guarantees
+- [Accessibility Checklist](./docs/accessibility.md) - Mobile accessibility audit checklist for labels, touch targets, contrast, focus, screen-reader, and error/loading states
 
 > ⚠️ **This app runs on the Stellar Testnet only.** Testnet XLM has no real monetary value. Read the [Security Guide](docs/security.md) before storing or sharing any keys.
 
@@ -81,8 +82,6 @@ app's `postinstall` script because the SDK is not currently published to npm.
 ## Contributing
 
 Before adding new screens or components, read the [Design System guide](docs/design-system.md). It covers colour tokens, typography, spacing, card patterns, buttons, inputs, and dark mode rules derived directly from the existing codebase.
-
-## Contributing
 
 Please read our [Contributing Guidelines](CONTRIBUTING.md) and review our [Accessibility Checklist](docs/accessibility.md) before making UI changes.
 
