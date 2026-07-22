@@ -31,7 +31,7 @@ import {
   ChevronDown,
   User,
 } from "lucide-react-native";
-import { ScreenHeader } from "@/components";
+import { ScreenHeader, SigningConfirmModal } from "@/components";
 
 interface FieldErrors {
   destination?: string;
@@ -39,6 +39,12 @@ interface FieldErrors {
   memo?: string;
 }
 
+const getNetworkLabel = (): string => {
+  const network = (process.env.EXPO_PUBLIC_STELLAR_NETWORK || "TESTNET").toUpperCase();
+  if (network === "PUBLIC" || network === "MAINNET") return "Public Network";
+  if (network === "TESTNET") return "Testnet";
+  return network;
+};
 export default function SendScreen() {
   const router = useRouter();
   const { colors } = useTheme();
@@ -54,6 +60,8 @@ export default function SendScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
+  const [showSigningConfirm, setShowSigningConfirm] = useState(false);
+  const [isSigning, setIsSigning] = useState(false);
 
   const destinationContact =
     destination.trim() && !errors.destination
@@ -110,32 +118,37 @@ export default function SendScreen() {
   const handleScanClose = () => {
     setIsScanning(false);
   };
-
-  const handleSend = async () => {
+  const handleSend = () => {
     const fieldErrors: FieldErrors = {
       destination: validateAddress(destination, publicKey) ?? undefined,
       amount: validateAmount(amount, balance) ?? undefined,
       memo: validateMemo(memo) ?? undefined,
     };
     setErrors(fieldErrors);
-
     if (fieldErrors.destination || fieldErrors.amount || fieldErrors.memo) {
       return;
     }
+    setShowSigningConfirm(true);
+  };
 
+  const handleCancelSign = () => {
+    if (isSigning) return;
+    setShowSigningConfirm(false);
+  };
+
+  const handleConfirmSign = async () => {
     try {
-      setIsLoading(true);
+      setIsSigning(true);
       const secretKey = await getSecretKey();
       if (!secretKey) throw new Error("Secret key not found.");
-
       const result = await sendXlmTransaction(
         secretKey,
         destination.trim(),
         amount.trim(),
         memo.trim(),
       );
-
       refreshWalletData();
+      setShowSigningConfirm(false);
       router.replace({
         pathname: "/payment-success",
         params: {
@@ -145,12 +158,13 @@ export default function SendScreen() {
         },
       });
     } catch (error: any) {
+      setShowSigningConfirm(false);
       Alert.alert(
         "Transaction Failed",
         error.message || "An error occurred while sending.",
       );
     } finally {
-      setIsLoading(false);
+      setIsSigning(false);
     }
   };
 
@@ -276,6 +290,17 @@ export default function SendScreen() {
           onClose={handleScanClose}
         />
       </Modal>
+      <SigningConfirmModal
+        visible={showSigningConfirm}
+        isLoading={isSigning}
+        recipientAddress={destination.trim()}
+        recipientLabel={destinationContact?.isContact ? destinationContact.label : null}
+        amount={amount.trim()}
+        memo={memo.trim()}
+        network={getNetworkLabel()}
+        onConfirm={handleConfirmSign}
+        onCancel={handleCancelSign}
+      />
     </>
   );
 }
