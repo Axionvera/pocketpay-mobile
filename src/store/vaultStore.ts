@@ -14,8 +14,6 @@ import {
 } from '../services/stellar';
 
 const LOCKS_KEY = '@pocketpay_vault_locks';
-const LOCKED_BALANCE_KEY = '@pocketpay_vault_locked_balance';
-const UNLOCK_TIME_KEY = '@pocketpay_vault_unlock_time';
 
 export interface Lock {
   id: string;
@@ -28,8 +26,6 @@ export interface Lock {
 interface VaultState {
   balance: string;
   locks: Lock[];
-  lockedBalance: string;
-  unlockTime: string | null;
   isConfigured: boolean;
   contractId: string;
   isLoadingBalance: boolean;
@@ -41,8 +37,6 @@ interface VaultState {
   loadLocks: () => Promise<void>;
   addLock: (amount: string, unlockDate: string) => Promise<void>;
   unlockLock: (lockId: string) => Promise<void>;
-  loadLockedState: () => Promise<void>;
-  lockFunds: (amount: string, unlockTime: string) => Promise<void>;
   deposit: (secretKey: string, publicKey: string, amount: string) => Promise<string | null>;
   withdraw: (secretKey: string, publicKey: string, amount: string) => Promise<string | null>;
 }
@@ -50,8 +44,6 @@ interface VaultState {
 export const useVaultStore = create<VaultState>((set, get) => ({
   balance: '0.0000000',
   locks: [],
-  lockedBalance: '0.0000000',
-  unlockTime: null,
   isConfigured: isVaultConfigured(),
   contractId: getVaultContractId(),
   isLoadingBalance: false,
@@ -125,33 +117,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     }
   },
 
-  loadLockedState: async () => {
-    try {
-      const [lockedBalance, unlockTime] = await Promise.all([
-        AsyncStorage.getItem(LOCKED_BALANCE_KEY),
-        AsyncStorage.getItem(UNLOCK_TIME_KEY),
-      ]);
-      set({
-        lockedBalance: lockedBalance ?? '0.0000000',
-        unlockTime: unlockTime,
-      });
-    } catch (err: any) {
-      console.error('Failed to load locked state:', err);
-    }
-  },
 
-  lockFunds: async (amount: string, unlockTime: string) => {
-    set({ isSubmitting: true });
-    try {
-      await Promise.all([
-        AsyncStorage.setItem(LOCKED_BALANCE_KEY, amount),
-        AsyncStorage.setItem(UNLOCK_TIME_KEY, unlockTime),
-      ]);
-      set({ lockedBalance: amount, unlockTime });
-    } finally {
-      set({ isSubmitting: false });
-    }
-  },
 
   // Returns the transaction hash on-chain, or null in mock mode.
   deposit: async (secretKey: string, publicKey: string, amount: string) => {
