@@ -179,36 +179,6 @@ export default function VaultScreen() {
     }
   };
 
-  const initiateDeposit = () => {
-    const error = validateAmount(amount, balance) ?? undefined;
-    setAmountError(error);
-    if (error) return;
-
-    setModalConfig({
-      title: 'Confirm Deposit',
-      amount: `${amount} XLM`,
-      description: 'You are depositing XLM into the Soroban Savings Vault. These funds will be locked/deposited into the smart contract.',
-      confirmText: 'Deposit',
-      onConfirm: handleDeposit,
-    });
-    setModalVisible(true);
-  };
-
-  const initiateWithdraw = () => {
-    const error = validateAmount(amount, vaultBalance) ?? undefined;
-    setAmountError(error);
-    if (error) return;
-
-    setModalConfig({
-      title: 'Confirm Withdrawal',
-      amount: `${amount} XLM`,
-      description: 'You are withdrawing XLM from the Soroban Savings Vault. These funds will be transferred back to your main wallet balance.',
-      confirmText: 'Withdraw',
-      onConfirm: handleWithdraw,
-    });
-    setModalVisible(true);
-  };
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <VaultIntroModal visible={introVisible} onContinue={dismissIntro} />

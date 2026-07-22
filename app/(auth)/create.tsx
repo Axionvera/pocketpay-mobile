@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button } from '../../src/components/Button';
+import { AsyncActionButton } from '../../src/components/AsyncActionButton';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { generateKeypair } from '../../src/services/stellar';
@@ -71,7 +71,7 @@ export default function CreateWalletScreen() {
             Your Testnet wallet is ready. Fund it with the Friendbot on the home screen to start sending test XLM.
           </Text>
         </View>
-        <Button title="Go to Wallet" onPress={handleGoToWallet} />
+        <AsyncActionButton title="Go to Wallet" onPress={handleGoToWallet} />
       </View>
     );
   }
@@ -93,7 +93,7 @@ export default function CreateWalletScreen() {
             A new keypair will be generated on your device. Your secret key stays private and never leaves this phone.
           </Text>
         </View>
-        <Button title="Generate Keypair" onPress={handleGenerate} />
+        <AsyncActionButton title="Generate Keypair" onPress={handleGenerate} />
       </View>
     );
   }
@@ -128,7 +128,7 @@ export default function CreateWalletScreen() {
         </Text>
       </View>
 
-      <Button
+      <AsyncActionButton
         title="I've Saved It — Continue"
         onPress={handleContinue}
         isLoading={isLoading}
