@@ -23,6 +23,7 @@ interface WalletState {
   isFunding: boolean;
   fundError: string | null;
   error: string | null;
+  showBackupReminder: boolean;
 
   // Pagination
   isLoadingMore: boolean;
@@ -38,6 +39,7 @@ interface WalletState {
   clearWallet: () => Promise<boolean>;
   getSecretKey: () => Promise<string | null>;
   fundWallet: () => Promise<void>;
+  setShowBackupReminder: (show: boolean) => void;
 }
 
 const resetWalletState = () => ({
@@ -75,7 +77,7 @@ const parseStoredSecret = (storedValue: string): string | null => {
   return trimmedValue;
 };
 
-const clearStoredWalletValue = async () => {
+const clearStoredSecrets = async () => {
   try {
     await SecureStore.deleteItemAsync(WALLET_KEY);
   } catch {
@@ -95,6 +97,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   isLoadingMore: false,
   hasMoreTransactions: false,
   nextCursor: null,
+  showBackupReminder: false,
+
+  setShowBackupReminder: (show: boolean) => set({ showBackupReminder: show }),
 
   setWallet: async (publicKey: string, secretKey: string) => {
     try {
