@@ -2,11 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
-import { Lock, useVaultStore } from '../store/vaultStore';
+import { Lock } from '../store/vaultStore';
 import { Calendar, Clock, DollarSign, Lock as LockIcon, Unlock, Info, Timer, HelpCircle } from 'lucide-react-native';
 import { formatTimeRemaining, getEligibilityText } from '../utils/lockTime';
-import { VaultConfirmModal } from './VaultConfirmModal';
-import { useRouter } from 'expo-router';
 
 interface VaultLockDetailProps {
   lock: Lock;
@@ -126,7 +124,7 @@ export const VaultLockDetail: React.FC<VaultLockDetailProps> = ({ lock }) => {
             accessibilityLabel="Withdraw funds"
             accessibilityRole="button"
           >
-            <DollarSign color={colors.background} size={20} />
+            <DollarSign color={colors.buttonText} size={20} />
             <Text style={styles.withdrawButtonText}>Withdraw Funds</Text>
           </TouchableOpacity>
         )}
@@ -148,15 +146,6 @@ export const VaultLockDetail: React.FC<VaultLockDetailProps> = ({ lock }) => {
           This is a Testnet preview — no real money is involved.
         </Text>
       </View>
-
-      <VaultConfirmModal
-        visible={isConfirmVisible}
-        actionType="withdraw"
-        amount={lock.amount}
-        isLoading={isWithdrawing}
-        onConfirm={performWithdrawal}
-        onCancel={() => !isWithdrawing && setIsConfirmVisible(false)}
-      />
     </View>
   );
 };
