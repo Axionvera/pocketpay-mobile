@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'rea
 import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { Button } from './Button';
-import { Lock, Clock, AlertCircle, X } from 'lucide-react-native';
+import { Lock, Clock, AlertCircle, X, ArrowRight, CheckCircle, Wallet } from 'lucide-react-native';
+import { formatTimeRemaining } from '../utils/lockTime';
 
 interface VaultLockEducationModalProps {
   visible: boolean;
@@ -31,64 +32,103 @@ export const VaultLockEducationModal: React.FC<VaultLockEducationModalProps> = (
             <View style={styles.iconContainer}>
               <Lock color={colors.secondary} size={36} />
             </View>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={onClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel="Close"
+              accessibilityRole="button"
+            >
               <X color={colors.textMuted} size={22} />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.title}>About Locked Funds</Text>
+          <Text style={styles.title}>Understanding Locked Funds</Text>
           <Text style={styles.subtitle}>
-            Why you can't withdraw locked funds right away
+            Locking sets your XLM aside for a set period. Here's how it works.
           </Text>
 
           <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+            {/* ── Visual timeline ─────────────────────────────────── */}
+            <View style={styles.timeline}>
+              <View style={styles.timelineStep}>
+                <View style={[styles.timelineDot, { backgroundColor: colors.secondary }]}>
+                  <Lock color={colors.background} size={14} />
+                </View>
+                <Text style={styles.timelineLabel}>You lock{"\n"}your funds</Text>
+              </View>
+              <View style={styles.timelineArrow}>
+                <ArrowRight color={colors.textMuted} size={16} />
+              </View>
+              <View style={styles.timelineStep}>
+                <View style={[styles.timelineDot, { backgroundColor: colors.warning }]}>
+                  <Clock color={colors.background} size={14} />
+                </View>
+                <Text style={styles.timelineLabel}>Wait for the{"\n"}unlock date</Text>
+              </View>
+              <View style={styles.timelineArrow}>
+                <ArrowRight color={colors.textMuted} size={16} />
+              </View>
+              <View style={styles.timelineStep}>
+                <View style={[styles.timelineDot, { backgroundColor: colors.success }]}>
+                  <Wallet color={colors.background} size={14} />
+                </View>
+                <Text style={styles.timelineLabel}>Withdraw{"\n"}anytime</Text>
+              </View>
+            </View>
+
+            {/* ── Active lock summary ────────────────────────────── */}
             {isLocked ? (
               <View style={styles.currentLockInfo}>
                 <View style={styles.currentLockIcon}>
                   <Clock color={colors.secondary} size={24} />
                 </View>
                 <View style={styles.currentLockText}>
-                  <Text style={styles.currentLockLabel}>Currently Locked</Text>
+                  <Text style={styles.currentLockLabel}>Your current lock</Text>
                   <Text style={styles.currentLockAmount}>{lockedBalance} XLM</Text>
-                  {unlockTime && (
-                    <Text style={styles.currentUnlockTime}>Unlocks on {unlockTime}</Text>
-                  )}
+                  <Text style={styles.currentUnlockTime}>
+                    Available to withdraw on {unlockTime}
+                  </Text>
+                  <Text style={styles.currentCountdown}>
+                    {formatTimeRemaining(unlockTime)}
+                  </Text>
                 </View>
               </View>
             ) : null}
 
+            {/* ── Education points ────────────────────────────────── */}
             <View style={styles.point}>
               <View style={[styles.pointIcon, { backgroundColor: 'rgba(123, 97, 255, 0.12)' }]}>
                 <Lock color={colors.secondary} size={18} />
               </View>
               <View style={styles.pointText}>
-                <Text style={styles.pointTitle}>Lock period</Text>
+                <Text style={styles.pointTitle}>How long are funds locked?</Text>
                 <Text style={styles.pointBody}>
-                  When you lock funds, they're held for a fixed time (30 days by default). You can't withdraw them until the unlock date passes.
+                  Each lock holds your XLM for 30 days. During this time the funds stay safely set aside and cannot be withdrawn early.
                 </Text>
               </View>
             </View>
 
             <View style={styles.point}>
               <View style={[styles.pointIcon, { backgroundColor: 'rgba(0, 230, 118, 0.12)' }]}>
-                <Clock color={colors.success} size={18} />
+                <CheckCircle color={colors.success} size={18} />
               </View>
               <View style={styles.pointText}>
-                <Text style={styles.pointTitle}>Matured locks</Text>
+                <Text style={styles.pointTitle}>When can I withdraw?</Text>
                 <Text style={styles.pointBody}>
-                  Once the unlock date passes, locks become "matured" and you can unlock the funds.
+                  Once the unlock date arrives, your lock shows a green "Ready" badge and an "Unlock" button appears. Tap it to move the funds back into your available balance — there's no deadline to do so.
                 </Text>
               </View>
             </View>
 
             <View style={styles.point}>
               <View style={[styles.pointIcon, { backgroundColor: 'rgba(0, 229, 255, 0.12)' }]}>
-                <Clock color={colors.primary} size={18} />
+                <Wallet color={colors.primary} size={18} />
               </View>
               <View style={styles.pointText}>
-                <Text style={styles.pointTitle}>Multiple locks</Text>
+                <Text style={styles.pointTitle}>Can I lock more than once?</Text>
                 <Text style={styles.pointBody}>
-                  You can create multiple independent locks, each with their own amount and unlock date.
+                  Yes. You can create as many locks as you like, each with its own amount and countdown. They work independently of each other.
                 </Text>
               </View>
             </View>
@@ -98,9 +138,9 @@ export const VaultLockEducationModal: React.FC<VaultLockEducationModalProps> = (
                 <AlertCircle color={colors.warning} size={18} />
               </View>
               <View style={styles.pointText}>
-                <Text style={styles.pointTitle}>Testnet note</Text>
+                <Text style={styles.pointTitle}>Testnet preview</Text>
                 <Text style={styles.pointBody}>
-                  This is a testnet feature. Locking currently uses mock data stored locally on your device for demonstration purposes.
+                  This feature currently runs on the Stellar Testnet. Locked amounts are tracked on your device for demonstration — no real money is involved.
                 </Text>
               </View>
             </View>
@@ -175,6 +215,40 @@ const createStyles = (colors: ThemeColors) =>
     body: {
       marginBottom: SIZES.md,
     },
+    // ── Visual timeline ──────────────────────────────────────────
+    timeline: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(123, 97, 255, 0.06)',
+      borderRadius: RADIUS.lg,
+      paddingVertical: SIZES.lg,
+      paddingHorizontal: SIZES.sm,
+      marginBottom: SIZES.lg,
+    },
+    timelineStep: {
+      alignItems: 'center',
+      flex: 1,
+    },
+    timelineDot: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: SIZES.xs,
+    },
+    timelineLabel: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      textAlign: 'center',
+      lineHeight: 15,
+    },
+    timelineArrow: {
+      paddingTop: 8,
+      paddingHorizontal: 2,
+    },
+    // ── Current lock card ────────────────────────────────────────
     currentLockInfo: {
       flexDirection: 'row',
       backgroundColor: 'rgba(123, 97, 255, 0.08)',
@@ -205,7 +279,14 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.secondary,
       fontSize: 13,
       fontWeight: '500',
+      marginBottom: 2,
     },
+    currentCountdown: {
+      color: colors.textMuted,
+      fontSize: 12,
+      fontStyle: 'italic',
+    },
+    // ── Education points ─────────────────────────────────────────
     point: {
       flexDirection: 'row',
       marginBottom: SIZES.lg,

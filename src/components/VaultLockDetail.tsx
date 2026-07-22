@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { Lock } from '../store/vaultStore';
-import { Calendar, Clock, DollarSign, Lock as LockIcon, Unlock, Info } from 'lucide-react-native';
+import { Calendar, Clock, DollarSign, Lock as LockIcon, Unlock, Info, Timer, HelpCircle } from 'lucide-react-native';
+import { formatTimeRemaining, getEligibilityText } from '../utils/lockTime';
 
 interface VaultLockDetailProps {
   lock: Lock;
@@ -16,6 +17,8 @@ export const VaultLockDetail: React.FC<VaultLockDetailProps> = ({ lock }) => {
   const isMatured = lock.status === 'matured';
   const unlockDate = new Date(lock.unlockDate);
   const createdAt = new Date(lock.createdAt);
+  const countdown = formatTimeRemaining(lock.unlockDate);
+  const eligibility = getEligibilityText(lock.unlockDate, lock.status);
 
   const handleWithdraw = () => {
     // TODO: Implement withdrawal logic
@@ -49,7 +52,7 @@ export const VaultLockDetail: React.FC<VaultLockDetailProps> = ({ lock }) => {
                   ? colors.success
                   : colors.secondary,
               }]}>
-                {isMatured ? 'Matured' : 'Locked'}
+                {isMatured ? 'Ready to withdraw' : 'Locked'}
               </Text>
             </View>
           </View>
@@ -57,30 +60,62 @@ export const VaultLockDetail: React.FC<VaultLockDetailProps> = ({ lock }) => {
 
         <View style={styles.detailRow}>
           <Calendar color={colors.textMuted} size={18} style={styles.detailIcon} />
-          <Text style={styles.detailLabel}>Created Date:</Text>
+          <Text style={styles.detailLabel}>Locked on:</Text>
           <Text style={styles.detailValue}>{createdAt.toLocaleDateString()}</Text>
         </View>
 
         <View style={styles.detailRow}>
           <Clock color={colors.textMuted} size={18} style={styles.detailIcon} />
-          <Text style={styles.detailLabel}>Unlock Date:</Text>
+          <Text style={styles.detailLabel}>Available from:</Text>
           <Text style={styles.detailValue}>{unlockDate.toLocaleDateString()}</Text>
         </View>
 
-        <View style={styles.detailRow}>
-          <Info color={colors.textMuted} size={18} style={styles.detailIcon} />
-          <Text style={styles.detailLabel}>Withdrawal Eligibility:</Text>
-          <Text style={[styles.detailValue, { color: isMatured ? colors.success : colors.error }]}>
-            {isMatured ? 'Eligible' : 'Not yet eligible'}
+        {!isMatured && countdown ? (
+          <View style={styles.detailRow}>
+            <Timer color={colors.textMuted} size={18} style={styles.detailIcon} />
+            <Text style={styles.detailLabel}>Time left:</Text>
+            <Text style={[styles.detailValue, { color: colors.secondary }]}>{countdown}</Text>
+          </View>
+        ) : null}
+
+        {/* Eligibility explanation */}
+        <View style={styles.eligibilityBox}>
+          <Info color={isMatured ? colors.success : colors.secondary} size={18} style={styles.detailIcon} />
+          <Text style={[styles.eligibilityText, {
+            color: isMatured ? colors.success : colors.textSecondary,
+          }]}>
+            {eligibility}
           </Text>
         </View>
 
         {isMatured && (
-          <TouchableOpacity style={styles.withdrawButton} onPress={handleWithdraw}>
+          <TouchableOpacity
+            style={styles.withdrawButton}
+            onPress={handleWithdraw}
+            accessibilityLabel="Withdraw funds"
+            accessibilityRole="button"
+          >
             <DollarSign color={colors.buttonText} size={20} />
             <Text style={styles.withdrawButtonText}>Withdraw Funds</Text>
           </TouchableOpacity>
         )}
+      </View>
+
+      {/* Inline education card */}
+      <View style={styles.educationCard}>
+        <View style={styles.educationHeader}>
+          <HelpCircle color={colors.primary} size={20} style={{ marginRight: SIZES.sm }} />
+          <Text style={styles.educationTitle}>Why are my funds locked?</Text>
+        </View>
+        <Text style={styles.educationBody}>
+          When you lock XLM, it's set aside for a fixed period (30 days). During this time the funds stay safely in your vault but cannot be withdrawn.
+        </Text>
+        <Text style={styles.educationBody}>
+          Once the unlock date arrives, you'll see a "Ready to withdraw" badge and can move the funds back to your wallet whenever you like — there's no rush.
+        </Text>
+        <Text style={styles.educationFootnote}>
+          This is a Testnet preview — no real money is involved.
+        </Text>
       </View>
     </View>
   );
@@ -148,6 +183,20 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 15,
   },
+  eligibilityBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(123, 97, 255, 0.06)',
+    borderRadius: RADIUS.md,
+    padding: SIZES.md,
+    marginTop: SIZES.sm,
+    marginBottom: SIZES.sm,
+  },
+  eligibilityText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   withdrawButton: {
     flexDirection: 'row',
     backgroundColor: colors.primary,
@@ -163,5 +212,36 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: SIZES.xs,
+  },
+  // ── Inline education card ──────────────────────────────────────
+  educationCard: {
+    backgroundColor: colors.surface,
+    padding: SIZES.lg,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: SIZES.lg,
+  },
+  educationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SIZES.sm,
+  },
+  educationTitle: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  educationBody: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: SIZES.sm,
+  },
+  educationFootnote: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: SIZES.xs,
   },
 });
