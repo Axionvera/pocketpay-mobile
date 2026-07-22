@@ -42,6 +42,7 @@ PocketPay Mobile is part of a broader PocketPay stack:
 
 - [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
 - [Mobile Onboarding Checklist](docs/mobile-onboarding-checklist.md) - Quick-reference setup checklist for new contributors
+- [UI State Catalogue](docs/ui-states.md) - Loading, empty, error, success, and disabled states for wallet, send, receive, transactions, contacts, and vault
 
 ## Screenshots
 
