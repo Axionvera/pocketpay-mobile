@@ -9,20 +9,14 @@ import { formatTimeRemaining } from '../utils/lockTime';
 interface VaultLockEducationModalProps {
   visible: boolean;
   onClose: () => void;
-  lockedBalance?: string;
-  unlockTime?: string | null;
 }
 
 export const VaultLockEducationModal: React.FC<VaultLockEducationModalProps> = ({
   visible,
   onClose,
-  lockedBalance,
-  unlockTime,
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-
-  const isLocked = lockedBalance && parseFloat(lockedBalance) > 0 && unlockTime;
 
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
@@ -77,24 +71,7 @@ export const VaultLockEducationModal: React.FC<VaultLockEducationModalProps> = (
               </View>
             </View>
 
-            {/* ── Active lock summary ────────────────────────────── */}
-            {isLocked ? (
-              <View style={styles.currentLockInfo}>
-                <View style={styles.currentLockIcon}>
-                  <Clock color={colors.secondary} size={24} />
-                </View>
-                <View style={styles.currentLockText}>
-                  <Text style={styles.currentLockLabel}>Your current lock</Text>
-                  <Text style={styles.currentLockAmount}>{lockedBalance} XLM</Text>
-                  <Text style={styles.currentUnlockTime}>
-                    Available to withdraw on {unlockTime}
-                  </Text>
-                  <Text style={styles.currentCountdown}>
-                    {formatTimeRemaining(unlockTime)}
-                  </Text>
-                </View>
-              </View>
-            ) : null}
+
 
             {/* ── Education points ────────────────────────────────── */}
             <View style={styles.point}>
@@ -248,44 +225,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingTop: 8,
       paddingHorizontal: 2,
     },
-    // ── Current lock card ────────────────────────────────────────
-    currentLockInfo: {
-      flexDirection: 'row',
-      backgroundColor: 'rgba(123, 97, 255, 0.08)',
-      borderRadius: RADIUS.md,
-      padding: SIZES.md,
-      marginBottom: SIZES.lg,
-      alignItems: 'flex-start',
-    },
-    currentLockIcon: {
-      marginRight: SIZES.sm,
-      marginTop: 2,
-    },
-    currentLockText: {
-      flex: 1,
-    },
-    currentLockLabel: {
-      color: colors.textSecondary,
-      fontSize: 12,
-      marginBottom: 2,
-    },
-    currentLockAmount: {
-      color: colors.textPrimary,
-      fontSize: 18,
-      fontWeight: 'bold',
-      marginBottom: 4,
-    },
-    currentUnlockTime: {
-      color: colors.secondary,
-      fontSize: 13,
-      fontWeight: '500',
-      marginBottom: 2,
-    },
-    currentCountdown: {
-      color: colors.textMuted,
-      fontSize: 12,
-      fontStyle: 'italic',
-    },
+
     // ── Education points ─────────────────────────────────────────
     point: {
       flexDirection: 'row',

@@ -30,8 +30,6 @@ export default function VaultScreen() {
   const {
     balance,
     locks,
-    lockedBalance,
-    unlockTime,
     isConfigured,
     contractId,
     isLoadingBalance,
@@ -42,8 +40,6 @@ export default function VaultScreen() {
     loadLocks,
     addLock,
     unlockLock,
-    loadLockedState,
-    lockFunds,
     deposit,
     withdraw,
   } = useVault();
@@ -62,7 +58,6 @@ export default function VaultScreen() {
   const isVaultUnavailable = !publicKey;
   const isMissingContractId = isVaultUnavailable && !isConfigured;
   const isMissingRpcUrl = false; // For now, default to testnet RPC
-  const isLocked = parseFloat(lockedBalance) > 0;
 
   // Initial setup
   useEffect(() => {
@@ -79,9 +74,8 @@ export default function VaultScreen() {
     if (publicKey) {
       loadBalance(publicKey);
       loadLocks();
-      loadLockedState();
     }
-  }, [publicKey, loadBalance, loadLocks, loadLockedState]);
+  }, [publicKey, loadBalance, loadLocks]);
 
   // Handlers
   const dismissIntro = async () => {
@@ -131,7 +125,6 @@ export default function VaultScreen() {
       if (pendingAction === 'lock') {
         const unlockDate = new Date(Date.now() + LOCK_PERIOD_SECONDS * 1000);
         await addLock(depositForm.amount, unlockDate.toISOString());
-        await lockFunds(depositForm.amount, unlockDate.toLocaleDateString());
         setConfirmVisible(false);
         Alert.alert('Success', `Locked ${depositForm.amount} XLM until ${unlockDate.toLocaleDateString()} (mock)`);
         depositForm.setAmount('');
@@ -186,8 +179,6 @@ export default function VaultScreen() {
       <VaultLockEducationModal
         visible={lockEducationVisible}
         onClose={() => setLockEducationVisible(false)}
-        lockedBalance={lockedBalance}
-        unlockTime={unlockTime}
       />
       <VaultConfirmModal
         visible={confirmVisible}
@@ -237,28 +228,7 @@ export default function VaultScreen() {
         onUnlock={handleUnlock}
         onInfoPress={() => setLockEducationVisible(true)}
       />
-      {isLocked && unlockTime ? (
-        <View style={styles.lockedFundsBox}>
-          <View style={styles.lockedFundsHeader}>
-            <Lock color={colors.secondary} size={20} style={{ marginRight: SIZES.sm }} />
-            <Text style={styles.lockedFundsTitle}>Locked Funds</Text>
-            <TouchableOpacity
-              onPress={() => setLockEducationVisible(true)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              accessibilityLabel="Learn about locked funds"
-              accessibilityRole="button"
-            >
-              <HelpCircle color={colors.textMuted} size={18} />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.lockedAmount}>{lockedBalance} XLM</Text>
-          <Text style={styles.unlockTime}>Available to withdraw on {unlockTime}</Text>
-          <Text style={styles.lockedCountdown}>{formatTimeRemaining(unlockTime)}</Text>
-          <Text style={styles.lockedFundsHelper}>
-            These funds are set aside and can't be withdrawn until the date above. Once that date passes, you can move them back to your wallet.
-          </Text>
-        </View>
-      ) : null}
+
 
       {isConfigured ? (
         <View style={styles.infoBox}>
@@ -428,47 +398,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  lockedFundsBox: {
-    backgroundColor: 'rgba(123, 97, 255, 0.08)',
-    padding: SIZES.lg,
-    borderRadius: RADIUS.lg,
-    marginBottom: SIZES.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(123, 97, 255, 0.2)',
-  },
-  lockedFundsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SIZES.sm,
-  },
-  lockedFundsTitle: {
-    color: colors.secondary,
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-  },
-  lockedAmount: {
-    color: colors.textPrimary,
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: SIZES.xs,
-  },
-  unlockTime: {
-    color: colors.textSecondary,
-    fontSize: 14,
-  },
-  lockedCountdown: {
-    color: colors.secondary,
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  lockedFundsHelper: {
-    color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: SIZES.sm,
-  },
+
   infoBox: {
     flexDirection: 'row',
     backgroundColor: 'rgba(0, 230, 118, 0.1)',

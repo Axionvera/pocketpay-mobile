@@ -6,8 +6,6 @@ export function useVault() {
   const {
     balance,
     locks,
-    lockedBalance,
-    unlockTime,
     isConfigured,
     contractId,
     isLoadingBalance,
@@ -18,8 +16,6 @@ export function useVault() {
     loadLocks,
     addLock,
     unlockLock,
-    loadLockedState,
-    lockFunds,
     deposit,
     withdraw,
   } = useVaultStore();
@@ -29,8 +25,6 @@ export function useVault() {
   return {
     balance,
     locks,
-    lockedBalance,
-    unlockTime,
     isConfigured,
     contractId,
     isLoadingBalance,
@@ -41,8 +35,6 @@ export function useVault() {
     loadLocks,
     addLock,
     unlockLock,
-    loadLockedState,
-    lockFunds,
     deposit,
     withdraw,
     findLock,
