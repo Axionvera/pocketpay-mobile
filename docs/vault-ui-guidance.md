@@ -39,12 +39,30 @@ The vault contract tracks user balances internally via the `balance(id: Address)
 
 ---
 
+## Locked Funds Education
+
+To avoid user confusion when funds are locked, the UI provides:
+
+- A **locked funds box** showing locked amount and unlock time (when applicable), using AsyncStorage for mock persistence
+- A **help icon** in the locked funds box that opens `VaultLockEducationModal`
+- The `VaultLockEducationModal` explains:
+  - Lock period and why early withdrawal isn't possible
+  - Unlock time calculation
+  - That this is currently a mock/test feature
+
+**Relevant code:**
+- `src/components/VaultLockEducationModal.tsx` — modal implementation
+- `src/store/vaultStore.ts` — `lockedBalance`, `unlockTime`, `loadLockedState`, `lockFunds`
+- `app/(tabs)/vault.tsx` — UI integration
+
+---
+
 ## Avoiding Production Custody Claims
 
 Do not represent the vault as a production-grade custody solution. Specifically:
 
 - Do not use terms like "insured", "guaranteed", "secured by contract", or "safe storage" without clear Testnet qualification.
-- The "Lock Funds (30 days)" button in `app/(tabs)/vault.tsx:164-185` is a placeholder. It must not be described as an active time-lock feature until Soroban time-lock logic is implemented in the contract and wired in the mobile app.
+- The "Lock Funds (30 days)" button in `app/(tabs)/vault.tsx:164-185` is currently implemented with mock local storage. It must not be described as an active time-lock feature until Soroban time-lock logic is implemented in the contract and wired in the mobile app.
 - When displaying transaction hashes (e.g. `app/(tabs)/vault.tsx:77-78`), clearly distinguish between real contract transactions and mock operations.
 
 **Acceptable language:**
@@ -79,6 +97,7 @@ Any new vault UI that displays contract interaction details (transaction hashes,
 | Internal balance tracking limitation documented in UI | Required |
 | No production custody claims | Required |
 | Lock funds placeholder clearly marked as not-yet-implemented | Required |
+| Locked funds explained with education UI | Required |
 | Contract docs referenced in UI footnotes or tooltips | Recommended |
 | Mock mode distinguished from real contract mode | Required |
 
