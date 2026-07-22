@@ -7,6 +7,7 @@ import { useWalletStore } from '../../src/store/walletStore';
 import { mockFetchVaultBalance, mockDepositToVault, mockWithdrawFromVault } from '../../src/services/stellar';
 import { validateAmount } from '../../src/utils/validation';
 import { PiggyBank, ShieldCheck } from 'lucide-react-native';
+import { VaultConfirmationModal } from '../../src/components/VaultConfirmationModal';
 
 export default function VaultScreen() {
   const { publicKey, getSecretKey, balance } = useWalletStore();
@@ -14,6 +15,14 @@ export default function VaultScreen() {
   const [amount, setAmount] = useState('');
   const [amountError, setAmountError] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{
+    title: string;
+    amount: string;
+    description: string;
+    confirmText: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   useEffect(() => {
     if (publicKey) {
@@ -37,9 +46,6 @@ export default function VaultScreen() {
   };
 
   const handleDeposit = async () => {
-    const error = validateAmount(amount, balance) ?? undefined;
-    setAmountError(error);
-    if (error) return;
     try {
       setIsLoading(true);
       const secret = await getSecretKey();
@@ -51,12 +57,64 @@ export default function VaultScreen() {
       Alert.alert('Success', 'Funds deposited into Soroban Vault (Mock)');
       setAmount('');
       setAmountError(undefined);
+      setModalVisible(false);
       loadVaultBalance();
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleWithdraw = async () => {
+    try {
+      setIsLoading(true);
+      const secret = await getSecretKey();
+      if (!secret) throw new Error('Secret key not found');
+      
+      // MOCK CALL TO SOROBAN CONTRACT
+      await mockWithdrawFromVault(secret, amount);
+      
+      Alert.alert('Success', 'Funds withdrawn from Soroban Vault (Mock)');
+      setAmount('');
+      setAmountError(undefined);
+      setModalVisible(false);
+      loadVaultBalance();
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const initiateDeposit = () => {
+    const error = validateAmount(amount, balance) ?? undefined;
+    setAmountError(error);
+    if (error) return;
+
+    setModalConfig({
+      title: 'Confirm Deposit',
+      amount: `${amount} XLM`,
+      description: 'You are depositing XLM into the Soroban Savings Vault. These funds will be locked/deposited into the smart contract.',
+      confirmText: 'Deposit',
+      onConfirm: handleDeposit,
+    });
+    setModalVisible(true);
+  };
+
+  const initiateWithdraw = () => {
+    const error = validateAmount(amount, vaultBalance) ?? undefined;
+    setAmountError(error);
+    if (error) return;
+
+    setModalConfig({
+      title: 'Confirm Withdrawal',
+      amount: `${amount} XLM`,
+      description: 'You are withdrawing XLM from the Soroban Savings Vault. These funds will be transferred back to your main wallet balance.',
+      confirmText: 'Withdraw',
+      onConfirm: handleWithdraw,
+    });
+    setModalVisible(true);
   };
 
   return (
@@ -89,19 +147,32 @@ export default function VaultScreen() {
         <View style={styles.actions}>
           <Button 
             title="Deposit" 
-            onPress={handleDeposit} 
-            isLoading={isLoading}
+            onPress={initiateDeposit} 
+            disabled={isLoading}
             style={styles.actionButton}
           />
           <Button 
             title="Withdraw" 
             variant="secondary"
-            onPress={() => Alert.alert('Notice', 'Withdrawal mock action triggered')} 
+            onPress={initiateWithdraw} 
             disabled={isLoading}
             style={styles.actionButton}
           />
         </View>
       </View>
+
+      {modalConfig && (
+        <VaultConfirmationModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          onConfirm={modalConfig.onConfirm}
+          title={modalConfig.title}
+          amount={modalConfig.amount}
+          description={modalConfig.description}
+          confirmText={modalConfig.confirmText}
+          isLoading={isLoading}
+        />
+      )}
     </View>
   );
 }
