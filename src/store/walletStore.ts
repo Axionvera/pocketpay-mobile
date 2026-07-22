@@ -23,6 +23,7 @@ interface WalletState {
   isFunding: boolean;
   fundError: string | null;
   error: string | null;
+  showBackupReminder: boolean;
 
   // Pagination
   isLoadingMore: boolean;
@@ -38,6 +39,7 @@ interface WalletState {
   clearWallet: () => Promise<boolean>;
   getSecretKey: () => Promise<string | null>;
   fundWallet: () => Promise<void>;
+  setShowBackupReminder: (show: boolean) => void;
 }
 
 const resetWalletState = () => ({
@@ -75,7 +77,7 @@ const parseStoredSecret = (storedValue: string): string | null => {
   return trimmedValue;
 };
 
-const clearStoredWalletValue = async () => {
+const clearStoredSecrets = async () => {
   try {
     await SecureStore.deleteItemAsync(WALLET_KEY);
   } catch {
@@ -95,6 +97,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   isLoadingMore: false,
   hasMoreTransactions: false,
   nextCursor: null,
+  showBackupReminder: false,
+
+  setShowBackupReminder: (show: boolean) => set({ showBackupReminder: show }),
 
   setWallet: async (publicKey: string, secretKey: string) => {
     try {
@@ -109,26 +114,34 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   },
 
   loadWalletFromStorage: async () => {
+    let storedValue: string | null = null;
     try {
-      const storedValue = await SecureStore.getItemAsync(WALLET_KEY);
-      if (storedValue === null) {
-        set({ ...resetWalletState(), error: null });
-        return false;
-      }
+      storedValue = await SecureStore.getItemAsync(WALLET_KEY);
+    } catch {
+      console.error(RESTORE_WALLET_ERROR);
+      set({ ...resetWalletState(), error: RESTORE_WALLET_ERROR });
+      return false;
+    }
 
-      const secretKey = parseStoredSecret(storedValue);
-      if (!secretKey) {
-        await clearStoredWalletValue();
-        set({ ...resetWalletState(), error: RESTORE_WALLET_ERROR });
-        return false;
-      }
+    if (storedValue === null) {
+      set({ ...resetWalletState(), error: null });
+      return false;
+    }
 
+    const secretKey = parseStoredSecret(storedValue);
+    if (!secretKey) {
+      await clearStoredSecrets();
+      set({ ...resetWalletState(), error: RESTORE_WALLET_ERROR });
+      return false;
+    }
+
+    try {
       const keypair = StellarSdk.Keypair.fromSecret(secretKey);
       set({ publicKey: keypair.publicKey(), error: null });
       return true;
     } catch {
       console.error(RESTORE_WALLET_ERROR);
-      await clearStoredWalletValue();
+      await clearStoredSecrets();
       set({ ...resetWalletState(), error: RESTORE_WALLET_ERROR });
       return false;
     }

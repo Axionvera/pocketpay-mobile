@@ -3,6 +3,7 @@ export { ConfirmModal } from "./ConfirmModal";
 export { ScreenHeader } from "./ScreenHeader";
 export { OfflineBanner } from "./OfflineBanner";
 export { AsyncActionButton } from "./AsyncActionButton";
+export type { AsyncActionButtonProps } from "./AsyncActionButton";
 export { Button } from "./Button";
 export { VaultConfirmModal, VaultAction } from "./VaultConfirmModal";
 export { VaultIntroModal } from "./VaultIntroModal";

@@ -126,9 +126,9 @@ export const VaultLockEducationModal: React.FC<VaultLockEducationModalProps> = (
                 <Wallet color={colors.primary} size={18} />
               </View>
               <View style={styles.pointText}>
-                <Text style={styles.pointTitle}>Can I lock more than once?</Text>
+                <Text style={styles.pointTitle}>Multiple locks</Text>
                 <Text style={styles.pointBody}>
-                  Yes. You can create as many locks as you like, each with its own amount and countdown. They work independently of each other.
+                  You can create multiple independent locks, each with their own amount and unlock date.
                 </Text>
               </View>
             </View>

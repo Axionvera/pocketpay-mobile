@@ -144,6 +144,16 @@ describe('useWalletStore State Transitions', () => {
       expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('pocketpay_wallet_secret');
     });
 
+    it('does not delete credentials if secure storage read throws an error', async () => {
+      mockedSecureStore.getItemAsync.mockRejectedValueOnce(new Error('Device locked or permission denied'));
+      const restored = await useWalletStore.getState().loadWalletFromStorage();
+      expect(restored).toBe(false);
+      const state = useWalletStore.getState();
+      expect(state.publicKey).toBeNull();
+      expect(state.error).toBe('Failed to restore wallet securely');
+      expect(mockedSecureStore.deleteItemAsync).not.toHaveBeenCalled();
+    });
+
     it('restores successfully from valid JSON secret with secretKey field', async () => {
       mockedSecureStore.getItemAsync.mockResolvedValueOnce(JSON.stringify({ secretKey: 'SVALIDSECRET' }));
       const restored = await useWalletStore.getState().loadWalletFromStorage();
