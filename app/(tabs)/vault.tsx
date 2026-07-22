@@ -6,13 +6,14 @@ import { Input } from '../../src/components/Input';
 import { VaultConfirmModal, VaultAction } from '../../src/components/VaultConfirmModal';
 import { VaultIntroModal } from '../../src/components/VaultIntroModal';
 import { VaultLockEducationModal } from '../../src/components/VaultLockEducationModal';
+import { VaultLockList } from '../../src/components/VaultLockList';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useVaultStore } from '../../src/store/vaultStore';
 import { validateAmount } from '../../src/utils/validation';
 import { useVaultDepositForm } from '../../src/features/vault/useVaultDepositForm';
-import { PiggyBank, ShieldCheck, AlertTriangle, XCircle, Info, Lock, HelpCircle } from 'lucide-react-native';
+import { PiggyBank, ShieldCheck, AlertTriangle, XCircle, Info } from 'lucide-react-native';
 
 const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const VAULT_INTRO_SEEN_KEY = '@pocketpay_vault_intro_seen';
@@ -23,16 +24,17 @@ export default function VaultScreen() {
   const { publicKey, getSecretKey, balance: walletBalance } = useWalletStore();
   const {
     balance,
-    lockedBalance,
-    unlockTime,
+    locks,
     isConfigured,
     contractId,
     isLoadingBalance,
+    isLoadingLocks,
     isSubmitting,
     balanceError,
     loadBalance,
-    loadLockedState,
-    lockFunds,
+    loadLocks,
+    addLock,
+    unlockLock,
     deposit,
     withdraw,
   } = useVaultStore();
@@ -53,7 +55,7 @@ export default function VaultScreen() {
   // Confirmation modal state
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [pendingAction, setPendingAction] = useState<VaultAction>('deposit');
-  const [pendingUnlockTime, setPendingUnlockTime] = useState('');
+  const [pendingUnlockDate, setPendingUnlockDate] = useState('');
 
   // Vault introduction modal state
   const [introVisible, setIntroVisible] = useState(false);
@@ -65,7 +67,7 @@ export default function VaultScreen() {
     if (publicKey) {
       loadBalance(publicKey);
     }
-    loadLockedState();
+    loadLocks();
   }, [publicKey]);
 
   useEffect(() => {
@@ -106,7 +108,7 @@ export default function VaultScreen() {
     setPendingAction(action);
     if (action === 'lock') {
       const unlockDate = new Date(Date.now() + LOCK_PERIOD_SECONDS * 1000);
-      setPendingUnlockTime(unlockDate.toLocaleDateString());
+      setPendingUnlockDate(unlockDate.toLocaleDateString());
     }
     setConfirmVisible(true);
   };
@@ -116,9 +118,9 @@ export default function VaultScreen() {
 
     try {
       if (pendingAction === 'lock') {
-        await lockFunds(amount, pendingUnlockTime);
+        await addLock(amount, pendingUnlockDate);
         setConfirmVisible(false);
-        Alert.alert('Success', `Locked ${amount} XLM until ${pendingUnlockTime} (mock)`);
+        Alert.alert('Success', `Locked ${amount} XLM until ${pendingUnlockDate} (mock)`);
         depositForm.setAmount('');
         depositForm.setAmountError(undefined);
         return;
@@ -156,7 +158,14 @@ export default function VaultScreen() {
     setConfirmVisible(false);
   };
 
-  const isLocked = parseFloat(lockedBalance) > 0;
+  const handleUnlock = async (lockId: string) => {
+    try {
+      await unlockLock(lockId);
+      Alert.alert('Success', 'Funds unlocked! (mock)');
+    } catch (e: any) {
+      Alert.alert('Unlock failed', e.message);
+    }
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -164,8 +173,6 @@ export default function VaultScreen() {
       <VaultLockEducationModal
         visible={lockEducationVisible}
         onClose={() => setLockEducationVisible(false)}
-        lockedBalance={lockedBalance}
-        unlockTime={unlockTime}
       />
       <VaultConfirmModal
         visible={confirmVisible}
@@ -173,7 +180,7 @@ export default function VaultScreen() {
         amount={amount}
         isLoading={isSubmitting || depositForm.isSubmitting}
         contractId={isConfigured ? contractId : undefined}
-        unlockTime={pendingAction === 'lock' ? pendingUnlockTime : undefined}
+        unlockTime={pendingAction === 'lock' ? pendingUnlockDate : undefined}
         onConfirm={handleConfirmAction}
         onCancel={cancelAction}
       />
@@ -209,22 +216,12 @@ export default function VaultScreen() {
         )}
       </View>
 
-      {isLocked && unlockTime ? (
-        <View style={styles.lockedFundsBox}>
-          <View style={styles.lockedFundsHeader}>
-            <Lock color={colors.secondary} size={20} style={{ marginRight: SIZES.sm }} />
-            <Text style={styles.lockedFundsTitle}>Locked Funds</Text>
-            <TouchableOpacity
-              onPress={() => setLockEducationVisible(true)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <HelpCircle color={colors.textMuted} size={18} />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.lockedAmount}>{lockedBalance} XLM</Text>
-          <Text style={styles.unlockTime}>Unlocks on {unlockTime}</Text>
-        </View>
-      ) : null}
+      <VaultLockList
+        locks={locks}
+        isLoading={isLoadingLocks}
+        onUnlock={handleUnlock}
+        onInfoPress={() => setLockEducationVisible(true)}
+      />
 
       {isConfigured ? (
         <View style={styles.infoBox}>
@@ -393,35 +390,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.primary,
     fontSize: 14,
     fontWeight: '600',
-  },
-  lockedFundsBox: {
-    backgroundColor: 'rgba(123, 97, 255, 0.08)',
-    padding: SIZES.lg,
-    borderRadius: RADIUS.lg,
-    marginBottom: SIZES.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(123, 97, 255, 0.2)',
-  },
-  lockedFundsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SIZES.sm,
-  },
-  lockedFundsTitle: {
-    color: colors.secondary,
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-  },
-  lockedAmount: {
-    color: colors.textPrimary,
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: SIZES.xs,
-  },
-  unlockTime: {
-    color: colors.textSecondary,
-    fontSize: 14,
   },
   infoBox: {
     flexDirection: 'row',

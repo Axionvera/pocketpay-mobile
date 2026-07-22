@@ -39,21 +39,29 @@ The vault contract tracks user balances internally via the `balance(id: Address)
 
 ---
 
-## Locked Funds Education
+## Multiple Locked Funds Support
 
-To avoid user confusion when funds are locked, the UI provides:
+The UI now supports displaying multiple independent locks per user, each with:
 
-- A **locked funds box** showing locked amount and unlock time (when applicable), using AsyncStorage for mock persistence
-- A **help icon** in the locked funds box that opens `VaultLockEducationModal`
-- The `VaultLockEducationModal` explains:
-  - Lock period and why early withdrawal isn't possible
-  - Unlock time calculation
-  - That this is currently a mock/test feature
+- Locked amount
+- Unlock date
+- Status (locked/matured)
+- Eligible actions (unlock for matured locks)
+
+### UI Components:
+- `VaultLockList.tsx` - Displays all locks with empty and loading states
+- `VaultLockEducationModal.tsx` - Explains lock functionality (updated for multiple locks)
+
+### State Management:
+- `src/store/vaultStore.ts` uses an array of `Lock` objects stored in AsyncStorage
+- Each lock has an id, amount, unlockDate, status, and createdAt timestamp
+- Lock status is automatically checked against current time when loading
 
 **Relevant code:**
-- `src/components/VaultLockEducationModal.tsx` — modal implementation
-- `src/store/vaultStore.ts` — `lockedBalance`, `unlockTime`, `loadLockedState`, `lockFunds`
-- `app/(tabs)/vault.tsx` — UI integration
+- `src/components/VaultLockList.tsx` — lock list component with empty/loading states
+- `src/components/VaultLockEducationModal.tsx` — updated education modal
+- `src/store/vaultStore.ts` — `locks` state, `loadLocks`, `addLock`, `unlockLock` functions
+- `app/(tabs)/vault.tsx` — uses `VaultLockList` and integrates with store
 
 ---
 
@@ -98,6 +106,9 @@ Any new vault UI that displays contract interaction details (transaction hashes,
 | No production custody claims | Required |
 | Lock funds placeholder clearly marked as not-yet-implemented | Required |
 | Locked funds explained with education UI | Required |
+| Multiple locks supported with distinct UI | Required |
+| Matured/immature locks visually distinct | Required |
+| Empty and loading states handled | Required |
 | Contract docs referenced in UI footnotes or tooltips | Recommended |
 | Mock mode distinguished from real contract mode | Required |
 

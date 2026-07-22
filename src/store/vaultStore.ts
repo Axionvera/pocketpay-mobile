@@ -13,33 +13,41 @@ import {
   mockWithdrawFromVault,
 } from '../services/stellar';
 
-const LOCKED_BALANCE_KEY = '@pocketpay_vault_locked_balance';
-const UNLOCK_TIME_KEY = '@pocketpay_vault_unlock_time';
+const LOCKS_KEY = '@pocketpay_vault_locks';
+
+export interface Lock {
+  id: string;
+  amount: string;
+  unlockDate: string; // ISO string or date string
+  status: 'locked' | 'matured';
+  createdAt: string; // ISO string
+}
 
 interface VaultState {
   balance: string;
-  lockedBalance: string;
-  unlockTime: string | null;
+  locks: Lock[];
   isConfigured: boolean;
   contractId: string;
   isLoadingBalance: boolean;
+  isLoadingLocks: boolean;
   isSubmitting: boolean;
   balanceError: string | null;
 
   loadBalance: (publicKey: string) => Promise<void>;
-  loadLockedState: () => Promise<void>;
-  lockFunds: (amount: string, unlockTime: string) => Promise<void>;
+  loadLocks: () => Promise<void>;
+  addLock: (amount: string, unlockDate: string) => Promise<void>;
+  unlockLock: (lockId: string) => Promise<void>;
   deposit: (secretKey: string, publicKey: string, amount: string) => Promise<string | null>;
   withdraw: (secretKey: string, publicKey: string, amount: string) => Promise<string | null>;
 }
 
 export const useVaultStore = create<VaultState>((set, get) => ({
   balance: '0.0000000',
-  lockedBalance: '0.0000000',
-  unlockTime: null,
+  locks: [],
   isConfigured: isVaultConfigured(),
   contractId: getVaultContractId(),
   isLoadingBalance: false,
+  isLoadingLocks: false,
   isSubmitting: false,
   balanceError: null,
 
@@ -58,29 +66,52 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     }
   },
 
-  loadLockedState: async () => {
+  loadLocks: async () => {
+    set({ isLoadingLocks: true });
     try {
-      const [lockedBalance, unlockTime] = await Promise.all([
-        AsyncStorage.getItem(LOCKED_BALANCE_KEY),
-        AsyncStorage.getItem(UNLOCK_TIME_KEY),
-      ]);
-      set({
-        lockedBalance: lockedBalance ?? '0.0000000',
-        unlockTime: unlockTime,
+      const locksJson = await AsyncStorage.getItem(LOCKS_KEY);
+      let locks: Lock[] = locksJson ? JSON.parse(locksJson) : [];
+      
+      // Update lock statuses based on current date
+      const now = new Date();
+      locks = locks.map(lock => {
+        const unlockDate = new Date(lock.unlockDate);
+        const status = now >= unlockDate ? 'matured' : 'locked';
+        return { ...lock, status };
       });
+      
+      set({ locks, isLoadingLocks: false });
     } catch (err: any) {
-      console.error('Failed to load locked state:', err);
+      console.error('Failed to load locks:', err);
+      set({ locks: [], isLoadingLocks: false });
     }
   },
 
-  lockFunds: async (amount: string, unlockTime: string) => {
+  addLock: async (amount: string, unlockDate: string) => {
     set({ isSubmitting: true });
     try {
-      await Promise.all([
-        AsyncStorage.setItem(LOCKED_BALANCE_KEY, amount),
-        AsyncStorage.setItem(UNLOCK_TIME_KEY, unlockTime),
-      ]);
-      set({ lockedBalance: amount, unlockTime });
+      const newLock: Lock = {
+        id: Date.now().toString(),
+        amount,
+        unlockDate,
+        status: 'locked',
+        createdAt: new Date().toISOString(),
+      };
+      
+      const updatedLocks = [...get().locks, newLock];
+      await AsyncStorage.setItem(LOCKS_KEY, JSON.stringify(updatedLocks));
+      set({ locks: updatedLocks });
+    } finally {
+      set({ isSubmitting: false });
+    }
+  },
+
+  unlockLock: async (lockId: string) => {
+    set({ isSubmitting: true });
+    try {
+      const updatedLocks = get().locks.filter(lock => lock.id !== lockId);
+      await AsyncStorage.setItem(LOCKS_KEY, JSON.stringify(updatedLocks));
+      set({ locks: updatedLocks });
     } finally {
       set({ isSubmitting: false });
     }

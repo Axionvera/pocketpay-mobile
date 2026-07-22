@@ -8,20 +8,14 @@ import { Lock, Clock, AlertCircle, X } from 'lucide-react-native';
 interface VaultLockEducationModalProps {
   visible: boolean;
   onClose: () => void;
-  lockedBalance: string;
-  unlockTime: string | null;
 }
 
 export const VaultLockEducationModal: React.FC<VaultLockEducationModalProps> = ({
   visible,
   onClose,
-  lockedBalance,
-  unlockTime,
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-
-  const isLocked = parseFloat(lockedBalance) > 0 && unlockTime !== null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
@@ -42,21 +36,6 @@ export const VaultLockEducationModal: React.FC<VaultLockEducationModalProps> = (
           </Text>
 
           <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
-            {isLocked ? (
-              <View style={styles.currentLockInfo}>
-                <View style={styles.currentLockIcon}>
-                  <Clock color={colors.secondary} size={24} />
-                </View>
-                <View style={styles.currentLockText}>
-                  <Text style={styles.currentLockLabel}>Currently Locked</Text>
-                  <Text style={styles.currentLockAmount}>{lockedBalance} XLM</Text>
-                  {unlockTime && (
-                    <Text style={styles.currentUnlockTime}>Unlocks on {unlockTime}</Text>
-                  )}
-                </View>
-              </View>
-            ) : null}
-
             <View style={styles.point}>
               <View style={[styles.pointIcon, { backgroundColor: 'rgba(123, 97, 255, 0.12)' }]}>
                 <Lock color={colors.secondary} size={18} />
@@ -70,13 +49,25 @@ export const VaultLockEducationModal: React.FC<VaultLockEducationModalProps> = (
             </View>
 
             <View style={styles.point}>
+              <View style={[styles.pointIcon, { backgroundColor: 'rgba(0, 230, 118, 0.12)' }]}>
+                <Clock color={colors.success} size={18} />
+              </View>
+              <View style={styles.pointText}>
+                <Text style={styles.pointTitle}>Matured locks</Text>
+                <Text style={styles.pointBody}>
+                  Once the unlock date passes, locks become "matured" and you can unlock the funds.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.point}>
               <View style={[styles.pointIcon, { backgroundColor: 'rgba(0, 229, 255, 0.12)' }]}>
                 <Clock color={colors.primary} size={18} />
               </View>
               <View style={styles.pointText}>
-                <Text style={styles.pointTitle}>Unlock time</Text>
+                <Text style={styles.pointTitle}>Multiple locks</Text>
                 <Text style={styles.pointBody}>
-                  The unlock date and time are set when you lock the funds. There's no way to unlock early — the contract enforces the time lock.
+                  You can create multiple independent locks, each with their own amount and unlock date.
                 </Text>
               </View>
             </View>
@@ -162,37 +153,6 @@ const createStyles = (colors: ThemeColors) =>
     },
     body: {
       marginBottom: SIZES.md,
-    },
-    currentLockInfo: {
-      flexDirection: 'row',
-      backgroundColor: 'rgba(123, 97, 255, 0.08)',
-      borderRadius: RADIUS.md,
-      padding: SIZES.md,
-      marginBottom: SIZES.lg,
-      alignItems: 'flex-start',
-    },
-    currentLockIcon: {
-      marginRight: SIZES.sm,
-      marginTop: 2,
-    },
-    currentLockText: {
-      flex: 1,
-    },
-    currentLockLabel: {
-      color: colors.textSecondary,
-      fontSize: 12,
-      marginBottom: 2,
-    },
-    currentLockAmount: {
-      color: colors.textPrimary,
-      fontSize: 18,
-      fontWeight: 'bold',
-      marginBottom: 4,
-    },
-    currentUnlockTime: {
-      color: colors.secondary,
-      fontSize: 13,
-      fontWeight: '500',
     },
     point: {
       flexDirection: 'row',
