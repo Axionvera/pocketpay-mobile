@@ -8,7 +8,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useAppLockStore } from '../../src/store/appLockStore';
 import { ThemeMode } from '../../src/store/appStore';
-import { Moon, Sun, Monitor, Shield, AlertTriangle } from 'lucide-react-native';
+import { Moon, Sun, Monitor, Shield, AlertTriangle, Activity } from 'lucide-react-native';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
 import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
 
@@ -161,10 +161,21 @@ export default function SettingsScreen() {
               <Text style={styles.rowValue}>{appVersion}</Text>
             </View>
             <View style={styles.divider} />
-            <View style={[styles.row, styles.rowLast]}>
+            <View style={styles.row}>
               <Text style={styles.aboutLabel}>Network</Text>
               <Text style={styles.rowValue}>Testnet</Text>
             </View>
+            <View style={styles.divider} />
+            <TouchableOpacity
+              style={[styles.row, styles.rowLast]}
+              onPress={() => router.push('/diagnostics')}
+            >
+              <View style={styles.rowLeft}>
+                <Activity color={colors.primary} size={20} />
+                <Text style={[styles.aboutLabel, { marginLeft: SIZES.sm }]}>Diagnostics</Text>
+              </View>
+              <Text style={styles.rowValue}>View</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -230,7 +241,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyInBetween: 'space-between',
     padding: SIZES.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
