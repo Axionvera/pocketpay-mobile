@@ -2,11 +2,11 @@
 
 Debugging mobile applications often requires insight into the app's internal state. However, ensuring that sensitive user data is protected is paramount.
 
-The Development Diagnostics feature allows contributors to easily export and share non-sensitive app state when debugging issues or reporting bugs.
+The Development Diagnostics feature allows contributors to easily view, export, and share non-sensitive app state when debugging issues or reporting bugs.
 
 ## How It Works
 
-When running the application in development mode (`__DEV__` is true), a **Development** section will appear in the Settings tab. Tapping **View Diagnostics** will navigate to a dedicated screen displaying the relevant application state, where you can easily copy the data.
+A **Diagnostics** option is available in the **About** section of the Settings tab. Tapping **Diagnostics** opens a dedicated status view displaying real-time system diagnostic info and provides an **Export Diagnostics Log** button to copy or send the redacted log via the native system share sheet.
 
 ## Redacted Information
 
@@ -47,6 +47,5 @@ The exported JSON string includes useful metadata for debugging:
     "isLoading": false,
     "lastError": null
   },
-  "timestamp": "2023-10-25T14:48:00.000Z"
+  "timestamp": "2026-07-23T11:15:00.000Z"
 }
-```

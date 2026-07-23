@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, Switch, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 import { Button } from '../../src/components/Button';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useAppLockStore } from '../../src/store/appLockStore';
 import { ThemeMode } from '../../src/store/appStore';
-import { Moon, Sun, Monitor, Shield, AlertTriangle } from 'lucide-react-native';
+import { Moon, Sun, Monitor, Shield, AlertTriangle, Activity } from 'lucide-react-native';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
 import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
 
@@ -29,12 +30,21 @@ export default function SettingsScreen() {
 
   const styles = createStyles(colors);
 
+  // Read version from Expo manifest, with graceful fallback
+  const appVersion = Constants.expoConfig?.version ?? Constants.nativeAppVersion ?? '1.0.0';
+  const appName = Constants.expoConfig?.name ?? 'Stellar PocketPay';
+
   const handleExportKey = async () => {
     if (!showSecret) {
       const secret = await getSecretKey();
       if (secret) {
         setSecretKey(secret);
         setShowSecret(true);
+      } else {
+        Alert.alert(
+          'Unable to Access Secret Key',
+          'PocketPay could not read your wallet from secure storage. This can happen if your device is locked, restarted, or restricts keychain access. Try again, or unlock your device and retry.'
+        );
       }
     } else {
       setShowSecret(false);
@@ -79,18 +89,21 @@ export default function SettingsScreen() {
   };
 
   return (
-    <><ScrollView style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferences</Text>
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <View style={styles.rowLeft}>
-              <Shield color={colors.primary} size={24} />
-              <View style={styles.rowTextGroup}>
-                <Text style={styles.rowText}>App Lock</Text>
-                <Text style={styles.rowHelper}>
-                  Require biometrics or passcode to open
-                </Text>
+    <>
+      <ScrollView style={styles.container}>
+        {/* Preferences */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Preferences</Text>
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <View style={styles.rowLeft}>
+                <Shield color={colors.primary} size={24} />
+                <View style={styles.rowTextGroup}>
+                  <Text style={styles.rowText}>App Lock</Text>
+                  <Text style={styles.rowHelper}>
+                    Require biometrics or passcode to open
+                  </Text>
+                </View>
               </View>
             </View>
             <Switch
@@ -140,50 +153,50 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>About</Text>
           <View style={styles.card}>
             <View style={styles.row}>
-              <Text style={styles.aboutLabel}>Version</Text>
-              <Text style={styles.rowValue}>1.0.0</Text>
+              <Text style={styles.aboutLabel}>App Name</Text>
+              <Text style={styles.rowValue}>{appName}</Text>
             </View>
-            <View style={[styles.row, styles.rowLast]}>
+            <View style={styles.divider} />
+            <View style={styles.row}>
+              <Text style={styles.aboutLabel}>Version</Text>
+              <Text style={styles.rowValue}>{appVersion}</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.row}>
               <Text style={styles.aboutLabel}>Network</Text>
               <Text style={styles.rowValue}>Testnet</Text>
             </View>
-          </View>
-        </View>
-
-      {__DEV__ && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Development</Text>
-          <View style={styles.card}>
-            <Button 
-              title="View Diagnostics" 
-              variant="outline" 
+            <View style={styles.divider} />
+            <TouchableOpacity
+              style={[styles.row, styles.rowLast]}
               onPress={() => router.push('/diagnostics')}
-              style={[styles.menuButton, { borderBottomWidth: 0 }]}
-            />
+            >
+              <View style={styles.rowLeft}>
+                <Activity color={colors.primary} size={20} />
+                <Text style={[styles.aboutLabel, { marginLeft: SIZES.sm }]}>Diagnostics</Text>
+              </View>
+              <Text style={styles.rowValue}>View</Text>
+            </TouchableOpacity>
           </View>
         </View>
-      )}
 
-      <View style={[styles.section, { marginTop: SIZES.xl }]}>
-        <Button
-          title="Sign Out & Clear Wallet"
-          variant="danger"
-          onPress={handleSignOut}
-        />
-      </View>
+        <View style={[styles.section, { marginTop: SIZES.xl }]}>
+          <Button
+            title="Sign Out & Clear Wallet"
+            variant="danger"
+            onPress={handleSignOut}
+          />
+        </View>
+      </ScrollView>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Stellar PocketPay v1.0.0</Text>
-        <Text style={styles.footerText}>Network: Testnet</Text>
-      </View>
-    </ScrollView>
       <WalletResetConfirmModal
         visible={showResetModal}
         isLoading={isResetting}
         onConfirm={handleResetConfirm}
         onCancel={() => setShowResetModal(false)}
       />
-    </>);
+    </>
+  );
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
@@ -229,7 +242,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyInBetween: 'space-between',
     padding: SIZES.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -303,10 +316,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: 'flex-start',
     paddingHorizontal: SIZES.lg,
   },
-  footer: {
+  aboutRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: SIZES.xl,
-    paddingBottom: SIZES.xxl * 2,
+    paddingVertical: SIZES.md,
+    paddingHorizontal: SIZES.lg,
   },
   footerText: {
     color: colors.textMuted,
