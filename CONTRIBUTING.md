@@ -130,6 +130,19 @@ npm run test:watch
 - Mock external dependencies (Stellar SDK, SecureStore, AsyncStorage) — see the existing mocks in `__mocks__/` and `src/services/__mocks__/` for patterns to follow.
 - Tests should pass before you open a PR. CI will run the suite automatically on every push.
 
+### SDK API Compatibility
+
+If your change touches `src/types/pocketpay-sdk.d.ts` or `src/sdk-stub/`, run:
+
+```bash
+npm run api:check
+```
+
+This detects accidental changes to the `pocketpay-sdk` public contract. If the
+change is intentional, run `npm run api:update`, commit the regenerated
+`api-reports/pocketpay-sdk.api.md`, and note the change in `CHANGELOG.md`. See
+[docs/sdk-api-compatibility.md](docs/sdk-api-compatibility.md) for details.
+
 ---
 
 ## UI & Design Guidelines
