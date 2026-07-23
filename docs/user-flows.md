@@ -25,7 +25,18 @@ This document describes the expected screen sequence and UI states for PocketPay
 4. Copying the secret shows confirmation and leaves the user on the backup state.
 5. Continuing opens a confirmation alert. Cancel returns to the backup state without saving anything.
 6. Confirming **Yes, I saved it** writes the secret to SecureStore, updates the public key in wallet state, and shows a loading state on the button.
-7. Once the public key is available, root navigation replaces the auth flow with the Home tab.
+7. The wallet-created screen confirms success and offers **Go to Wallet**, which replaces the auth flow with the Home tab.
+8. Home shows the backup reminder over the wallet until the user acknowledges it (see below).
+
+### Backup reminder
+
+Creating a wallet marks the backup reminder as pending (`walletStore.markBackupPending`), which the Home tab renders as a blocking `BackupReminderModal`.
+
+- The reminder restates that the secret key is the only way back into the wallet, that PocketPay stores no copy of it, and that it must never be shared.
+- It shows **no key material** — the secret key is revealed only on the creation screen, behind an explicit reveal.
+- The **I Understand, Continue** action stays disabled until the user ticks the confirmation checkbox, then calls `walletStore.acknowledgeBackupReminder`.
+- The reminder cannot be dismissed by tapping outside it or by the Android back button, and the pending flag is persisted — so an app restart before acknowledgement brings the reminder back rather than silently skipping it.
+- Clearing the wallet clears the flag, so a newly created wallet is reminded again.
 
 **Expected states**
 
@@ -35,6 +46,8 @@ This document describes the expected screen sequence and UI states for PocketPay
 | Generated | Public and secret keys plus backup warning and confirmation action. |
 | Saving | Continue action is disabled/loading; repeated submissions are prevented. |
 | Success | Wallet is stored securely and Home shows an unfunded `0.0000000 XLM` balance. |
+| Backup reminder | Blocking reminder over Home; acknowledge action disabled until the confirmation is checked. |
+| Reminder unacknowledged | Reminder reappears on the next launch until it is acknowledged. |
 | Failure | Show a generation or secure-storage error and keep the user in the auth flow. |
 
 ## Import a wallet

@@ -5,6 +5,7 @@ export { OfflineBanner } from "./OfflineBanner";
 export { AsyncActionButton } from "./AsyncActionButton";
 export type { AsyncActionButtonProps } from "./AsyncActionButton";
 export { Button } from "./Button";
+export { BackupReminderModal } from "./BackupReminderModal";
 export { VaultConfirmModal, VaultAction } from "./VaultConfirmModal";
 export { VaultIntroModal } from "./VaultIntroModal";
 export { VaultLockEducationModal } from "./VaultLockEducationModal";
