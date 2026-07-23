@@ -28,13 +28,13 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     };
   }
 
-  // Resolve @stellar/stellar-sdk from the pocketpay-sdk bundled copy
+  // @stellar/stellar-sdk's package.json "browser" field points resolverMainFields
+  // (['react-native', 'browser', 'main']) at dist/stellar-sdk.min.js, a Webpack/Terser
+  // bundle that uses native `#privateField` syntax Hermes can't parse. Force the
+  // Babel-compiled Node build instead, which is already down-leveled.
   if (moduleName === '@stellar/stellar-sdk') {
     return {
-      filePath: path.resolve(
-        __dirname,
-        'node_modules/pocketpay-sdk/node_modules/@stellar/stellar-sdk/dist/stellar-sdk.min.js'
-      ),
+      filePath: path.resolve(__dirname, 'node_modules/@stellar/stellar-sdk/lib/index.js'),
       type: 'sourceFile',
     };
   }
