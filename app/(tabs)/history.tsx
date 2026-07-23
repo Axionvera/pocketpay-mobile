@@ -1,16 +1,35 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   RefreshControl,
+  SectionList,
   StyleSheet,
   Text,
   View,
+  ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { Clock } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { useWalletStore, TransactionRecord } from '../../src/store/walletStore';
-import { COLORS, SIZES } from '../../src/constants/theme';
+import { RADIUS, SIZES, ThemeColors } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
+import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
+import { EmptyState } from '../../src/components/EmptyState';
+import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
+import { groupTransactionsByDate } from '../../src/utils/transactions';
+
+const FILTERS = [
+  { label: 'All', value: 'all' },
+  { label: 'Sent', value: 'sent' },
+  { label: 'Received', value: 'received' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Failed', value: 'failed' },
+  { label: 'Vault', value: 'vault' },
+] as const;
+
+type FilterType = (typeof FILTERS)[number]['value'];
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -22,13 +41,15 @@ const ListFooter: React.FC<{
   isLoadingMore: boolean;
   hasMoreTransactions: boolean;
   hasTransactions: boolean;
-}> = ({ isLoadingMore, hasMoreTransactions, hasTransactions }) => {
+  colors: ThemeColors;
+  styles: ReturnType<typeof createStyles>;
+}> = ({ isLoadingMore, hasMoreTransactions, hasTransactions, colors, styles }) => {
   if (!hasTransactions) return null;
 
   if (isLoadingMore) {
     return (
       <View style={styles.footer} testID="loading-more-indicator">
-        <ActivityIndicator color={COLORS.primary} size="small" />
+        <ActivityIndicator color={colors.primary} size="small" />
         <Text style={styles.footerText}>Loading older transactions…</Text>
       </View>
     );
@@ -48,26 +69,43 @@ const ListFooter: React.FC<{
 /**
  * Shown when there are no transactions and the screen is not loading.
  */
-const EmptyState: React.FC = () => (
+const ActivityEmptyState: React.FC<{
+  colors: ThemeColors;
+  styles: ReturnType<typeof createStyles>;
+  onReceivePress: () => void;
+}> = ({ colors, styles, onReceivePress }) => (
   <View style={styles.emptyState} testID="empty-state">
-    <Clock color={COLORS.textMuted} size={48} style={{ marginBottom: SIZES.md }} />
-    <Text style={styles.emptyText}>No transactions found</Text>
-    <Text style={styles.emptySubtext}>Your recent activity will appear here.</Text>
+    <EmptyState
+      icon={<Clock color={colors.textMuted} size={48} />}
+      title="No activity yet"
+      message="Your payments and transfers will appear here once you send or receive XLM."
+      action={{
+        label: 'Receive XLM',
+        onPress: onReceivePress,
+        variant: 'outline',
+      }}
+    />
   </View>
 );
 
 // ─── Screen ────────────────────────────────────────────────────────────────────
 
 export default function HistoryScreen() {
+  const router = useRouter();
   const {
     transactions,
     isLoading,
     isLoadingMore,
     hasMoreTransactions,
     publicKey,
+    error,
     refreshWalletData,
     loadMoreTransactions,
   } = useWalletStore();
+
+  const { networkErrorType, message } = useNetworkStatus(error);
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Load the first page on mount.
   useEffect(() => {
@@ -75,18 +113,55 @@ export default function HistoryScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [filter, setFilter] = useState<FilterType>('all');
+
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(tx => {
+      if (filter === 'all') return true;
+      
+      const isSent = tx.from === publicKey;
+      const isReceived = tx.to === publicKey || tx.into === publicKey;
+      const isFailed = tx.transaction_successful === false;
+      const isPending = tx.is_pending === true; 
+      const isVault = tx.type === 'invoke_host_function' || tx.is_vault === true;
+
+      if (filter === 'sent') return isSent && !isVault;
+      if (filter === 'received') return isReceived && !isVault;
+      if (filter === 'failed') return isFailed;
+      if (filter === 'pending') return isPending;
+      if (filter === 'vault') return isVault;
+
+      return true;
+    });
+  }, [transactions, filter, publicKey]);
+
+  const groupedTransactions = useMemo(
+    () => groupTransactionsByDate(filteredTransactions),
+    [filteredTransactions]
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: TransactionRecord }) => (
       <TransactionListItem
         transaction={item}
         currentPublicKey={publicKey}
         variant="card"
+        onPress={(tx) => router.push(`/transaction/${tx.id}`)}
       />
     ),
-    [publicKey]
+    [publicKey, router]
   );
 
   const keyExtractor = useCallback((item: TransactionRecord) => item.id, []);
+
+  const renderSectionHeader = useCallback(
+    ({ section: { title } }: { section: { title: string } }) => (
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionHeaderText}>{title}</Text>
+      </View>
+    ),
+    [styles]
+  );
 
   /**
    * Triggered when the FlatList scrolls close to the end.
@@ -104,17 +179,20 @@ export default function HistoryScreen() {
         isLoadingMore={isLoadingMore}
         hasMoreTransactions={hasMoreTransactions}
         hasTransactions={transactions.length > 0}
+        colors={colors}
+        styles={styles}
       />
     ),
-    [isLoadingMore, hasMoreTransactions, transactions.length]
+    [isLoadingMore, hasMoreTransactions, transactions.length, colors, styles]
   );
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={transactions}
+      <SectionList
+        sections={groupedTransactions}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
         contentContainerStyle={[
           styles.listContent,
           transactions.length === 0 && styles.listContentEmpty,
@@ -123,17 +201,57 @@ export default function HistoryScreen() {
           <RefreshControl
             refreshing={isLoading}
             onRefresh={refreshWalletData}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
         // Trigger load-more when 20 % of the list remains below the viewport.
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.2}
+        ListHeaderComponent={
+          <>
+            <NetworkStatusBanner
+              networkErrorType={networkErrorType}
+              message={message}
+              onRetry={refreshWalletData}
+              isRetrying={isLoading}
+            />
+            <View style={styles.filterContainer}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={styles.filterScroll}
+              >
+                {FILTERS.map((f) => {
+                  const isActive = filter === f.value;
+                  return (
+                    <TouchableOpacity
+                      key={f.value}
+                      style={[styles.filterChip, isActive && styles.filterChipActive]}
+                      onPress={() => setFilter(f.value)}
+                    >
+                      <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                        {f.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </>
+        }
         ListFooterComponent={renderFooter}
-        ListEmptyComponent={!isLoading ? <EmptyState /> : null}
+        ListEmptyComponent={
+          !isLoading ? (
+            <ActivityEmptyState
+              colors={colors}
+              styles={styles}
+              onReceivePress={() => router.push('/receive')}
+            />
+          ) : null
+        }
         // Avoid stale closures while also keeping rendering performant.
-        extraData={{ isLoadingMore, hasMoreTransactions }}
+        extraData={{ isLoadingMore, hasMoreTransactions, colors, styles }}
       />
     </View>
   );
@@ -141,10 +259,10 @@ export default function HistoryScreen() {
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   listContent: {
     padding: SIZES.lg,
@@ -162,16 +280,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: SIZES.xxl * 2,
   },
-  emptyText: {
-    color: COLORS.textPrimary,
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: SIZES.xs,
-  },
-  emptySubtext: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-  },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -180,7 +288,50 @@ const styles = StyleSheet.create({
     gap: SIZES.sm,
   },
   footerText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 13,
+  },
+  sectionHeader: {
+    paddingTop: SIZES.sm,
+    paddingBottom: SIZES.xs,
+    marginBottom: SIZES.xs,
+  },
+  sectionHeaderText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  filterContainer: {
+    paddingVertical: SIZES.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    marginBottom: SIZES.md,
+  },
+  filterScroll: {
+    paddingHorizontal: SIZES.lg,
+    gap: SIZES.xs,
+  },
+  filterChip: {
+    paddingHorizontal: SIZES.md,
+    paddingVertical: SIZES.sm,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    marginRight: SIZES.xs,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterChipText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  filterChipTextActive: {
+    color: colors.background,
   },
 });

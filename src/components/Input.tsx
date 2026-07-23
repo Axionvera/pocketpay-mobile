@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, TextInput, Text, StyleSheet, TextInputProps } from 'react-native';
-import { COLORS, RADIUS, SIZES } from '../constants/theme';
+import { RADIUS, SIZES, ThemeColors } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 interface InputProps extends TextInputProps {
   label: string;
@@ -9,14 +10,17 @@ interface InputProps extends TextInputProps {
   rightIcon?: React.ReactNode;
 }
 
-export const Input: React.FC<InputProps> = ({ 
-  label, 
-  error, 
-  leftIcon, 
-  rightIcon, 
-  style, 
-  ...props 
+export const Input: React.FC<InputProps> = ({
+  label,
+  error,
+  leftIcon,
+  rightIcon,
+  style,
+  ...props
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
@@ -27,7 +31,7 @@ export const Input: React.FC<InputProps> = ({
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
         <TextInput
           style={[styles.input, style]}
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={colors.textMuted}
           {...props}
         />
         {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
@@ -37,12 +41,12 @@ export const Input: React.FC<InputProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: SIZES.md,
   },
   label: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 14,
     marginBottom: SIZES.sm,
     fontWeight: '500',
@@ -50,18 +54,18 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     height: 56,
   },
   inputError: {
-    borderColor: COLORS.error,
+    borderColor: colors.error,
   },
   input: {
     flex: 1,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 16,
     paddingHorizontal: SIZES.md,
     height: '100%',
@@ -73,7 +77,7 @@ const styles = StyleSheet.create({
     paddingRight: SIZES.md,
   },
   errorText: {
-    color: COLORS.error,
+    color: colors.error,
     fontSize: 12,
     marginTop: SIZES.xs,
     marginLeft: SIZES.xs,

@@ -85,24 +85,40 @@ New keypairs do not exist on the Stellar ledger until they receive their first T
 
 1. The Send screen displays the currently available XLM balance.
 2. Enter a destination public key, amount, and optional memo.
-3. Tapping **Send Payment** validates locally before signing:
+3. Tapping **Send Payment** validates locally before navigating:
    - destination and amount are required;
    - amount must be greater than zero; and
    - amount must not exceed the displayed balance.
-4. If validation passes, show the button loading state, read the secret from SecureStore, build and sign the transaction on-device, and submit it to Stellar Testnet.
-5. A successful submission shows **Transaction sent successfully!**
-6. Acknowledging success refreshes wallet data and returns to the previous screen.
-7. A rejected transaction shows **Transaction Failed** with a safe, actionable message and leaves the entered fields available for correction.
+4. If validation passes, navigate to `/review-transaction` with the payment details.
+
+### Transaction Review
+
+**Entry:** Send → **Send Payment** (after validation) → `/review-transaction`.
+
+1. The Review screen displays the full transaction details: source, destination (with contact label if known), amount, memo, and network.
+2. A signer info card shows which signer will be used (currently "This Device") and its security model.
+3. A security notice reminds the user that the secret key never leaves the device.
+4. Tapping **Sign & Send** initiates the signing handoff flow:
+   - Phase transitions: `review` → `handoff` → `signing` → `submitting` → `completed`
+   - A loading indicator shows the current phase.
+5. On success, a success card appears with the transaction hash, then the user is navigated to the payment success screen.
+6. On failure, a red error card appears with the error message and a **Dismiss** button that returns to the Send screen.
+7. At any point before submission, the user can tap **Cancel** to abort and return to Send.
 
 **Expected states**
 
 | State | Expected UI and behavior |
 | --- | --- |
-| Editing | Form is enabled and available balance is visible. |
-| Validation error | Alert identifies the invalid field or insufficient balance; no transaction is signed. |
-| Submitting | Send action is disabled/loading to prevent duplicate payments. |
-| Success | Confirmation appears, then navigation returns and balance/activity refresh. |
-| Network/ledger failure | Error alert appears; the user stays on Send and may retry deliberately. |
+| Review | Full transaction details and signer info with Sign & Send / Cancel actions. |
+| Handoff / Signing / Submitting | Loading indicator with phase-specific status text. Actions disabled. |
+| Completed | Green success card with transaction hash. Auto-navigates to success screen. |
+| Failed | Red error card with message and Dismiss action. |
+| Cancelled | Yellow warning card. User returns to Send screen. |
+| Review (missing data) | Screen redirects back if required params are missing. |
+
+### Legacy Signing Modal
+
+The original `SigningConfirmModal` remains available for backward compatibility. The review screen is the new default path for the signer handoff flow.
 
 ## Receive XLM
 
@@ -146,22 +162,34 @@ New keypairs do not exist on the Stellar ledger until they receive their first T
 
 **Entry:** Settings → **Address Book / Contacts** → `/contacts`.
 
-1. With no saved contacts, display **No contacts yet** and **+ Add Contact**.
-2. Tapping **+ Add Contact** replaces the list with Name and Public Key fields plus Save and Cancel actions.
-3. Saving validates that both fields are present and that the public key starts with `G` and is exactly 56 characters.
-4. Validation errors appear in an alert and keep the entered values available for correction.
-5. A valid contact is appended to the list, persisted in AsyncStorage, and the form resets.
-6. Cancel closes the form without adding a contact.
-7. Tapping the delete icon opens a confirmation alert. Cancel keeps the contact; Delete removes it from state and AsyncStorage.
+1. With no saved contacts, display **No contacts yet** and two entry points: **+ Add Manually** and **Scan QR**.
+2. **+ Add Manually** opens a Name / Stellar Address form with Save and Cancel actions, plus a **Scan QR Instead** shortcut into the scanner.
+3. **Scan QR** opens the full-screen `QrScanner` in a modal. On a valid address it pre-fills the address (read-only) into the same form under **Save Scanned Contact**; the user only has to enter a name.
+4. Saving validates that a name is present and that the address is a valid, non-duplicate 56-character Stellar public key (starting with `G`).
+5. Validation errors appear inline (manual form) or as an alert (scan flow) and keep the entered values available for correction.
+6. A valid contact is appended to the list and the form resets.
+7. Cancel closes the form without adding a contact.
+8. Tapping the delete icon opens a confirmation alert. Cancel keeps the contact; Delete removes it from state.
 
 **Expected states**
 
 | State | Expected UI and behavior |
 | --- | --- |
-| Empty | Empty-state copy and Add Contact action. |
-| Adding | Name/public-key form with Save and Cancel. |
-| Invalid | Alert explains missing fields or invalid Stellar public-key format. |
+| Empty | Empty-state copy and both Add Manually / Scan QR actions. |
+| Scanning | Full-screen camera with a scan-window overlay and a Close action. |
+| Adding / Confirming scan | Name/public-key form with Save and Cancel; the address field is read-only after a scan. |
+| Invalid | Alert or inline error explains missing fields, an invalid Stellar public-key format, or a duplicate address. |
 | Populated | Contact name and abbreviated public key are shown. |
 | Deleting | Destructive confirmation prevents accidental removal. |
+
+**QR scan debounce (QA notes, issue #104)**
+
+Mobile QR scanners can fire more than one `onBarcodeScanned` callback for the same physical code before the resulting state update or navigation completes. `QrScanner` guards against this so a scan is only ever processed once:
+
+- A `hasScanned` flag plus a `lastScanTime` timestamp (checked synchronously, so it isn't affected by React's batching) reject any scan that arrives while a previous one is still being processed or within `SCAN_DEBOUNCE_MS` (1.5s) of the last one.
+- Once a scan is accepted, the camera's `onBarcodeScanned` prop is set to `undefined` so the camera stops delivering further events entirely, in addition to the guard above.
+- On an invalid scan, the lock is released automatically after the debounce window so the user can immediately try again without leaving the scanner.
+- On a valid scan, the lock is only released by unmounting/remounting the scanner (i.e. the user closing and reopening **Scan QR**), matching "reset it only when the user starts a new scan."
+- Covered by the `AC11` test group in `__tests__/contacts.scan.test.tsx`, which drives the scanner's real `onBarcodeScanned` handler (not just its `onScan`/`onError` callbacks) to prove duplicate and rapid-fire events are ignored and that scanning again after closing/reopening works.
 
 Contacts are currently an address-book management flow; the Send form does not yet provide contact selection. Document and test that integration separately when it is implemented.

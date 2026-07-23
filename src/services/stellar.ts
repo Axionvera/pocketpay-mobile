@@ -6,6 +6,9 @@ const server = new StellarSdk.Horizon.Server(
   process.env.EXPO_PUBLIC_STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org'
 );
 
+/** Horizon operation record type used for transaction history. */
+export type PaymentRecord = StellarSdk.Horizon.ServerApi.OperationRecord;
+
 /**
  * Generates a new Stellar Keypair.
  * This function returns both the public and secret keys.
@@ -48,12 +51,10 @@ export const fetchAccountDetails = async (publicKey: string) => {
  */
 export const fetchXlmBalance = async (publicKey: string): Promise<string> => {
   try {
-    const account = await server.loadAccount(publicKey);
-    const nativeBalance = account.balances.find(
-      (b: any) => b.asset_type === 'native'
-    );
-    return nativeBalance?.balance ?? '0.0000000';
-  } catch (error: unknown) {
+    const account = await fetchAccountDetails(publicKey);
+    const nativeBalance = account.balances.find((b) => b.asset_type === 'native');
+    return nativeBalance ? nativeBalance.balance : '0.0000000';
+  } catch (error: any) {
     // If account is not found (unfunded), balance is 0
     if (isNotFoundError(error)) {
       return '0.0000000';
@@ -107,7 +108,7 @@ export interface TransactionsPage {
  * @param publicKey  – Stellar public key to query.
  * @param limit      – Page size (default 20).
  * @param cursor     – Paging token from a previous page to continue from.
- *                     Pass `undefined` / omit to start from the latest.
+ *                    Pass `undefined` / omit to start from the latest.
  */
 export const fetchTransactionsPage = async (
   publicKey: string,
@@ -199,6 +200,7 @@ const isAccountNotFoundError = (error: unknown): boolean =>
 
 /**
  * Fund a Stellar testnet account using Friendbot.
+ * Only works on testnet; throws on mainnet or if funding fails.
  */
 export const fundWithFriendbot = async (publicKey: string): Promise<void> => {
   const friendbotUrl = process.env.EXPO_PUBLIC_FRIENDBOT_URL || 'https://friendbot.stellar.org';
@@ -235,4 +237,29 @@ export const mockDepositToVault = async (secretKey: string, amount: string): Pro
 export const mockWithdrawFromVault = async (secretKey: string, amount: string): Promise<boolean> => {
   await new Promise(resolve => setTimeout(resolve, 1500));
   return true;
+};
+
+/**
+ * Networks with a known stellar.expert explorer path. Anything else (e.g. a
+ * custom standalone network) has no public explorer, so callers should treat
+ * a `null` result as "no explorer link available".
+ */
+const EXPLORER_NETWORK_PATHS: Record<string, string> = {
+  TESTNET: 'testnet',
+  PUBLIC: 'public',
+  MAINNET: 'public',
+};
+
+/**
+ * Builds a stellar.expert transaction URL for the network configured via
+ * EXPO_PUBLIC_STELLAR_NETWORK (defaults to Testnet, matching this app's
+ * default network). Returns null when there is no hash or no known explorer
+ * for the configured network.
+ */
+export const getExplorerTxUrl = (hash: string | null | undefined): string | null => {
+  if (!hash) return null;
+  const network = (process.env.EXPO_PUBLIC_STELLAR_NETWORK || 'TESTNET').toUpperCase();
+  const explorerNetwork = EXPLORER_NETWORK_PATHS[network];
+  if (!explorerNetwork) return null;
+  return `https://stellar.expert/explorer/${explorerNetwork}/tx/${hash}`;
 };
