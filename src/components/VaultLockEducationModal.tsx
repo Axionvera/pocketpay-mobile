@@ -79,9 +79,9 @@ export const VaultLockEducationModal: React.FC<VaultLockEducationModalProps> = (
                 <Lock color={colors.secondary} size={18} />
               </View>
               <View style={styles.pointText}>
-                <Text style={styles.pointTitle}>How long are funds locked?</Text>
+                <Text style={styles.pointTitle}>Why are funds locked?</Text>
                 <Text style={styles.pointBody}>
-                  Each lock holds your XLM for 30 days. During this time the funds stay safely set aside and cannot be withdrawn early.
+                  When you lock funds in the vault, they are set aside to help you save and avoid accidental spending. The smart contract holds your funds securely until the designated lock duration completes.
                 </Text>
               </View>
             </View>
@@ -91,9 +91,9 @@ export const VaultLockEducationModal: React.FC<VaultLockEducationModalProps> = (
                 <CheckCircle color={colors.success} size={18} />
               </View>
               <View style={styles.pointText}>
-                <Text style={styles.pointTitle}>When can I withdraw?</Text>
+                <Text style={styles.pointTitle}>When do funds become withdrawable?</Text>
                 <Text style={styles.pointBody}>
-                  Once the unlock date arrives, your lock shows a green "Ready" badge and an "Unlock" button appears. Tap it to move the funds back into your available balance — there's no deadline to do so.
+                  Funds become eligible for withdrawal as soon as the unlock date passes based on the contract's schedule. Once matured, a "Ready" badge appears and you can move them back to your wallet at any time — there is no time limit or deadline to claim them.
                 </Text>
               </View>
             </View>
@@ -103,9 +103,9 @@ export const VaultLockEducationModal: React.FC<VaultLockEducationModalProps> = (
                 <Wallet color={colors.primary} size={18} />
               </View>
               <View style={styles.pointText}>
-                <Text style={styles.pointTitle}>Multiple locks</Text>
+                <Text style={styles.pointTitle}>How is unlock timing determined?</Text>
                 <Text style={styles.pointBody}>
-                  You can create multiple independent locks, each with their own amount and unlock date.
+                  Unlock timing is set when you create a lock (for example, 30 days) and is tracked on-chain by the smart contract's network time. Multiple independent locks can be created, each with its own amount and unlock schedule.
                 </Text>
               </View>
             </View>
@@ -115,9 +115,9 @@ export const VaultLockEducationModal: React.FC<VaultLockEducationModalProps> = (
                 <AlertCircle color={colors.warning} size={18} />
               </View>
               <View style={styles.pointText}>
-                <Text style={styles.pointTitle}>Testnet preview</Text>
+                <Text style={styles.pointTitle}>Testnet preview notice</Text>
                 <Text style={styles.pointBody}>
-                  This feature currently runs on the Stellar Testnet. Locked amounts are tracked on your device for demonstration — no real money is involved.
+                  This feature currently operates on the Stellar Testnet. Locked amounts are tracked for demonstration and testing — no real funds are involved.
                 </Text>
               </View>
             </View>
