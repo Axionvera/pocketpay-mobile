@@ -162,3 +162,42 @@ describe('copy transaction hash', () => {
     });
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Graceful fallback for missing/invalid data
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('graceful handling of missing or invalid data', () => {
+  it('handles missing amount gracefully by showing fallback dash without XLM suffix', () => {
+    mockUseLocalSearchParams.mockReturnValue({
+      hash: TX_HASH,
+      amount: undefined,
+      destination: DESTINATION,
+    } as any);
+    const { getByText, queryByText } = render(<PaymentSuccessScreen />);
+    expect(getByText('—')).toBeTruthy();
+    expect(queryByText('— XLM')).toBeNull();
+  });
+
+  it('handles missing date gracefully by showing fallback dash', () => {
+    mockUseLocalSearchParams.mockReturnValue({
+      hash: TX_HASH,
+      amount: AMOUNT,
+      destination: DESTINATION,
+      date: undefined,
+    } as any);
+    const { getByText } = render(<PaymentSuccessScreen />);
+    expect(getByText('—')).toBeTruthy();
+  });
+
+  it('handles invalid date gracefully by showing fallback dash', () => {
+    mockUseLocalSearchParams.mockReturnValue({
+      hash: TX_HASH,
+      amount: AMOUNT,
+      destination: DESTINATION,
+      date: 'invalid-date-string',
+    } as any);
+    const { getByText } = render(<PaymentSuccessScreen />);
+    expect(getByText('—')).toBeTruthy();
+  });
+});

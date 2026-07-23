@@ -1,5 +1,5 @@
 import '../shim'; // MUST BE FIRST (See docs/polyfills.md for details)
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { installGlobalErrorHandlers } from '../src/utils/globalErrorHandler';
 import { StatusBar } from 'expo-status-bar';
@@ -12,6 +12,7 @@ import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { Button } from '../src/components/Button';
 import { ShieldAlert } from 'lucide-react-native';
 import { SIZES, RADIUS } from '../src/constants/theme';
+import { WalletResetConfirmModal } from '../src/components/WalletResetConfirmModal';
 
 installGlobalErrorHandlers(); // MUST run before anything else can throw
 
@@ -21,6 +22,9 @@ export default function RootLayout() {
   const { colors } = useTheme();
   const segments = useSegments();
   const router = useRouter();
+
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   useEffect(() => {
     initializeApp();
@@ -56,26 +60,20 @@ export default function RootLayout() {
     };
 
     const handleReset = () => {
-      Alert.alert(
-        'Confirm Wallet Reset',
-        'This will erase the secure storage database for PocketPay. If you do not have your secret key backed up offline, you will permanently lose access to your wallet and funds. Are you sure you want to proceed?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Reset Wallet',
-            style: 'destructive',
-            onPress: async () => {
-              const cleared = await clearWallet();
-              if (!cleared) {
-                Alert.alert(
-                  'Reset Failed',
-                  'PocketPay could not clear secure storage on this device. Please restart the app and try again, or check your device storage permissions.'
-                );
-              }
-            }
-          }
-        ]
-      );
+      setShowResetModal(true);
+    };
+
+    const handleResetConfirm = async () => {
+      setIsResetting(true);
+      const cleared = await clearWallet();
+      setIsResetting(false);
+      setShowResetModal(false);
+      if (!cleared) {
+        Alert.alert(
+          'Reset Failed',
+          'PocketPay could not clear secure storage on this device. Please restart the app and try again, or check your device storage permissions.'
+        );
+      }
     };
 
     return (
@@ -102,6 +100,13 @@ export default function RootLayout() {
           <Button title="Retry Access" onPress={handleRetry} style={{ marginBottom: SIZES.sm }} />
           <Button title="Reset & Import Again" variant="secondary" onPress={handleReset} />
         </View>
+
+        <WalletResetConfirmModal
+          visible={showResetModal}
+          isLoading={isResetting}
+          onConfirm={handleResetConfirm}
+          onCancel={() => setShowResetModal(false)}
+        />
       </View>
     );
   }

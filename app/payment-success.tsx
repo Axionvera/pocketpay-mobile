@@ -34,13 +34,23 @@ export default function PaymentSuccessScreen() {
 
   const explorerUrl = getExplorerTxUrl(hash);
   const destinationLabel = destination ? resolveAddressLabel(destination, contacts) : null;
-  const formattedDate = date ? new Date(date).toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }) : '—';
+
+  let formattedDate = '—';
+  if (date) {
+    const parsedDate = new Date(date);
+    if (!isNaN(parsedDate.getTime())) {
+      formattedDate = parsedDate.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+  }
+
+  const rawFormattedAmount = formatAmount(amount);
+  const displayAmount = rawFormattedAmount && rawFormattedAmount !== '—' ? `${rawFormattedAmount} XLM` : '—';
 
   const handleCopyHash = async () => {
     if (!hash) return;
@@ -65,7 +75,7 @@ export default function PaymentSuccessScreen() {
       <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Amount</Text>
-          <Text style={styles.amountValue}>{formatAmount(amount)} XLM</Text>
+          <Text style={styles.amountValue}>{displayAmount}</Text>
         </View>
 
         <View style={styles.divider} />
