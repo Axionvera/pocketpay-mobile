@@ -7,6 +7,7 @@ import type {
   TransactionReview,
   SignerError,
 } from '../types/signer';
+import { WALLET_SECRET_ACCESS_MESSAGE } from '../utils/walletStorageErrors';
 
 /**
  * Local signer implementation.
@@ -38,7 +39,7 @@ export class LocalSigner implements Signer {
   ): Promise<Transaction> {
     const secretKey = await this.getSecretKey();
     if (!secretKey) {
-      throw createSignerError('signer_unavailable', 'Secret key not available. Please try again.');
+      throw createSignerError('signer_unavailable', WALLET_SECRET_ACCESS_MESSAGE);
     }
 
     const keypair = StellarSdk.Keypair.fromSecret(secretKey);

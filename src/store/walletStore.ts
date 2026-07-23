@@ -3,6 +3,12 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { fetchXlmBalance, fetchTransactionsPage, fundWithFriendbot, PaymentRecord } from '../services/stellar';
+import {
+  CLEAR_WALLET_ERROR,
+  PERSIST_WALLET_ERROR,
+  READ_WALLET_ERROR,
+  RESTORE_WALLET_ERROR,
+} from '../utils/walletStorageErrors';
 
 const WALLET_KEY = 'pocketpay_wallet_secret';
 // Tracks whether the post-creation backup reminder has been acknowledged.
@@ -13,10 +19,6 @@ const WALLET_KEY = 'pocketpay_wallet_secret';
 const BACKUP_ACK_KEY = '@pocketpay_backup_acknowledged';
 const DEFAULT_BALANCE = '0.0000000';
 const TX_PAGE_SIZE = 20;
-const PERSIST_WALLET_ERROR = 'Failed to persist wallet securely';
-const RESTORE_WALLET_ERROR = 'Failed to restore wallet securely';
-const CLEAR_WALLET_ERROR = 'Failed to clear wallet securely';
-const READ_WALLET_ERROR = 'Failed to read wallet securely';
 
 // Transaction records from the Stellar Horizon API – use a flexible type
 // until a proper typed SDK wrapper is available.
@@ -257,12 +259,32 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   },
 
   getSecretKey: async () => {
+    let value: string | null = null;
     try {
-      const value = await SecureStore.getItemAsync(WALLET_KEY);
-      if (value !== null) set({ error: null });
-      return value;
+      value = await SecureStore.getItemAsync(WALLET_KEY);
     } catch {
       console.error(READ_WALLET_ERROR);
+      set({ error: READ_WALLET_ERROR });
+      return null;
+    }
+
+    if (value === null) return null;
+
+    const secretKey = parseStoredSecret(value);
+    if (!secretKey) {
+      console.error(READ_WALLET_ERROR);
+      await clearStoredSecrets();
+      set({ error: READ_WALLET_ERROR });
+      return null;
+    }
+
+    try {
+      StellarSdk.Keypair.fromSecret(secretKey);
+      set({ error: null });
+      return secretKey;
+    } catch {
+      console.error(READ_WALLET_ERROR);
+      await clearStoredSecrets();
       set({ error: READ_WALLET_ERROR });
       return null;
     }
@@ -284,4 +306,3 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     }
   }
 }));
-

@@ -25,6 +25,7 @@ import {
 } from "../src/utils/validation";
 import { resolveAddressLabel } from "../src/utils/contacts";
 import { formatAmount } from "../src/utils/amount";
+import { WALLET_SECRET_ACCESS_MESSAGE } from "../src/utils/walletStorageErrors";
 import {
   Send as SendIcon,
   ScanLine,
@@ -148,7 +149,7 @@ export default function SendScreen() {
     try {
       setIsSigning(true);
       const secretKey = await getSecretKey();
-      if (!secretKey) throw new Error("Secret key not found.");
+      if (!secretKey) throw new Error(WALLET_SECRET_ACCESS_MESSAGE);
       const result = await sendXlmTransaction(
         secretKey,
         destination.trim(),

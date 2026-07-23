@@ -6,6 +6,10 @@ import { Button } from '../../src/components/Button';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
+import {
+  WALLET_CLEAR_FAILURE_MESSAGE,
+  WALLET_SECRET_ACCESS_MESSAGE,
+} from '../../src/utils/walletStorageErrors';
 import { useAppLockStore } from '../../src/store/appLockStore';
 import { ThemeMode } from '../../src/store/appStore';
 import { Moon, Sun, Monitor, Shield, AlertTriangle, Activity } from 'lucide-react-native';
@@ -43,7 +47,7 @@ export default function SettingsScreen() {
       } else {
         Alert.alert(
           'Unable to Access Secret Key',
-          'PocketPay could not read your wallet from secure storage. This can happen if your device is locked, restarted, or restricts keychain access. Try again, or unlock your device and retry.'
+          WALLET_SECRET_ACCESS_MESSAGE
         );
       }
     } else {
@@ -62,7 +66,7 @@ export default function SettingsScreen() {
     setIsResetting(false);
     setShowResetModal(false);
     if (!cleared) {
-      Alert.alert('Wallet Not Cleared', 'Failed to clear wallet securely. Please try again.');
+      Alert.alert('Wallet Not Cleared', WALLET_CLEAR_FAILURE_MESSAGE);
     }
   };
 
@@ -133,7 +137,6 @@ export default function SettingsScreen() {
               })}
             </View>
           </View>
-        </View>
 
         {/* Wallet */}
         <View style={styles.section}>

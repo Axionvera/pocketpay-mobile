@@ -140,6 +140,16 @@ describe('walletStore secure storage handling', () => {
     expect(JSON.stringify(consoleErrorSpy.mock.calls)).not.toContain('Keystore unavailable');
   });
 
+  it('clears malformed stored secrets when getSecretKey reads them', async () => {
+    mockedSecureStore.getItemAsync.mockResolvedValueOnce('{"secretKey":"not-a-valid-secret"}');
+
+    const key = await useWalletStore.getState().getSecretKey();
+
+    expect(key).toBeNull();
+    expect(useWalletStore.getState().error).toBe('Failed to read wallet securely');
+    expect(mockedSecureStore.deleteItemAsync).toHaveBeenCalledWith('pocketpay_wallet_secret');
+  });
+
   it('clears any prior error when getSecretKey succeeds', async () => {
     useWalletStore.setState({ error: 'Failed to read wallet securely' });
     mockedSecureStore.getItemAsync.mockResolvedValueOnce('SVALIDSECRET');
@@ -150,4 +160,3 @@ describe('walletStore secure storage handling', () => {
     expect(useWalletStore.getState().error).toBeNull();
   });
 });
-
