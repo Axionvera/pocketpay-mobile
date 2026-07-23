@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'r
 import { useRouter } from 'expo-router';
 import { Button } from '../src/components/Button';
 import { FormField } from '../src/components/FormField';
+import { PaymentErrorBanner } from '../src/components/PaymentErrorBanner';
 import { COLORS, SIZES, RADIUS } from '../src/constants/theme';
 import { sendXlmTransaction } from '../src/services/stellar';
 import { useWalletStore } from '../src/store/walletStore';
@@ -24,6 +25,7 @@ export default function SendScreen() {
   const [memo, setMemo] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState<Error | null>(null);
 
   const handleDestinationChange = (value: string) => {
     setDestination(value);
@@ -50,6 +52,8 @@ export default function SendScreen() {
   };
 
   const handleSend = async () => {
+    setPaymentError(null);
+
     const fieldErrors: FieldErrors = {
       destination: validateAddress(destination, publicKey) ?? undefined,
       amount: validateAmount(amount, balance) ?? undefined,
@@ -78,7 +82,7 @@ export default function SendScreen() {
         }
       ]);
     } catch (error: any) {
-      Alert.alert('Transaction Failed', error.message || 'An error occurred while sending.');
+      setPaymentError(error instanceof Error ? error : new Error(String(error)));
     } finally {
       setIsLoading(false);
     }
@@ -96,6 +100,14 @@ export default function SendScreen() {
       </View>
 
       <View style={styles.form}>
+        {paymentError && (
+          <PaymentErrorBanner
+            error={paymentError}
+            onRetry={() => handleSend()}
+            onDismiss={() => setPaymentError(null)}
+          />
+        )}
+
         <FormField
           label="Destination Address (Public Key)"
           placeholder="G..."

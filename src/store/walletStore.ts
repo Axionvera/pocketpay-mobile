@@ -1,14 +1,16 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
-import { fetchXlmBalance, fetchRecentTransactions, fundWithFriendbot } from '../services/stellar';
+import * as StellarSdk from '@stellar/stellar-sdk';
+import { fetchXlmBalance, fetchTransactionsPage, fundWithFriendbot } from '../services/stellar';
 
 const WALLET_KEY = 'pocketpay_wallet_secret';
 const DEFAULT_BALANCE = '0.0000000';
+const TX_PAGE_SIZE = 20;
 const PERSIST_WALLET_ERROR = 'Failed to persist wallet securely';
 const RESTORE_WALLET_ERROR = 'Failed to restore wallet securely';
 const CLEAR_WALLET_ERROR = 'Failed to clear wallet securely';
 
-export type TransactionRecord = PaymentRecord;
+export type TransactionRecord = Record<string, any> & { id: string };
 
 interface WalletState {
   publicKey: string | null;
@@ -19,11 +21,18 @@ interface WalletState {
   fundError: string | null;
   error: string | null;
 
+  // Pagination
+  nextCursor: string | null;
+  hasMoreTransactions: boolean;
+  isLoadingMore: boolean;
+
   // Actions
   setWallet: (publicKey: string, secretKey: string) => Promise<boolean>;
   loadWalletFromStorage: () => Promise<boolean>;
   /** Pull-to-refresh: resets pagination and loads the first page fresh. */
   refreshWalletData: () => Promise<void>;
+  /** Load the next page of older transactions (cursor-based pagination). */
+  loadMoreTransactions: () => Promise<void>;
   clearWallet: () => Promise<boolean>;
   getSecretKey: () => Promise<string | null>;
   fundWallet: () => Promise<void>;
@@ -33,6 +42,8 @@ const resetWalletState = () => ({
   publicKey: null,
   balance: DEFAULT_BALANCE,
   transactions: [],
+  nextCursor: null,
+  hasMoreTransactions: false,
 });
 
 const parseStoredSecret = (storedValue: string): string | null => {
@@ -76,6 +87,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   isFunding: false,
   fundError: null,
   error: null,
+  nextCursor: null,
+  hasMoreTransactions: false,
+  isLoadingMore: false,
 
   setWallet: async (publicKey: string, secretKey: string) => {
     try {
@@ -125,7 +139,13 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         fetchXlmBalance(publicKey),
         fetchTransactionsPage(publicKey, TX_PAGE_SIZE),
       ]);
-      set({ balance, transactions: txs, isLoading: false });
+      set({
+        balance,
+        transactions: page.records as TransactionRecord[],
+        nextCursor: page.nextCursor,
+        hasMoreTransactions: page.hasMore,
+        isLoading: false,
+      });
     } catch (err: any) {
       console.error('Failed to refresh wallet data');
       set({ isLoading: false, error: err.message || 'Failed to sync data' });
