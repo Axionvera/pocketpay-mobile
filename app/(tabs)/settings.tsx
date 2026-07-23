@@ -105,16 +105,17 @@ export default function SettingsScreen() {
                   </Text>
                 </View>
               </View>
-              <Switch
-                value={isLockEnabled}
-                onValueChange={handleToggleLock}
-                trackColor={{ false: colors.border, true: colors.primary }}
-              />
             </View>
+            <Switch
+              value={isLockEnabled}
+              onValueChange={handleToggleLock}
+              trackColor={{ false: colors.border, true: colors.primary }}
+            />
+          </View>
 
-            <View style={styles.divider} />
+          <View style={styles.divider} />
 
-            <View style={styles.themeRow}>
+          <View style={styles.themeRow}>
               {THEME_OPTIONS.map(({ mode, label, Icon }) => {
                 const selected = themeMode === mode;
                 return (

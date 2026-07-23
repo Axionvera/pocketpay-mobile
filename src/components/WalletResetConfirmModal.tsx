@@ -33,6 +33,14 @@ const DATA_TO_BE_REMOVED = [
   { icon: Clock, label: 'Transaction history', detail: 'Cached payment activity' },
 ] as const;
 
+/** Items that will be permanently deleted, displayed as a bullet-point list. */
+const DATA_TO_BE_REMOVED = [
+  { icon: KeyRound, label: 'Wallet secret key', detail: 'Your Stellar secret key stored on this device' },
+  { icon: Settings, label: 'App preferences', detail: 'Theme selection and app lock settings' },
+  { icon: Users, label: 'Saved contacts', detail: 'Your address book entries' },
+  { icon: Clock, label: 'Transaction history', detail: 'Cached payment activity' },
+] as const;
+
 export const WalletResetConfirmModal: React.FC<WalletResetConfirmModalProps> = ({
   visible,
   isLoading = false,
