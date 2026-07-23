@@ -135,16 +135,19 @@ export const VaultLockDetail: React.FC<VaultLockDetailProps> = ({ lock }) => {
       <View style={styles.educationCard}>
         <View style={styles.educationHeader}>
           <HelpCircle color={colors.primary} size={20} style={{ marginRight: SIZES.sm }} />
-          <Text style={styles.educationTitle}>Why are my funds locked?</Text>
+          <Text style={styles.educationTitle}>How locked funds work</Text>
         </View>
         <Text style={styles.educationBody}>
-          When you lock XLM, it's set aside for a fixed period (30 days). During this time the funds stay safely in your vault but cannot be withdrawn.
+          • <Text style={{ fontWeight: '600', color: colors.textPrimary }}>Why funds are locked:</Text> Locked funds are held in the vault to help you commit to long-term savings goals and avoid premature spending.
         </Text>
         <Text style={styles.educationBody}>
-          Once the unlock date arrives, you'll see a "Ready to withdraw" badge and can move the funds back to your wallet whenever you like — there's no rush.
+          • <Text style={{ fontWeight: '600', color: colors.textPrimary }}>Unlock timing:</Text> The unlock date is determined by the lock duration (e.g., 30 days) set when created and monitored by the smart contract's network schedule.
+        </Text>
+        <Text style={styles.educationBody}>
+          • <Text style={{ fontWeight: '600', color: colors.textPrimary }}>When withdrawable:</Text> As soon as the unlock date is reached, your status updates to "Ready to withdraw" and you can return the XLM to your main wallet at any time with no deadline.
         </Text>
         <Text style={styles.educationFootnote}>
-          This is a Testnet preview — no real money is involved.
+          Testnet preview — no real funds are involved.
         </Text>
       </View>
     </View>
