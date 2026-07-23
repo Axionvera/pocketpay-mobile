@@ -32,6 +32,8 @@ interface WalletState {
   fundError: string | null;
   error: string | null;
   showBackupReminder: boolean;
+  /** True once the initial `loadWalletFromStorage` call has resolved (success or failure). */
+  walletChecked: boolean;
 
   // Pagination
   isLoadingMore: boolean;
@@ -109,6 +111,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   hasMoreTransactions: false,
   nextCursor: null,
   showBackupReminder: false,
+  walletChecked: false,
 
   markBackupPending: async () => {
     set({ showBackupReminder: true });
@@ -146,19 +149,19 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       storedValue = await SecureStore.getItemAsync(WALLET_KEY);
     } catch {
       console.error(RESTORE_WALLET_ERROR);
-      set({ ...resetWalletState(), error: RESTORE_WALLET_ERROR });
+      set({ ...resetWalletState(), error: RESTORE_WALLET_ERROR, walletChecked: true });
       return false;
     }
 
     if (storedValue === null) {
-      set({ ...resetWalletState(), error: null });
+      set({ ...resetWalletState(), error: null, walletChecked: true });
       return false;
     }
 
     const secretKey = parseStoredSecret(storedValue);
     if (!secretKey) {
       await clearStoredSecrets();
-      set({ ...resetWalletState(), error: RESTORE_WALLET_ERROR });
+      set({ ...resetWalletState(), error: RESTORE_WALLET_ERROR, walletChecked: true });
       return false;
     }
 
@@ -174,12 +177,12 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         // Non-critical: default to not re-showing the reminder on read failure.
       }
 
-      set({ publicKey: keypair.publicKey(), error: null, showBackupReminder });
+      set({ publicKey: keypair.publicKey(), error: null, showBackupReminder, walletChecked: true });
       return true;
     } catch {
       console.error(RESTORE_WALLET_ERROR);
       await clearStoredSecrets();
-      set({ ...resetWalletState(), error: RESTORE_WALLET_ERROR });
+      set({ ...resetWalletState(), error: RESTORE_WALLET_ERROR, walletChecked: true });
       return false;
     }
   },

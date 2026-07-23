@@ -25,7 +25,7 @@ export default function RootLayout() {
 }
 
 function RootContent() {
-  const { loadWalletFromStorage, publicKey, error, clearWallet } = useWalletStore();
+   const { loadWalletFromStorage, publicKey, error, clearWallet, walletChecked } = useWalletStore();
   const { initializeApp, isInitialized } = useAppStore();
   const { colors } = useTheme();
   const segments = useSegments();
@@ -41,6 +41,11 @@ function RootContent() {
 
   useEffect(() => {
     if (!isInitialized) return;
+    // Wait for the initial wallet load to resolve too — `isInitialized` (app
+    // settings) and `walletChecked` (wallet secret) load independently, and
+    // deciding on `publicKey` before it's checked would flash-redirect a
+    // returning signed-in user to the auth screens on cold start.
+    if (!walletChecked) return;
     if (error === 'Failed to restore wallet securely') return; // Stay on error screen
 
     const inAuthGroup = segments[0] === '(auth)';
@@ -48,13 +53,15 @@ function RootContent() {
     if (publicKey && inAuthGroup) {
       // User is signed in and trying to access auth screens, redirect to main
       router.replace('/(tabs)');
-    } else if (!publicKey && !inAuthGroup && segments[0] !== '(tabs)' && segments[0] !== 'send' && segments[0] !== 'receive' && segments[0] !== 'review-transaction') {
-      // User is NOT signed in and trying to access main screens, redirect to auth
+    } else if (!publicKey && !inAuthGroup && segments[0] !== 'send' && segments[0] !== 'receive' && segments[0] !== 'review-transaction') {
+      // User is NOT signed in and trying to access main screens, redirect to auth.
+      // This also covers a wallet reset that happens while sitting on a (tabs)
+      // screen (e.g. Settings) — publicKey going null must redirect from there too.
       router.replace('/(auth)');
     }
-  }, [publicKey, isInitialized, segments, error]);
+  }, [publicKey, isInitialized, walletChecked, segments, error]);
 
-  if (!isInitialized) {
+  if (!isInitialized || !walletChecked) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={colors.primary} />
