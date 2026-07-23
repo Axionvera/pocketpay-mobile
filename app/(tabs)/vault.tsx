@@ -21,6 +21,7 @@ const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const VAULT_INTRO_SEEN_KEY = '@pocketpay_vault_intro_seen';
 
 export default function VaultScreen() {
+  const router = useRouter();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
@@ -319,6 +320,21 @@ export default function VaultScreen() {
             disabled={isSubmitting || depositForm.isSubmitting}
             style={styles.lockButton}
           />
+          <View style={styles.mockLockSection}>
+            <Text style={styles.mockLockTitle}>Mock Active Locks</Text>
+            <TouchableOpacity 
+              style={styles.mockLockItem}
+              onPress={() => router.push('/vault-lock/mock-id-123')}
+            >
+              <View>
+                <Text style={styles.mockLockAmount}>500.0000000 XLM</Text>
+                <Text style={styles.mockLockSubtitle}>Locked • Matures in 15 days</Text>
+              </View>
+              <View style={styles.mockLockBadge}>
+                 <Text style={styles.mockLockBadgeText}>VIEW</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </ScrollView>
@@ -441,6 +457,48 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   lockButton: {
     marginTop: SIZES.md,
+  },
+  mockLockSection: {
+    marginTop: SIZES.xl,
+  },
+  mockLockTitle: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: SIZES.md,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  mockLockItem: {
+    backgroundColor: colors.surface,
+    padding: SIZES.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  mockLockAmount: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  mockLockSubtitle: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  mockLockBadge: {
+    backgroundColor: 'rgba(255, 196, 0, 0.1)',
+    paddingHorizontal: SIZES.sm,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+  },
+  mockLockBadgeText: {
+    color: colors.warning,
+    fontSize: 12,
+    fontWeight: '600',
   },
   unavailableCard: {
     backgroundColor: colors.surface,
