@@ -1,6 +1,6 @@
 # Soroban Savings Vault: Integration Risks & Assumptions
 
-This document outlines assumptions, placeholder states, and integration risks between the PocketPay Mobile vault UI, PocketPay SDK helpers, and deployed Soroban smart contract behavior.
+This document outlines assumptions, placeholder states, and integration risks between the PocketPay Mobile vault UI, PocketPay SDK helpers, and deployed Soroban smart contract behavior. For a structured list of SDK/contract dependencies, placeholder behaviors, and known gaps, see the [Vault Integration Assumptions](./vault-integration-assumptions.md) document.
 
 ## Summary of Current State
 
