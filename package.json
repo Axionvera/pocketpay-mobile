@@ -9,7 +9,9 @@
     "web": "expo start --web",
     "test": "jest --watchAll=false",
     "test:watch": "jest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "api:check": "node scripts/check-sdk-api.js",
+    "api:update": "node scripts/check-sdk-api.js --update"
   },
   "jest": {
     "preset": "jest-expo",
