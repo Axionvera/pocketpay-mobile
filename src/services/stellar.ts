@@ -69,7 +69,7 @@ export const fetchXlmBalance = async (publicKey: string): Promise<string> => {
 export const fetchRecentTransactions = async (
   publicKey: string,
   limit: number = 20
-): Promise<PaymentRecord[]> => {
+): Promise<any[]> => {
   try {
     const response = await server
       .operations()
@@ -108,7 +108,7 @@ export interface TransactionsPage {
  * @param publicKey  – Stellar public key to query.
  * @param limit      – Page size (default 20).
  * @param cursor     – Paging token from a previous page to continue from.
- *                     Pass `undefined` / omit to start from the latest.
+ *                    Pass `undefined` / omit to start from the latest.
  */
 export const fetchTransactionsPage = async (
   publicKey: string,
@@ -199,6 +199,19 @@ const isAccountNotFoundError = (error: unknown): boolean =>
   error.code === 'ACCOUNT_NOT_FOUND';
 
 /**
+ * Fund a Stellar testnet account using Friendbot.
+ * Only works on testnet; throws on mainnet or if funding fails.
+ */
+export const fundWithFriendbot = async (publicKey: string): Promise<void> => {
+  const friendbotUrl = process.env.EXPO_PUBLIC_FRIENDBOT_URL || 'https://friendbot.stellar.org';
+  const response = await fetch(`${friendbotUrl}?addr=${encodeURIComponent(publicKey)}`);
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(body || `Friendbot funding failed (HTTP ${response.status})`);
+  }
+};
+
+/**
  * MOCK SERVICE WRAPPERS FOR SOROBAN SAVINGS VAULT
  *
  * Used as a fallback by the vault store when EXPO_PUBLIC_VAULT_CONTRACT_ID
@@ -250,17 +263,3 @@ export const getExplorerTxUrl = (hash: string | null | undefined): string | null
   if (!explorerNetwork) return null;
   return `https://stellar.expert/explorer/${explorerNetwork}/tx/${hash}`;
 };
-
-export const fundWithFriendbot = async (publicKey: string): Promise<void> => {
-  try {
-    const url = `https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Friendbot error: ${response.statusText}`);
-    }
-  } catch (error: any) {
-    console.error('Friendbot funding failed:', error);
-    throw new Error(error.message || 'Friendbot funding failed');
-  }
-};
-

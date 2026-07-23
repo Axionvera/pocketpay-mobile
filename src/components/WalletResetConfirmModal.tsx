@@ -23,7 +23,23 @@ interface WalletResetConfirmModalProps {
 }
 
 /** The exact text the user must type to enable the destructive action. */
-const CONFIRMATION_TEXT = 'RESET';
+const CONFIRMATION_TEXT = 'confirm reset';
+
+/** Items that will be permanently deleted, displayed as a bullet-point list. */
+const DATA_TO_BE_REMOVED = [
+  { icon: KeyRound, label: 'Wallet secret key', detail: 'Your Stellar secret key stored on this device' },
+  { icon: Settings, label: 'App preferences', detail: 'Theme selection and app lock settings' },
+  { icon: Users, label: 'Saved contacts', detail: 'Your address book entries' },
+  { icon: Clock, label: 'Transaction history', detail: 'Cached payment activity' },
+] as const;
+
+/** Items that will be permanently deleted, displayed as a bullet-point list. */
+const DATA_TO_BE_REMOVED = [
+  { icon: KeyRound, label: 'Wallet secret key', detail: 'Your Stellar secret key stored on this device' },
+  { icon: Settings, label: 'App preferences', detail: 'Theme selection and app lock settings' },
+  { icon: Users, label: 'Saved contacts', detail: 'Your address book entries' },
+  { icon: Clock, label: 'Transaction history', detail: 'Cached payment activity' },
+] as const;
 
 /** Items that will be permanently deleted, displayed as a bullet-point list. */
 const DATA_TO_BE_REMOVED = [
@@ -43,7 +59,7 @@ export const WalletResetConfirmModal: React.FC<WalletResetConfirmModalProps> = (
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [typedText, setTypedText] = useState('');
 
-  const isConfirmed = typedText === CONFIRMATION_TEXT;
+  const isConfirmed = typedText.trim().toLowerCase() === CONFIRMATION_TEXT;
 
   return (
     <ConfirmModal
@@ -77,6 +93,7 @@ export const WalletResetConfirmModal: React.FC<WalletResetConfirmModalProps> = (
             <Text style={styles.dataLabel}>{label}</Text>
             <Text style={styles.dataDetail}>{detail}</Text>
           </View>
+        </View>
       ))}
 
       {/* Typed confirmation */}
@@ -85,11 +102,11 @@ export const WalletResetConfirmModal: React.FC<WalletResetConfirmModalProps> = (
         value={typedText}
         onChangeText={setTypedText}
         placeholder={CONFIRMATION_TEXT}
-        autoCapitalize="characters"
+        autoCapitalize="none"
         autoComplete="off"
         autoCorrect={false}
         editable={!isLoading}
-        accessibilityLabel="Type RESET to confirm wallet deletion"
+        accessibilityLabel="Type confirm reset to confirm wallet deletion"
       />
 
       {/* Disclaimer */}
