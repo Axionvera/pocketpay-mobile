@@ -285,7 +285,7 @@ describe('AC4 – valid form calls sendXlmTransaction', () => {
 // ────────────────────────────────────────────────────────────────────────
 
 describe('AC5 – failure displays error', () => {
-  it('shows a "Transaction Failed" alert with the error message when sendXlmTransaction throws', async () => {
+  it('shows recovery guidance when sendXlmTransaction throws a known error', async () => {
     mockSendXlmTransaction.mockRejectedValueOnce(new Error('tx_bad_seq'));
     const { getByPlaceholderText, getByText } = render(<SendScreen />);
 
@@ -296,11 +296,12 @@ describe('AC5 – failure displays error', () => {
     fireEvent.press(getByText('Sign & Send'));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Transaction Failed', 'tx_bad_seq');
+      // User-friendly title from the recovery guidance, not raw error code
+      expect(getByText('Sequence Error')).toBeTruthy();
     });
   });
 
-  it('shows a generic error message when the error has no message', async () => {
+  it('shows default guidance when the error has no message', async () => {
     mockSendXlmTransaction.mockRejectedValueOnce({});
     const { getByPlaceholderText, getByText } = render(<SendScreen />);
 
@@ -311,9 +312,7 @@ describe('AC5 – failure displays error', () => {
     fireEvent.press(getByText('Sign & Send'));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Transaction Failed', 'An error occurred while sending.',
-      );
+      expect(getByText('Transaction Failed')).toBeTruthy();
     });
   });
 
@@ -327,7 +326,7 @@ describe('AC5 – failure displays error', () => {
     await waitFor(() => getByText('Sign & Send'));
     fireEvent.press(getByText('Sign & Send'));
 
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+    await waitFor(() => expect(getByText('Network Error')).toBeTruthy());
     expect(mockBack).not.toHaveBeenCalled();
   });
 });
