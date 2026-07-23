@@ -9,4 +9,6 @@ export { VaultConfirmModal, VaultAction } from "./VaultConfirmModal";
 export { VaultIntroModal } from "./VaultIntroModal";
 export { VaultLockEducationModal } from "./VaultLockEducationModal";
 export { VaultLockList } from "./VaultLockList";
+export { VaultLockDetail } from "./VaultLockDetail";
+export { MaturedLockWithdrawalModal } from "./MaturedLockWithdrawalModal";
 export { SigningConfirmModal } from "./SigningConfirmModal";

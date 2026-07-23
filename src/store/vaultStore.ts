@@ -12,6 +12,11 @@ import {
   mockDepositToVault,
   mockWithdrawFromVault,
 } from '../services/stellar';
+import {
+  createWithdrawalError,
+  evaluateWithdrawalEligibility,
+  toWithdrawalErrorCode,
+} from '../features/vault/maturedLockWithdrawal';
 
 const LOCKS_KEY = '@pocketpay_vault_locks';
 
@@ -39,6 +44,29 @@ interface VaultState {
   unlockLock: (lockId: string) => Promise<void>;
   deposit: (secretKey: string, publicKey: string, amount: string) => Promise<string | null>;
   withdraw: (secretKey: string, publicKey: string, amount: string) => Promise<string | null>;
+  /**
+   * Withdraw a single matured lock back to the wallet.
+   *
+   * Re-checks eligibility at submission time, moves the funds, then drops the
+   * lock — the lock is only removed once the transfer resolves, so a failure
+   * leaves the vault untouched. Rejects with a `VaultWithdrawalError`.
+   */
+  withdrawMaturedLock: (
+    lockId: string,
+    params: { publicKey: string | null; getSecretKey: () => Promise<string | null> }
+  ) => Promise<MaturedLockWithdrawalResult>;
+}
+
+export interface MaturedLockWithdrawalResult {
+  /** Withdrawn amount in XLM, echoed back for the success screen. */
+  amount: string;
+  /** On-chain transaction hash, or null when no contract is configured. */
+  hash: string | null;
+  /**
+   * True when no vault contract is configured and the withdrawal ran against
+   * the local placeholder rather than the network.
+   */
+  isPreview: boolean;
 }
 
 export const useVaultStore = create<VaultState>((set, get) => ({
@@ -147,6 +175,52 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       }
       await get().loadBalance(publicKey);
       return hash;
+    } finally {
+      set({ isSubmitting: false });
+    }
+  },
+
+  withdrawMaturedLock: async (lockId, { publicKey, getSecretKey }) => {
+    const lock = get().locks.find((candidate) => candidate.id === lockId);
+    if (!lock) throw createWithdrawalError('lock-not-found');
+
+    // Eligibility is re-derived here rather than trusted from the UI: the lock
+    // may have been opened before it matured, or the screen may be stale.
+    const eligibility = evaluateWithdrawalEligibility(lock, { publicKey });
+    if (!eligibility.isEligible) {
+      throw createWithdrawalError(eligibility.reason ?? 'unknown', eligibility.message);
+    }
+
+    const isConfigured = get().isConfigured;
+    set({ isSubmitting: true });
+    try {
+      let hash: string | null = null;
+
+      if (isConfigured) {
+        const secretKey = await getSecretKey();
+        if (!secretKey) throw createWithdrawalError('secret-unavailable');
+        hash = await withdrawFromVault(secretKey, lock.amount);
+      } else {
+        // No contract configured: run the local placeholder so the flow is
+        // exercisable end to end without moving anything on the network.
+        await mockWithdrawFromVault('', lock.amount);
+      }
+
+      // Only drop the lock once the funds have actually moved.
+      const remainingLocks = get().locks.filter((candidate) => candidate.id !== lockId);
+      await AsyncStorage.setItem(LOCKS_KEY, JSON.stringify(remainingLocks));
+      set({ locks: remainingLocks });
+
+      if (publicKey) {
+        await get().loadBalance(publicKey);
+      }
+
+      return { amount: lock.amount, hash, isPreview: !isConfigured };
+    } catch (error) {
+      throw createWithdrawalError(
+        toWithdrawalErrorCode(error),
+        error instanceof Error ? error.message : undefined
+      );
     } finally {
       set({ isSubmitting: false });
     }

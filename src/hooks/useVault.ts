@@ -18,6 +18,7 @@ export function useVault() {
     unlockLock,
     deposit,
     withdraw,
+    withdrawMaturedLock,
   } = useVaultStore();
 
   const findLock = (id: string) => locks.find(lock => lock.id === id);
@@ -37,6 +38,7 @@ export function useVault() {
     unlockLock,
     deposit,
     withdraw,
+    withdrawMaturedLock,
     findLock,
   };
 }
