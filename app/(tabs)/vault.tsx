@@ -14,6 +14,7 @@ import { useVaultDepositForm } from '../../src/features/vault/useVaultDepositFor
 import { useWalletStore } from '../../src/store/walletStore';
 import { formatTimeRemaining } from '../../src/utils/lockTime';
 import { validateAmount } from '../../src/utils/validation';
+import { WALLET_SECRET_ACCESS_MESSAGE } from '../../src/utils/walletStorageErrors';
 import { PiggyBank, Info, Lock, HelpCircle, ShieldCheck, AlertTriangle, XCircle } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -138,7 +139,7 @@ export default function VaultScreen() {
         hash = await depositForm.submit(publicKey, getSecretKey, deposit, walletBalance);
       } else {
         const secret = await getSecretKey();
-        if (!secret) throw new Error('Secret key not found');
+        if (!secret) throw new Error(WALLET_SECRET_ACCESS_MESSAGE);
         hash = await withdraw(secret, publicKey, depositForm.amount);
         depositForm.setAmount('');
         depositForm.setAmountError(undefined);

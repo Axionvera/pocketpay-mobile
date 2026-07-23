@@ -13,6 +13,7 @@ import { useWalletStore } from '../src/store/walletStore';
 import { SIZES, RADIUS, ThemeColors } from '../src/constants/theme';
 import { formatAmount } from '../src/utils/amount';
 import { resolveAddressLabel } from '../src/utils/contacts';
+import { WALLET_SECRET_ACCESS_MESSAGE } from '../src/utils/walletStorageErrors';
 import { useAppStore } from '../src/store/appStore';
 import {
   ArrowRight,
@@ -96,7 +97,7 @@ export default function ReviewTransactionScreen() {
     if (!secretKey) {
       store.failSigning({
         type: 'signer_unavailable',
-        message: 'Secret key not available.',
+        message: WALLET_SECRET_ACCESS_MESSAGE,
       });
       return;
     }

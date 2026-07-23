@@ -6,6 +6,7 @@ import { FormField } from '../../src/components/FormField';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
+import { WALLET_SAVE_FAILURE_MESSAGE } from '../../src/utils/walletStorageErrors';
 import { importWallet } from 'pocketpay-sdk';
 import { Info, Shield, CheckCircle } from 'lucide-react-native';
 
@@ -45,7 +46,7 @@ export default function ImportWalletScreen() {
 
       const saved = await setWallet(publicKey, trimmedKey);
       if (!saved) {
-        setError('Failed to persist wallet. Please try again.');
+        setError(WALLET_SAVE_FAILURE_MESSAGE);
         return;
       }
 

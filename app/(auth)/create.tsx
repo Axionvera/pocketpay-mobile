@@ -6,6 +6,7 @@ import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { generateKeypair } from '../../src/services/stellar';
 import { useWalletStore } from '../../src/store/walletStore';
+import { WALLET_SAVE_FAILURE_MESSAGE } from '../../src/utils/walletStorageErrors';
 import { AlertTriangle, Info, Shield, CheckCircle } from 'lucide-react-native';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
 
@@ -43,7 +44,7 @@ export default function CreateWalletScreen() {
             const saved = await setWallet(keypair.publicKey, keypair.secretKey);
             setIsLoading(false);
             if (!saved) {
-              Alert.alert('Wallet Not Saved', 'Failed to persist wallet securely. Please try again.');
+              Alert.alert('Wallet Not Saved', WALLET_SAVE_FAILURE_MESSAGE);
               return;
             }
             await markBackupPending();

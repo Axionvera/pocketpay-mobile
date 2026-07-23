@@ -13,6 +13,10 @@ import { Button } from '../src/components/Button';
 import { ShieldAlert } from 'lucide-react-native';
 import { SIZES, RADIUS } from '../src/constants/theme';
 import { WalletResetConfirmModal } from '../src/components/WalletResetConfirmModal';
+import {
+  RESTORE_WALLET_ERROR,
+  WALLET_CLEAR_FAILURE_MESSAGE,
+} from '../src/utils/walletStorageErrors';
 
 installGlobalErrorHandlers(); // MUST run before anything else can throw
 
@@ -46,7 +50,7 @@ function RootContent() {
     // deciding on `publicKey` before it's checked would flash-redirect a
     // returning signed-in user to the auth screens on cold start.
     if (!walletChecked) return;
-    if (error === 'Failed to restore wallet securely') return; // Stay on error screen
+    if (error === RESTORE_WALLET_ERROR) return; // Stay on error screen
 
     const inAuthGroup = segments[0] === '(auth)';
 
@@ -69,7 +73,7 @@ function RootContent() {
     );
   }
 
-  if (error === 'Failed to restore wallet securely') {
+  if (error === RESTORE_WALLET_ERROR) {
     const handleRetry = async () => {
       await loadWalletFromStorage();
     };
@@ -86,7 +90,7 @@ function RootContent() {
       if (!cleared) {
         Alert.alert(
           'Reset Failed',
-          'PocketPay could not clear secure storage on this device. Please restart the app and try again, or check your device storage permissions.'
+          WALLET_CLEAR_FAILURE_MESSAGE
         );
       }
     };
