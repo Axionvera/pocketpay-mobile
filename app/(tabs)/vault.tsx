@@ -25,7 +25,6 @@ export default function VaultScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const router = useRouter();
 
   // Wallet & Vault stores
   const { publicKey, getSecretKey, balance: walletBalance } = useWalletStore();

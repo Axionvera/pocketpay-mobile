@@ -42,7 +42,32 @@ To ensure the app remains testable and runs in a demo environment without contra
 
 ---
 
-## 3. Known Gaps and Risks
+## 3. Matured Lock Withdrawal
+
+The matured-lock withdrawal flow (`src/features/vault/useMaturedLockWithdrawal.ts`, `src/components/MaturedLockWithdrawalModal.tsx`, and `vaultStore.withdrawMaturedLock`) is built against the interface above and steps through **eligibility → confirmation → loading → success/failure**.
+
+### Assumptions
+
+| Assumption | Detail | Impact if wrong |
+| :--- | :--- | :--- |
+| **Whole-lock withdrawal** | A matured lock is withdrawn in full; the UI offers no partial amount. | Partial withdrawal would need an amount step in the confirmation modal. |
+| **Withdrawal call shape** | The client calls `withdrawFromVault(secretKey, amount)`, which invokes `withdraw(to: Address, amount: i128)` for the signing account. | A `lock_id`-based `withdraw`/`unlock` signature would change the store action's arguments, not the flow. |
+| **Contract enforces maturity** | The contract rejects a withdrawal before the unlock date; the client check is a UX guard, not the security boundary. | A client-only check would be bypassable by changing device time (see *Ledger vs. Device Time*). |
+| **Lock lifecycle** | Locks are removed from local storage only after the transfer resolves. Once `get_locks` is live, the contract becomes the source of truth and the local removal drops out. | A failure must never destroy the lock record — hence removal after, not before, submission. |
+| **Confirmation is terminal** | `getTransaction` returning `SUCCESS` means the funds have moved; no separate settlement polling is modelled. | A pending/queued status would need an extra "processing" state in the modal. |
+| **Errors are mapped, not raw** | Failures are classified into codes (`network`, `secret-unavailable`, `not-matured`, …) and rendered from `describeWithdrawalError`. | Raw Soroban error strings would leak into the UI. |
+
+### Placeholder behaviour
+
+When `EXPO_PUBLIC_VAULT_CONTRACT_ID` is unset the flow runs against `mockWithdrawFromVault`. In that mode the modal states plainly that no vault contract is configured and that no funds move on the network, and the success state shows no transaction hash. The UI must not imply a live withdrawal until a contract is configured.
+
+### Eligibility rules
+
+Eligibility is evaluated by `evaluateWithdrawalEligibility` from the lock's `unlockDate` rather than its stored `status`, because `status` is only recomputed when locks are loaded. A lock is withdrawable when a wallet is loaded, the amount is positive, and the unlock date has passed. Eligibility is re-checked inside the store at submission time so a stale screen cannot submit an immature lock.
+
+---
+
+## 4. Known Gaps and Risks
 
 Below are the identified gaps and risks that require coordination across repositories before production deployment:
 

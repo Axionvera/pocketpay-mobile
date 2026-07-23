@@ -1,11 +1,13 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useVaultStore, Lock } from '../store/vaultStore';
 import { useRouter } from 'expo-router';
 import { Calendar, Clock, DollarSign, Lock as LockIcon, Unlock, Info, Timer, HelpCircle } from 'lucide-react-native';
 import { formatTimeRemaining, getEligibilityText } from '../utils/lockTime';
+import { useMaturedLockWithdrawal } from '../features/vault/useMaturedLockWithdrawal';
+import { MaturedLockWithdrawalModal } from './MaturedLockWithdrawalModal';
 
 interface VaultLockDetailProps {
   lock: Lock;
@@ -15,44 +17,22 @@ export const VaultLockDetail: React.FC<VaultLockDetailProps> = ({ lock }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const router = useRouter();
-  const unlockLock = useVaultStore((state) => state.unlockLock);
-  
-  const [isConfirmVisible, setIsConfirmVisible] = useState(false);
-  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const contractId = useVaultStore((state) => state.contractId);
+  const withdrawal = useMaturedLockWithdrawal(lock);
 
   const isMatured = lock.status === 'matured';
   const unlockDate = new Date(lock.unlockDate);
   const createdAt = new Date(lock.createdAt);
   const countdown = formatTimeRemaining(lock.unlockDate);
   const eligibility = getEligibilityText(lock.unlockDate, lock.status);
+  const canWithdraw = withdrawal.eligibility.isEligible;
 
-  const handleWithdraw = () => {
-    setIsConfirmVisible(true);
-  };
-
-  const performWithdrawal = async () => {
-    setIsWithdrawing(true);
-    try {
-      // TODO: Replace setTimeout with SDK withdrawal method once integrated.
-      // e.g. await useVaultStore().withdraw(secretKey, publicKey, lock.amount);
-      await new Promise(res => setTimeout(res, 1500));
-      
-      Alert.alert('Success', `Successfully withdrawn ${lock.amount} XLM to your wallet.`, [
-        { 
-          text: 'OK', 
-          onPress: () => {
-            setIsConfirmVisible(false);
-            router.back();
-            // Call unlockLock slightly later to avoid rendering "Lock Not Found" mid-transition
-            setTimeout(() => unlockLock(lock.id), 300);
-          } 
-        }
-      ]);
-    } catch (error) {
-      Alert.alert('Withdrawal Failed', 'Could not process the withdrawal. Please try again.');
-    } finally {
-      setIsWithdrawing(false);
-    }
+  const handleWithdrawalClosed = () => {
+    const succeeded = withdrawal.step === 'success';
+    withdrawal.close();
+    // The lock is gone from the vault once the withdrawal settles, so leave the
+    // detail screen rather than rendering its "not found" state.
+    if (succeeded) router.back();
   };
 
   return (
@@ -118,18 +98,47 @@ export const VaultLockDetail: React.FC<VaultLockDetailProps> = ({ lock }) => {
           </Text>
         </View>
 
+        {/* A matured lock can still be blocked — e.g. no wallet is loaded. */}
+        {isMatured && !canWithdraw ? (
+          <Text style={styles.blockedText}>{withdrawal.eligibility.message}</Text>
+        ) : null}
+
         {isMatured && (
           <TouchableOpacity
-            style={styles.withdrawButton}
-            onPress={handleWithdraw}
+            style={[styles.withdrawButton, !canWithdraw && styles.withdrawButtonDisabled]}
+            onPress={withdrawal.start}
+            disabled={!canWithdraw}
             accessibilityLabel="Withdraw funds"
             accessibilityRole="button"
+            accessibilityState={{ disabled: !canWithdraw }}
+            testID="withdraw-funds-button"
           >
-            <DollarSign color={colors.background} size={20} />
-            <Text style={styles.withdrawButtonText}>Withdraw Funds</Text>
+            <DollarSign color={canWithdraw ? colors.background : colors.textMuted} size={20} />
+            <Text
+              style={[
+                styles.withdrawButtonText,
+                !canWithdraw && styles.withdrawButtonTextDisabled,
+              ]}
+            >
+              Withdraw Funds
+            </Text>
           </TouchableOpacity>
         )}
       </View>
+
+      <MaturedLockWithdrawalModal
+        step={withdrawal.step}
+        amount={lock.amount}
+        availableFrom={withdrawal.eligibility.availableFrom}
+        isPreview={withdrawal.isPreview}
+        result={withdrawal.result}
+        error={withdrawal.error}
+        contractId={contractId || undefined}
+        onConfirm={withdrawal.confirm}
+        onCancel={withdrawal.cancel}
+        onRetry={withdrawal.retry}
+        onClose={handleWithdrawalClosed}
+      />
 
       {/* Inline education card */}
       <View style={styles.educationCard}>
@@ -240,11 +249,23 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     marginTop: SIZES.lg,
   },
+  withdrawButtonDisabled: {
+    backgroundColor: colors.surfaceLight,
+  },
   withdrawButtonText: {
     color: colors.background,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: SIZES.xs,
+  },
+  withdrawButtonTextDisabled: {
+    color: colors.textMuted,
+  },
+  blockedText: {
+    color: colors.warning,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: SIZES.sm,
   },
   // ── Inline education card ──────────────────────────────────────
   educationCard: {
