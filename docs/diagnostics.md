@@ -6,7 +6,7 @@ The Development Diagnostics feature allows contributors to easily export and sha
 
 ## How It Works
 
-When running the application in development mode (`__DEV__` is true), a **Development** section will appear in the Settings tab. Tapping **Export Diagnostics** will gather relevant application state and open the native share dialog, allowing you to copy the data or send it to another application.
+When running the application in development mode (`__DEV__` is true), a **Development** section will appear in the Settings tab. Tapping **View Diagnostics** will navigate to a dedicated screen displaying the relevant application state, where you can easily copy the data.
 
 ## Redacted Information
 

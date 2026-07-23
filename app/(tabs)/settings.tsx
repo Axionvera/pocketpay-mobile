@@ -85,23 +85,24 @@ export default function SettingsScreen() {
         <View style={styles.card}>
           <View style={styles.row}>
             <View style={styles.rowLeft}>
-              <Shield color={COLORS.primary} size={24} />
+              <Shield color={colors.primary} size={24} />
               <View style={styles.rowTextGroup}>
                 <Text style={styles.rowText}>App Lock</Text>
                 <Text style={styles.rowHelper}>
                   Require biometrics or passcode to open
                 </Text>
               </View>
-              <Switch
-                value={isLockEnabled}
-                onValueChange={handleToggleLock}
-                trackColor={{ false: colors.border, true: colors.primary }}
-              />
             </View>
+            <Switch
+              value={isLockEnabled}
+              onValueChange={handleToggleLock}
+              trackColor={{ false: colors.border, true: colors.primary }}
+            />
+          </View>
 
-            <View style={styles.divider} />
+          <View style={styles.divider} />
 
-            <View style={styles.themeRow}>
+          <View style={styles.themeRow}>
               {THEME_OPTIONS.map(({ mode, label, Icon }) => {
                 const selected = themeMode === mode;
                 return (
@@ -154,9 +155,9 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Development</Text>
           <View style={styles.card}>
             <Button 
-              title="Export Diagnostics" 
+              title="View Diagnostics" 
               variant="outline" 
-              onPress={handleExportDiagnostics}
+              onPress={() => router.push('/diagnostics')}
               style={[styles.menuButton, { borderBottomWidth: 0 }]}
             />
           </View>
