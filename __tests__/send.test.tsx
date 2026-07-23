@@ -257,6 +257,7 @@ describe('AC4 – valid form calls sendXlmTransaction', () => {
           hash: 'abc123',
           amount: VALID_AMOUNT,
           destination: VALID_DESTINATION,
+          date: expect.any(String),
         },
       });
     });

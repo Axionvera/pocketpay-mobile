@@ -82,6 +82,7 @@ export default function ReviewTransactionScreen() {
             hash: store.lastResult!.hash,
             amount: amount.trim(),
             destination: destination.trim(),
+            date: new Date().toISOString(),
           },
         });
       }, 1500);
