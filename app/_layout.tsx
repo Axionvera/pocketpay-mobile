@@ -17,7 +17,15 @@ import { WalletResetConfirmModal } from '../src/components/WalletResetConfirmMod
 installGlobalErrorHandlers(); // MUST run before anything else can throw
 
 export default function RootLayout() {
-  const { loadWalletFromStorage, publicKey, error, clearWallet, walletChecked } = useWalletStore();
+  return (
+    <ErrorBoundary>
+      <RootContent />
+    </ErrorBoundary>
+  );
+}
+
+function RootContent() {
+   const { loadWalletFromStorage, publicKey, error, clearWallet, walletChecked } = useWalletStore();
   const { initializeApp, isInitialized } = useAppStore();
   const { colors } = useTheme();
   const segments = useSegments();
@@ -119,12 +127,12 @@ export default function RootLayout() {
   }
 
   return (
-    <ErrorBoundary>
+    <>
       <StatusBar style="light" />
       <LockScreen>
         <Slot />
       </LockScreen>
-    </ErrorBoundary>
+    </>
   );
 }
 
