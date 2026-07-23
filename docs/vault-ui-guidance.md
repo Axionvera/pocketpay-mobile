@@ -133,4 +133,5 @@ Any new vault UI that displays contract interaction details (transaction hashes,
 
 - [Security Guide](./security.md) — key handling, Testnet risks, and safe development practices
 - [Storage Guide](./storage.md) — how SecureStore and AsyncStorage are used
+- [Vault Integration Assumptions](./vault-integration-assumptions.md) — expected SDK/contract dependencies, placeholder behaviors, and known gaps
 - [Soroban Savings Vault contract](https://github.com/Axionvera/pocketpay-contracts) — contract source and interface
