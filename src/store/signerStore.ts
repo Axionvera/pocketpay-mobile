@@ -81,15 +81,10 @@ export const useSignerStore = create<SignerState>((set, get) => ({
   cancelSigning: () =>
     set({
       phase: 'cancelled',
-      error: createCancelledError(),
+      currentReview: null,
+      lastResult: null,
+      error: null,
     }),
 
   reset: () => set({ ...initialState }),
 }));
-
-function createCancelledError(): SignerError {
-  return {
-    type: 'user_cancelled',
-    message: 'Signing was cancelled.',
-  };
-}
