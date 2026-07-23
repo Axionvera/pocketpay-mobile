@@ -107,18 +107,16 @@ export function useSignerHandoff() {
 
         // Check cancellation before signing
         if (cancelledRef.current) {
-          const error = createSignerError('user_cancelled', 'Signing was cancelled.');
-          store.failSigning(error);
-          return { success: false, error };
+          store.cancelSigning();
+          return { success: false, cancelled: true };
         }
 
         const signedTx = await localSigner.sign(review, buildTransaction);
 
         // Check cancellation before submission
         if (cancelledRef.current) {
-          const error = createSignerError('user_cancelled', 'Signing was cancelled.');
-          store.failSigning(error);
-          return { success: false, error };
+          store.cancelSigning();
+          return { success: false, cancelled: true };
         }
 
         // Phase: submitting
@@ -138,6 +136,11 @@ export function useSignerHandoff() {
         return { success: true, result };
       } catch (err: any) {
         const error = classifySigningError(err);
+        if (error.type === 'user_cancelled') {
+          store.cancelSigning();
+          return { success: false, cancelled: true, error };
+        }
+
         store.failSigning(error);
         return { success: false, error };
       }
