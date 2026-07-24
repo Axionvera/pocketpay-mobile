@@ -1,5 +1,5 @@
-// Manual mock for useAppStore – provides controllable defaults.
-// Individual tests can call (useAppStore as jest.Mock).mockReturnValue({...})
+// Manual mock for useAppStore -- provides controllable defaults.
+// Individual tests can call (useAppStore as jest.Mock).mockReturnValue
 // to override per-test.
 
 const defaultState = {
@@ -28,3 +28,10 @@ export const useAppStore = jest.fn(
   (selector?: (state: typeof defaultState) => unknown) =>
     selector ? selector(defaultState) : defaultState,
 );
+
+export const normalizePublicKey = (key: string): string =>
+  key ? key.trim().toUpperCase() : '';
+
+export function isValidThemeMode(value: unknown): boolean {
+  return typeof value === 'string' && ['light', 'dark', 'system'].includes(value);
+}

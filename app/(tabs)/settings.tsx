@@ -12,6 +12,7 @@ import {
 } from '../../src/utils/walletStorageErrors';
 import { useAppLockStore } from '../../src/store/appLockStore';
 import { ThemeMode } from '../../src/store/appStore';
+import { Moon, Sun, Monitor, Shield, Info, Globe } from 'lucide-react-native';import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
 import { Moon, Sun, Monitor, Shield, AlertTriangle, Activity } from 'lucide-react-native';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
 import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
@@ -37,6 +38,9 @@ export default function SettingsScreen() {
   // Read version from Expo manifest, with graceful fallback
   const appVersion = Constants.expoConfig?.version ?? Constants.nativeAppVersion ?? '1.0.0';
   const appName = Constants.expoConfig?.name ?? 'Stellar PocketPay';
+
+  // Read network from environment variable, with a fallback
+  const activeNetwork = process.env.EXPO_PUBLIC_STELLAR_NETWORK ?? 'TESTNET';
 
   const handleExportKey = async () => {
     if (!showSecret) {
@@ -108,6 +112,11 @@ export default function SettingsScreen() {
                     Require biometrics or passcode to open
                   </Text>
                 </View>
+                <Switch
+                  value={isLockEnabled}
+                  onValueChange={handleToggleLock}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                />
               </View>
             </View>
             <Switch
@@ -155,6 +164,29 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
           <View style={styles.card}>
+            <View style={styles.aboutRow}>
+              <Info color={colors.textSecondary} size={20} />
+              <View style={styles.aboutTextGroup}>
+                <Text style={styles.aboutLabel}>App Name</Text>
+                <Text style={styles.aboutValue}>{appName}</Text>
+              </View>
+            </View>
+            <View style={styles.aboutDivider} />
+            <View style={styles.aboutRow}>
+              <Info color={colors.textSecondary} size={20} />
+              <View style={styles.aboutTextGroup}>
+                <Text style={styles.aboutLabel}>Version</Text>
+                <Text style={styles.aboutValue}>{appVersion}</Text>
+              </View>
+            </View>
+            <View style={styles.aboutDivider} />
+            <View style={styles.aboutRow}>
+              <Info color={colors.textSecondary} size={20} />
+              <View style={styles.aboutTextGroup}>
+                <Text style={styles.aboutLabel}>Network</Text>
+                {/* Dynamically display active network with fallback */}
+                <Text style={styles.aboutValue}>{activeNetwork}</Text>
+              </View>
             <View style={styles.row}>
               <Text style={styles.aboutLabel}>App Name</Text>
               <Text style={styles.rowValue}>{appName}</Text>
@@ -219,19 +251,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  dangerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SIZES.sm,
-  },
-  dangerSectionTitle: {
-    color: colors.error,
-    fontSize: 14,
-    fontWeight: '500',
-    marginLeft: SIZES.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: RADIUS.lg,
@@ -239,23 +258,16 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  dangerCard: {
-    borderColor: colors.error,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyInBetween: 'space-between',
     padding: SIZES.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  rowLast: {
-    borderBottomWidth: 0,
   },
   rowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   rowTextGroup: {
     marginLeft: SIZES.md,
@@ -297,21 +309,28 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   themeOptionLabelSelected: {
     color: colors.primary,
   },
-  rowValue: {
-    color: colors.textSecondary,
-    fontSize: 16,
+  aboutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SIZES.md,
+    paddingHorizontal: SIZES.lg,
+  },
+  aboutTextGroup: {
+    marginLeft: SIZES.md,
   },
   aboutLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  aboutValue: {
     color: colors.textPrimary,
     fontSize: 16,
+    fontWeight: '500',
   },
-  menuButton: {
-    borderWidth: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    borderRadius: 0,
-    justifyContent: 'flex-start',
-    paddingHorizontal: SIZES.lg,
+  aboutDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: SIZES.lg,
   },
   menuButtonLast: {
     borderWidth: 0,
@@ -319,15 +338,4 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: 'flex-start',
     paddingHorizontal: SIZES.lg,
   },
-  aboutRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SIZES.md,
-    paddingHorizontal: SIZES.lg,
-  },
-  footerText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    marginBottom: 4,
-  }
 });

@@ -15,22 +15,11 @@
   },
   "jest": {
     "preset": "jest-expo",
-    "transform": {
-      "^.+\\.(js|jsx|ts|tsx)$": "babel-jest"
-    },
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "jsx",
-      "json",
-      "node"
+    "setupFiles": [
+      "<rootDir>/jest.setup.js"
     ],
     "setupFilesAfterEnv": [
       "@testing-library/jest-native/extend-expect"
-    ],
-    "transformIgnorePatterns": [
-      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|lucide-react-native|@stellar|@noble)"
     ],
     "moduleNameMapper": {
       "^expo-router$": "<rootDir>/__mocks__/expo-router.ts",
@@ -41,6 +30,7 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@stellar/stellar-sdk": "^16.0.1",
     "@stellar/stellar-sdk": "^12.2.0",
     "buffer": "^6.0.3",
     "events": "^3.3.0",
@@ -50,6 +40,7 @@
     "expo-constants": "~18.0.13",
     "expo-crypto": "~15.0.9",
     "expo-linking": "~8.0.12",
+    "expo-local-authentication": "~16.0.5",
     "expo-local-authentication": "~17.0.8",
     "expo-router": "~6.0.24",
     "expo-secure-store": "~15.0.8",
