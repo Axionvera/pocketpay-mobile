@@ -25,7 +25,18 @@ This document describes the expected screen sequence and UI states for PocketPay
 4. Copying the secret shows confirmation and leaves the user on the backup state.
 5. Continuing opens a confirmation alert. Cancel returns to the backup state without saving anything.
 6. Confirming **Yes, I saved it** writes the secret to SecureStore, updates the public key in wallet state, and shows a loading state on the button.
-7. Once the public key is available, root navigation replaces the auth flow with the Home tab.
+7. The wallet-created screen confirms success and offers **Go to Wallet**, which replaces the auth flow with the Home tab.
+8. Home shows the backup reminder over the wallet until the user acknowledges it (see below).
+
+### Backup reminder
+
+Creating a wallet marks the backup reminder as pending (`walletStore.markBackupPending`), which the Home tab renders as a blocking `BackupReminderModal`.
+
+- The reminder restates that the secret key is the only way back into the wallet, that PocketPay stores no copy of it, and that it must never be shared.
+- It shows **no key material** — the secret key is revealed only on the creation screen, behind an explicit reveal.
+- The **I Understand, Continue** action stays disabled until the user ticks the confirmation checkbox, then calls `walletStore.acknowledgeBackupReminder`.
+- The reminder cannot be dismissed by tapping outside it or by the Android back button, and the pending flag is persisted — so an app restart before acknowledgement brings the reminder back rather than silently skipping it.
+- Clearing the wallet clears the flag, so a newly created wallet is reminded again.
 
 **Expected states**
 
@@ -35,6 +46,8 @@ This document describes the expected screen sequence and UI states for PocketPay
 | Generated | Public and secret keys plus backup warning and confirmation action. |
 | Saving | Continue action is disabled/loading; repeated submissions are prevented. |
 | Success | Wallet is stored securely and Home shows an unfunded `0.0000000 XLM` balance. |
+| Backup reminder | Blocking reminder over Home; acknowledge action disabled until the confirmation is checked. |
+| Reminder unacknowledged | Reminder reappears on the next launch until it is acknowledged. |
 | Failure | Show a generation or secure-storage error and keep the user in the auth flow. |
 
 ## Import a wallet
@@ -85,24 +98,40 @@ New keypairs do not exist on the Stellar ledger until they receive their first T
 
 1. The Send screen displays the currently available XLM balance.
 2. Enter a destination public key, amount, and optional memo.
-3. Tapping **Send Payment** validates locally before signing:
+3. Tapping **Send Payment** validates locally before navigating:
    - destination and amount are required;
    - amount must be greater than zero; and
    - amount must not exceed the displayed balance.
-4. If validation passes, show the button loading state, read the secret from SecureStore, build and sign the transaction on-device, and submit it to Stellar Testnet.
-5. A successful submission shows **Transaction sent successfully!**
-6. Acknowledging success refreshes wallet data and returns to the previous screen.
-7. A rejected transaction shows **Transaction Failed** with a safe, actionable message and leaves the entered fields available for correction.
+4. If validation passes, navigate to `/review-transaction` with the payment details.
+
+### Transaction Review
+
+**Entry:** Send → **Send Payment** (after validation) → `/review-transaction`.
+
+1. The Review screen displays the full transaction details: source, destination (with contact label if known), amount, memo, and network.
+2. A signer info card shows which signer will be used (currently "This Device") and its security model.
+3. A security notice reminds the user that the secret key never leaves the device.
+4. Tapping **Sign & Send** initiates the signing handoff flow:
+   - Phase transitions: `review` → `handoff` → `signing` → `submitting` → `completed`
+   - A loading indicator shows the current phase.
+5. On success, a success card appears with the transaction hash, then the user is navigated to the payment success screen.
+6. On failure, a red error card appears with the error message and a **Dismiss** button that returns to the Send screen.
+7. At any point before submission, the user can tap **Cancel** to abort and return to Send.
 
 **Expected states**
 
 | State | Expected UI and behavior |
 | --- | --- |
-| Editing | Form is enabled and available balance is visible. |
-| Validation error | Alert identifies the invalid field or insufficient balance; no transaction is signed. |
-| Submitting | Send action is disabled/loading to prevent duplicate payments. |
-| Success | Confirmation appears, then navigation returns and balance/activity refresh. |
-| Network/ledger failure | Error alert appears; the user stays on Send and may retry deliberately. |
+| Review | Full transaction details and signer info with Sign & Send / Cancel actions. |
+| Handoff / Signing / Submitting | Loading indicator with phase-specific status text. Actions disabled. |
+| Completed | Green success card with transaction hash. Auto-navigates to success screen. |
+| Failed | Red error card with message and Dismiss action. |
+| Cancelled | Yellow warning card. User returns to Send screen. |
+| Review (missing data) | Screen redirects back if required params are missing. |
+
+### Legacy Signing Modal
+
+The original `SigningConfirmModal` remains available for backward compatibility. The review screen is the new default path for the signer handoff flow.
 
 ## Receive XLM
 

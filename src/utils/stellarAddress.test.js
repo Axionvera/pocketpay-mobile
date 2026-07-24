@@ -1,4 +1,5 @@
 // src/utils/stellarAddress.test.js
+const assert = require('node:assert/strict');
 const { validateDestinationAddress } = require('./stellarAddress');
 
 describe('stellarAddress utils', () => {

@@ -6,9 +6,16 @@ import { Button } from '../../src/components/Button';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
+import {
+  WALLET_CLEAR_FAILURE_MESSAGE,
+  WALLET_SECRET_ACCESS_MESSAGE,
+} from '../../src/utils/walletStorageErrors';
 import { useAppLockStore } from '../../src/store/appLockStore';
 import { ThemeMode } from '../../src/store/appStore';
 import { Moon, Sun, Monitor, Shield, Info } from 'lucide-react-native';
+import { Moon, Sun, Monitor, Shield, Info, Globe } from 'lucide-react-native';import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
+import { Moon, Sun, Monitor, Shield, AlertTriangle, Activity } from 'lucide-react-native';
+import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
 import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
 
 const THEME_OPTIONS: { mode: ThemeMode; label: string; Icon: typeof Sun }[] = [
@@ -42,6 +49,11 @@ export default function SettingsScreen() {
       if (secret) {
         setSecretKey(secret);
         setShowSecret(true);
+      } else {
+        Alert.alert(
+          'Unable to Access Secret Key',
+          WALLET_SECRET_ACCESS_MESSAGE
+        );
       }
     } else {
       setShowSecret(false);
@@ -59,7 +71,7 @@ export default function SettingsScreen() {
     setIsResetting(false);
     setShowResetModal(false);
     if (!cleared) {
-      Alert.alert('Wallet Not Cleared', 'Failed to clear wallet securely. Please try again.');
+      Alert.alert('Wallet Not Cleared', WALLET_CLEAR_FAILURE_MESSAGE);
     }
   };
 
@@ -108,10 +120,16 @@ export default function SettingsScreen() {
                 />
               </View>
             </View>
+            <Switch
+              value={isLockEnabled}
+              onValueChange={handleToggleLock}
+              trackColor={{ false: colors.border, true: colors.primary }}
+            />
+          </View>
 
-            <View style={styles.divider} />
+          <View style={styles.divider} />
 
-            <View style={styles.themeRow}>
+          <View style={styles.themeRow}>
               {THEME_OPTIONS.map(({ mode, label, Icon }) => {
                 const selected = themeMode === mode;
                 return (
@@ -129,7 +147,6 @@ export default function SettingsScreen() {
               })}
             </View>
           </View>
-        </View>
 
         {/* Wallet */}
         <View style={styles.section}>
@@ -172,6 +189,43 @@ export default function SettingsScreen() {
                 <Text style={styles.aboutValue}>{activeNetwork}</Text>
               </View>
             </View>
+                <Text style={styles.aboutLabel}>Version</Text>
+                <Text style={styles.aboutValue}>{appVersion}</Text>
+              </View>
+            </View>
+            <View style={styles.aboutDivider} />
+            <View style={styles.aboutRow}>
+              <Info color={colors.textSecondary} size={20} />
+              <View style={styles.aboutTextGroup}>
+                <Text style={styles.aboutLabel}>Network</Text>
+                {/* Dynamically display active network with fallback */}
+                <Text style={styles.aboutValue}>{activeNetwork}</Text>
+              </View>
+            <View style={styles.row}>
+              <Text style={styles.aboutLabel}>App Name</Text>
+              <Text style={styles.rowValue}>{appName}</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.row}>
+              <Text style={styles.aboutLabel}>Version</Text>
+              <Text style={styles.rowValue}>{appVersion}</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.row}>
+              <Text style={styles.aboutLabel}>Network</Text>
+              <Text style={styles.rowValue}>Testnet</Text>
+            </View>
+            <View style={styles.divider} />
+            <TouchableOpacity
+              style={[styles.row, styles.rowLast]}
+              onPress={() => router.push('/diagnostics')}
+            >
+              <View style={styles.rowLeft}>
+                <Activity color={colors.primary} size={20} />
+                <Text style={[styles.aboutLabel, { marginLeft: SIZES.sm }]}>Diagnostics</Text>
+              </View>
+              <Text style={styles.rowValue}>View</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -221,7 +275,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyInBetween: 'space-between',
     padding: SIZES.lg,
   },
   rowLeft: {

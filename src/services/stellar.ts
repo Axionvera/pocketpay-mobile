@@ -108,7 +108,7 @@ export interface TransactionsPage {
  * @param publicKey  – Stellar public key to query.
  * @param limit      – Page size (default 20).
  * @param cursor     – Paging token from a previous page to continue from.
- *                     Pass `undefined` / omit to start from the latest.
+ *                    Pass `undefined` / omit to start from the latest.
  */
 export const fetchTransactionsPage = async (
   publicKey: string,
@@ -266,4 +266,5 @@ export const getExplorerTxUrl = (hash: string | null | undefined): string | null
   const explorerNetwork = EXPLORER_NETWORK_PATHS[network];
   if (!explorerNetwork) return null;
   return `https://stellar.expert/explorer/${explorerNetwork}/tx/${hash}`;
+};
 };

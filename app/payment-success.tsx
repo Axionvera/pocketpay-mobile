@@ -8,6 +8,7 @@ import { COLORS, SIZES, RADIUS } from '../src/constants/theme';
 import { getExplorerTxUrl } from '../src/services/stellar';
 import { useAppStore } from '../src/store/appStore';
 import { resolveAddressLabel } from '../src/utils/contacts';
+import { formatAmount } from '../src/utils/amount';
 
 /**
  * Payment receipt shown after a successful send. Never render the wallet's
@@ -15,10 +16,11 @@ import { resolveAddressLabel } from '../src/utils/contacts';
  */
 export default function PaymentSuccessScreen() {
   const router = useRouter();
-  const { hash, amount, destination } = useLocalSearchParams<{
+  const { hash, amount, destination, date } = useLocalSearchParams<{
     hash?: string;
     amount?: string;
     destination?: string;
+    date?: string;
   }>();
   const contacts = useAppStore((state) => state.contacts);
   const [hashCopied, setHashCopied] = useState(false);
@@ -32,6 +34,23 @@ export default function PaymentSuccessScreen() {
 
   const explorerUrl = getExplorerTxUrl(hash);
   const destinationLabel = destination ? resolveAddressLabel(destination, contacts) : null;
+
+  let formattedDate = '—';
+  if (date) {
+    const parsedDate = new Date(date);
+    if (!isNaN(parsedDate.getTime())) {
+      formattedDate = parsedDate.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+  }
+
+  const rawFormattedAmount = formatAmount(amount);
+  const displayAmount = rawFormattedAmount && rawFormattedAmount !== '—' ? `${rawFormattedAmount} XLM` : '—';
 
   const handleCopyHash = async () => {
     if (!hash) return;
@@ -56,8 +75,17 @@ export default function PaymentSuccessScreen() {
       <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Amount</Text>
-          <Text style={styles.amountValue}>{amount ?? '—'} XLM</Text>
+          <Text style={styles.amountValue}>{displayAmount}</Text>
         </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Date</Text>
+        </View>
+        <Text style={styles.addressValue}>
+          {formattedDate}
+        </Text>
 
         <View style={styles.divider} />
 

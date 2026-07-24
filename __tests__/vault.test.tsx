@@ -63,6 +63,8 @@ const VALID_AMOUNT = '10';
 const mockDeposit = jest.fn();
 const mockWithdraw = jest.fn();
 const mockLoadBalance = jest.fn();
+const mockLoadLocks = jest.fn();
+const mockAddLock = jest.fn();
 
 function setupStores(overrides: Record<string, unknown> = {}) {
   mockDeposit.mockResolvedValue('tx_hash_1234567890abcdef');
@@ -77,14 +79,20 @@ function setupStores(overrides: Record<string, unknown> = {}) {
 
   mockUseVaultStore.mockReturnValue({
     balance: '50.0000000',
+    locks: [],
     isConfigured: true,
     contractId: 'CABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890',
     isLoadingBalance: false,
+    isLoadingLocks: false,
     isSubmitting: false,
     balanceError: null,
     loadBalance: mockLoadBalance,
+    loadLocks: mockLoadLocks,
+    addLock: mockAddLock,
+    unlockLock: jest.fn(),
     deposit: mockDeposit,
     withdraw: mockWithdraw,
+    withdrawMaturedLock: jest.fn(),
     ...overrides,
   } as any);
 }
@@ -131,7 +139,7 @@ describe('AC1 – consistent loading states', () => {
     const { getByText, getByPlaceholderText, getAllByText } = render(<VaultScreen />);
 
     fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
-    fireEvent.press(getByText('Lock Funds (30 days)'));
+    fireEvent.press(getByText('Set Aside for 30 Days'));
 
     await waitFor(() => {
       expect(getAllByText('Confirm Lock').length).toBeGreaterThanOrEqual(1);
@@ -172,19 +180,30 @@ describe('AC1 – consistent loading states', () => {
 // ────────────────────────────────────────────────────────────────────────
 
 describe('AC2 – duplicate submission prevention', () => {
-  it('disables the deposit button when isSubmitting is true', async () => {
-    setupStores({ isSubmitting: true });
-    const { getByText } = render(<VaultScreen />);
+  it('disables the deposit button while a deposit is in flight', async () => {
+    const { getByText, getByPlaceholderText, getAllByText, rerender } = render(<VaultScreen />);
 
-    expect(getByText('Depositing…')).toBeTruthy();
+    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
+    fireEvent.press(getByText('Deposit'));
+    await waitFor(() => getAllByText('Confirm Deposit').length > 0);
+
+    setupStores({ isSubmitting: true });
+    rerender(<VaultScreen />);
+
+    await waitFor(() => expect(getByText('Depositing…')).toBeTruthy());
   });
 
-  it('disables the lock button when isSubmitting is true', async () => {
-    setupStores({ isSubmitting: true });
-    const { getByText } = render(<VaultScreen />);
+  it('disables the lock button while a lock is in flight', async () => {
+    const { getByText, getByPlaceholderText, getAllByText, rerender } = render(<VaultScreen />);
 
-    const lockBtn = getByText('Lock Funds (30 days)').parent;
-    expect(lockBtn).toBeDefined();
+    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
+    fireEvent.press(getByText('Set Aside for 30 Days'));
+    await waitFor(() => getAllByText('Confirm Lock').length > 0);
+
+    setupStores({ isSubmitting: true });
+    rerender(<VaultScreen />);
+
+    await waitFor(() => expect(getByText('Locking…')).toBeTruthy());
   });
 
   it('calls deposit exactly once when confirm is pressed', async () => {
@@ -208,10 +227,16 @@ describe('AC2 – duplicate submission prevention', () => {
 
 describe('AC3 – clear loading copy', () => {
   it('shows "Depositing…" on the deposit button while submitting', async () => {
-    setupStores({ isSubmitting: true });
-    const { getByText } = render(<VaultScreen />);
+    const { getByText, getByPlaceholderText, getAllByText, rerender } = render(<VaultScreen />);
 
-    expect(getByText('Depositing…')).toBeTruthy();
+    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
+    fireEvent.press(getByText('Deposit'));
+    await waitFor(() => getAllByText('Confirm Deposit').length > 0);
+
+    setupStores({ isSubmitting: true });
+    rerender(<VaultScreen />);
+
+    await waitFor(() => expect(getByText('Depositing…')).toBeTruthy());
   });
 
   it('shows "Processing deposit…" on the modal confirm button while loading', async () => {
@@ -337,20 +362,18 @@ describe('AC4 – error and success states', () => {
     expect(queryByText('Confirm Deposit')).toBeNull();
   });
 
-  it('shows placeholder notice for lock action via modal', async () => {
+  it('records the lock and reports it as a mock via the modal', async () => {
     const { getByText, getByPlaceholderText, getAllByText } = render(<VaultScreen />);
 
     fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
-    fireEvent.press(getByText('Lock Funds (30 days)'));
+    fireEvent.press(getByText('Set Aside for 30 Days'));
 
     await waitFor(() => getAllByText('Confirm Lock').length > 0);
     fireEvent.press(getAllByText('Confirm Lock')[1]);
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Notice',
-        expect.stringContaining('not yet implemented')
-      );
+      expect(mockAddLock).toHaveBeenCalledWith(VALID_AMOUNT, expect.any(String));
+      expect(alertSpy).toHaveBeenCalledWith('Success', expect.stringContaining('(mock)'));
     });
   });
 

@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create } from "zustand";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface Contact {
   id: string;
@@ -7,15 +7,26 @@ export interface Contact {
   publicKey: string;
 }
 
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type ThemeMode = "light" | "dark" | "system";
 
-const VALID_THEME_MODES: ThemeMode[] = ['light', 'dark', 'system'];
+const VALID_THEME_MODES: ThemeMode[] = ["light", "dark", "system"];
 
 export function isValidThemeMode(value: unknown): value is ThemeMode {
-  return typeof value === 'string' && VALID_THEME_MODES.includes(value as ThemeMode);
+  return (
+    typeof value === "string" && VALID_THEME_MODES.includes(value as ThemeMode)
+  );
 }
 
-const DEFAULT_THEME_MODE: ThemeMode = 'dark';
+const DEFAULT_THEME_MODE: ThemeMode = "dark";
+
+export interface DuplicateCheckResult {
+  /** true if a duplicate was found and the contact should not be saved. */
+  isDuplicate: boolean;
+  /** The type of duplicate detected. */
+  type: "address" | "name" | "none";
+  /** A user-facing message describing the conflict, if any. */
+  message: string;
+}
 
 interface AppState {
   contacts: Contact[];
@@ -25,14 +36,21 @@ interface AppState {
   // Actions
   initializeApp: () => Promise<void>;
   addContact: (contact: Contact) => Promise<void>;
+  addContactIfUnique: (contact: Contact) => Promise<DuplicateCheckResult>;
   removeContact: (id: string) => Promise<void>;
   findContactByPublicKey: (publicKey: string) => Contact | undefined;
+  findContactByName: (name: string) => Contact | undefined;
+  findDuplicateContact: (
+    name: string,
+    publicKey: string,
+    excludeId?: string,
+  ) => DuplicateCheckResult;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
 }
 
 const STORAGE_KEYS = {
-  CONTACTS: '@pocketpay_contacts',
-  THEME_MODE: '@pocketpay_theme',
+  CONTACTS: "@pocketpay_contacts",
+  THEME_MODE: "@pocketpay_theme",
 };
 
 export function normalizePublicKey(publicKey: string): string {
@@ -59,16 +77,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const [storedContacts, storedTheme] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.CONTACTS),
-        AsyncStorage.getItem(STORAGE_KEYS.THEME_MODE)
+        AsyncStorage.getItem(STORAGE_KEYS.THEME_MODE),
       ]);
 
       set({
         contacts: storedContacts ? JSON.parse(storedContacts) : [],
         themeMode: parseStoredThemeMode(storedTheme),
-        isInitialized: true
+        isInitialized: true,
       });
     } catch (e) {
-      console.error('Failed to load app settings:', e);
+      console.error("Failed to load app settings:", e);
       set({ isInitialized: true });
     }
   },
@@ -77,20 +95,80 @@ export const useAppStore = create<AppState>((set, get) => ({
     const newContacts = [...get().contacts, contact];
     set({ contacts: newContacts });
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.CONTACTS, JSON.stringify(newContacts));
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.CONTACTS,
+        JSON.stringify(newContacts),
+      );
     } catch (e) {
-      console.error('Failed to save contact:', e);
+      console.error("Failed to save contact:", e);
     }
   },
 
+  addContactIfUnique: async (contact: Contact) => {
+    const duplicateCheck = get().findDuplicateContact(
+      contact.name,
+      contact.publicKey,
+    );
+
+    if (duplicateCheck.isDuplicate) {
+      return duplicateCheck;
+    }
+
+    await get().addContact(contact);
+    return { isDuplicate: false, type: "none", message: "" };
+  },
+
   removeContact: async (id: string) => {
-    const newContacts = get().contacts.filter(c => c.id !== id);
+    const newContacts = get().contacts.filter((c) => c.id !== id);
     set({ contacts: newContacts });
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.CONTACTS, JSON.stringify(newContacts));
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.CONTACTS,
+        JSON.stringify(newContacts),
+      );
     } catch (e) {
-      console.error('Failed to remove contact:', e);
+      console.error("Failed to remove contact:", e);
     }
+  },
+
+  findDuplicateContact: (
+    name: string,
+    publicKey: string,
+    excludeId?: string,
+  ) => {
+    const contacts = get().contacts;
+
+    // Address is the stronger duplicate identifier — check it first.
+    const normalizedKey = normalizePublicKey(publicKey);
+    const addressMatch = contacts.find(
+      (c) =>
+        c.id !== excludeId && normalizePublicKey(c.publicKey) === normalizedKey,
+    );
+    if (addressMatch) {
+      return {
+        isDuplicate: true,
+        type: "address" as const,
+        message: `This address is already saved as "${addressMatch.name}".`,
+      };
+    }
+
+    // Name duplicates are non-blocking warnings.
+    const normalizedName = name.trim().toLowerCase();
+    if (normalizedName) {
+      const nameMatch = contacts.find(
+        (c) =>
+          c.id !== excludeId && c.name.trim().toLowerCase() === normalizedName,
+      );
+      if (nameMatch) {
+        return {
+          isDuplicate: false,
+          type: "name" as const,
+          message: `You already have a contact named "${nameMatch.name}". You can still save another with a different address.`,
+        };
+      }
+    }
+
+    return { isDuplicate: false, type: "none" as const, message: "" };
   },
 
   findContactByPublicKey: (publicKey: string) => {
@@ -100,13 +178,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     );
   },
 
+  findContactByName: (name: string) => {
+    const normalized = name.trim().toLowerCase();
+    return get().contacts.find(
+      (c) => c.name.trim().toLowerCase() === normalized,
+    );
+  },
+
   setThemeMode: async (mode: ThemeMode) => {
     if (!isValidThemeMode(mode)) return;
     set({ themeMode: mode });
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.THEME_MODE, JSON.stringify(mode));
     } catch (e) {
-      console.error('Failed to save theme setting:', e);
+      console.error("Failed to save theme setting:", e);
     }
-  }
+  },
 }));
