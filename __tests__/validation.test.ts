@@ -28,16 +28,16 @@ describe('validation utilities', () => {
     });
 
     it('returns null for valid address', () => {
-      const valid = 'GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWX';
+      const valid = 'GC3S2J2C4G3D2O446IXXH2P454G4H5R3C5Y2K5J4D3O2I1H0G8F7E6D5'; // Valid format key
       expect(validateAddress(valid)).toBeNull();
       expect(validateAddress(`  ${valid}  `)).toBeNull(); // trimmed
     });
 
     it('returns error if sending to self', () => {
-      const ownKey = 'GOWNKEYABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQ';
+      const ownKey = 'GC3S2J2C4G3D2O446IXXH2P454G4H5R3C5Y2K5J4D3O2I1H0G8F7E6D5';
       expect(validateAddress(ownKey, ownKey)).toBe("You can't send a payment to your own wallet.");
     });
-  });
+  }); // <--- Closed describe('validateAddress') here!
 
   describe('validateAmount', () => {
     it('returns error for empty input', () => {

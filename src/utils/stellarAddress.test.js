@@ -1,9 +1,10 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
+// src/utils/stellarAddress.test.js
 const { validateDestinationAddress } = require('./stellarAddress');
 
-test('validates Stellar public keys and returns a clear error for invalid values', () => {
-  assert.equal(validateDestinationAddress('GBAJ4V3Q...').error, 'Enter a valid Stellar public key.');
-  assert.equal(validateDestinationAddress('G' + 'A'.repeat(55)).error, undefined);
-  assert.equal(validateDestinationAddress('').error, undefined);
+describe('stellarAddress utils', () => {
+  it('validates Stellar public keys and returns a clear error for invalid values', () => {
+    expect(validateDestinationAddress('GBAJ4V3Q...').error).toBe('Enter a valid Stellar public key.');
+    expect(validateDestinationAddress('G' + 'A'.repeat(55)).error).toBeUndefined();
+    expect(validateDestinationAddress('').error).toBeUndefined();
+  });
 });

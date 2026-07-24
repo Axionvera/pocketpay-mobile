@@ -8,8 +8,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useAppLockStore } from '../../src/store/appLockStore';
 import { ThemeMode } from '../../src/store/appStore';
-import { Moon, Sun, Monitor, Shield, AlertTriangle } from 'lucide-react-native';
-import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
+import { Moon, Sun, Monitor, Shield, Info } from 'lucide-react-native';
 import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
 
 const THEME_OPTIONS: { mode: ThemeMode; label: string; Icon: typeof Sun }[] = [
@@ -33,6 +32,9 @@ export default function SettingsScreen() {
   // Read version from Expo manifest, with graceful fallback
   const appVersion = Constants.expoConfig?.version ?? Constants.nativeAppVersion ?? '1.0.0';
   const appName = Constants.expoConfig?.name ?? 'Stellar PocketPay';
+
+  // Read network from environment variable, with a fallback
+  const activeNetwork = process.env.EXPO_PUBLIC_STELLAR_NETWORK ?? 'TESTNET';
 
   const handleExportKey = async () => {
     if (!showSecret) {
@@ -84,24 +86,27 @@ export default function SettingsScreen() {
   };
 
   return (
-    <><ScrollView style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferences</Text>
-        <View style={styles.card}>
-          <View style={styles.row}>
-            <View style={styles.rowLeft}>
-              <Shield color={COLORS.primary} size={24} />
-              <View style={styles.rowTextGroup}>
-                <Text style={styles.rowText}>App Lock</Text>
-                <Text style={styles.rowHelper}>
-                  Require biometrics or passcode to open
-                </Text>
+    <>
+      <ScrollView style={styles.container}>
+        {/* Preferences */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Preferences</Text>
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <View style={styles.rowLeft}>
+                <Shield color={colors.primary} size={24} />
+                <View style={styles.rowTextGroup}>
+                  <Text style={styles.rowText}>App Lock</Text>
+                  <Text style={styles.rowHelper}>
+                    Require biometrics or passcode to open
+                  </Text>
+                </View>
+                <Switch
+                  value={isLockEnabled}
+                  onValueChange={handleToggleLock}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                />
               </View>
-              <Switch
-                value={isLockEnabled}
-                onValueChange={handleToggleLock}
-                trackColor={{ false: colors.border, true: colors.primary }}
-              />
             </View>
 
             <View style={styles.divider} />
@@ -143,75 +148,50 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About</Text>
           <View style={styles.card}>
-            <View style={styles.row}>
-              <Text style={styles.aboutLabel}>Version</Text>
-              <Text style={styles.rowValue}>1.0.0</Text>
+            <View style={styles.aboutRow}>
+              <Info color={colors.textSecondary} size={20} />
+              <View style={styles.aboutTextGroup}>
+                <Text style={styles.aboutLabel}>App Name</Text>
+                <Text style={styles.aboutValue}>{appName}</Text>
+              </View>
             </View>
-            <View style={[styles.row, styles.rowLast]}>
-              <Text style={styles.aboutLabel}>Network</Text>
-              <Text style={styles.rowValue}>Testnet</Text>
+            <View style={styles.aboutDivider} />
+            <View style={styles.aboutRow}>
+              <Info color={colors.textSecondary} size={20} />
+              <View style={styles.aboutTextGroup}>
+                <Text style={styles.aboutLabel}>Version</Text>
+                <Text style={styles.aboutValue}>{appVersion}</Text>
+              </View>
+            </View>
+            <View style={styles.aboutDivider} />
+            <View style={styles.aboutRow}>
+              <Info color={colors.textSecondary} size={20} />
+              <View style={styles.aboutTextGroup}>
+                <Text style={styles.aboutLabel}>Network</Text>
+                {/* Dynamically display active network with fallback */}
+                <Text style={styles.aboutValue}>{activeNetwork}</Text>
+              </View>
             </View>
           </View>
         </View>
 
-      {__DEV__ && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Development</Text>
-          <View style={styles.card}>
-            <Button 
-              title="Export Diagnostics" 
-              variant="outline" 
-              onPress={handleExportDiagnostics}
-              style={[styles.menuButton, { borderBottomWidth: 0 }]}
-            />
-          </View>
+        <View style={[styles.section, { marginTop: SIZES.xl }]}>
+          <Button
+            title="Sign Out & Clear Wallet"
+            variant="danger"
+            onPress={handleSignOut}
+          />
         </View>
-      )}
+      </ScrollView>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
-        <View style={styles.card}>
-          <View style={styles.aboutRow}>
-            <Info color={COLORS.textSecondary} size={20} />
-            <View style={styles.aboutTextGroup}>
-              <Text style={styles.aboutLabel}>App Name</Text>
-              <Text style={styles.aboutValue}>{appName}</Text>
-            </View>
-          </View>
-          <View style={styles.aboutDivider} />
-          <View style={styles.aboutRow}>
-            <Info color={COLORS.textSecondary} size={20} />
-            <View style={styles.aboutTextGroup}>
-              <Text style={styles.aboutLabel}>Version</Text>
-              <Text style={styles.aboutValue}>{appVersion}</Text>
-            </View>
-          </View>
-          <View style={styles.aboutDivider} />
-          <View style={styles.aboutRow}>
-            <Info color={COLORS.textSecondary} size={20} />
-            <View style={styles.aboutTextGroup}>
-              <Text style={styles.aboutLabel}>Network</Text>
-              <Text style={styles.aboutValue}>Testnet</Text>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      <View style={[styles.section, { marginTop: SIZES.xl }]}>
-        <Button
-          title="Sign Out & Clear Wallet"
-          variant="danger"
-          onPress={handleSignOut}
-        />
-      </View>
-    </ScrollView>
       <WalletResetConfirmModal
         visible={showResetModal}
         isLoading={isResetting}
         onConfirm={handleResetConfirm}
         onCancel={() => setShowResetModal(false)}
       />
-    </>);
+    </>
+  );
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
@@ -231,19 +211,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  dangerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SIZES.sm,
-  },
-  dangerSectionTitle: {
-    color: colors.error,
-    fontSize: 14,
-    fontWeight: '500',
-    marginLeft: SIZES.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: RADIUS.lg,
@@ -251,23 +218,16 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  dangerCard: {
-    borderColor: colors.error,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: SIZES.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  rowLast: {
-    borderBottomWidth: 0,
   },
   rowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   rowTextGroup: {
     marginLeft: SIZES.md,
@@ -309,21 +269,28 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   themeOptionLabelSelected: {
     color: colors.primary,
   },
-  rowValue: {
-    color: colors.textSecondary,
-    fontSize: 16,
+  aboutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SIZES.md,
+    paddingHorizontal: SIZES.lg,
+  },
+  aboutTextGroup: {
+    marginLeft: SIZES.md,
   },
   aboutLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  aboutValue: {
     color: colors.textPrimary,
     fontSize: 16,
+    fontWeight: '500',
   },
-  menuButton: {
-    borderWidth: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    borderRadius: 0,
-    justifyContent: 'flex-start',
-    paddingHorizontal: SIZES.lg,
+  aboutDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: SIZES.lg,
   },
   menuButtonLast: {
     borderWidth: 0,
@@ -331,15 +298,4 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: 'flex-start',
     paddingHorizontal: SIZES.lg,
   },
-  aboutRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SIZES.md,
-    paddingHorizontal: SIZES.lg,
-  },
-  footerText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    marginBottom: 4,
-  }
 });
