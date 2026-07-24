@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
+import { server } from '../src/services/stellar';
 import {
   View,
   Text,
@@ -69,6 +70,18 @@ export default function ReviewTransactionScreen() {
       router.back();
       return;
     }
+    store.startReview({
+      requestId: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+      sourcePublicKey: publicKey,
+      destinationPublicKey: destination.trim(),
+      destinationLabel: destinationContact?.isContact ? destinationContact.label : null,
+      amount: amount.trim(),
+      assetCode: 'XLM',
+      memo: memo.trim() || undefined,
+      network: getNetworkLabel(),
+      createdAt: new Date().toISOString(),
+      timeoutSeconds: 30,
+    });
   }, [destination, amount, publicKey]);
 
   // Handle success - navigate away
@@ -101,7 +114,7 @@ export default function ReviewTransactionScreen() {
       });
       return;
     }
-
+    const fee = await server.fetchBaseFee();
     store.startReview({
       requestId: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
       sourcePublicKey: publicKey!,
@@ -113,6 +126,7 @@ export default function ReviewTransactionScreen() {
       network: getNetworkLabel(),
       createdAt: new Date().toISOString(),
       timeoutSeconds: 30,
+      fee: fee.toString(),
     });
 
     store.enterHandoff();
@@ -160,7 +174,7 @@ export default function ReviewTransactionScreen() {
     store.reset();
     router.back();
   };
-
+  
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -224,6 +238,17 @@ export default function ReviewTransactionScreen() {
           <Text style={[styles.rowLabel, { color: colors.textSecondary }]}>Network</Text>
           <Text style={[styles.rowValue, { color: colors.textPrimary }]}>{getNetworkLabel()}</Text>
         </View>
+        {store.currentReview?.fee ? (
+          <>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={styles.row}>
+              <Text style={[styles.rowLabel, { color: colors.textSecondary }]}>Fee</Text>
+              <Text style={[styles.rowValue, { color: colors.textPrimary }]}>
+                ~{store.currentReview.fee} stroops
+              </Text>
+            </View>
+          </>
+        ) : null}
       </View>
 
       {/* Signer Info Card */}
@@ -304,20 +329,20 @@ export default function ReviewTransactionScreen() {
       )}
 
       {/* Action Buttons */}
-      {phase === 'review' && (
-        <View style={styles.actions}>
-          <Button
-            title="Sign & Send"
-            onPress={handleConfirmSign}
-            style={styles.signButton}
-          />
-          <Button
-            title="Cancel"
-            variant="secondary"
-            onPress={handleCancel}
-          />
-        </View>
-      )}
+     {phase === 'review' && (
+  <View style={styles.actions}>
+    <Button
+      title="Sign & Send"
+      onPress={handleConfirmSign}
+      style={styles.signButton}
+    />
+    <Button
+      title="Back to Edit"
+      variant="secondary"
+      onPress={() => router.back()}
+    />
+  </View>
+)}
 
       {(phase === 'failed' || phase === 'cancelled') && (
         <View style={styles.actions}>
