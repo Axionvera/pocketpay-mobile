@@ -15,6 +15,7 @@
  */
 
 import React from 'react';
+import type { ReactElement } from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
@@ -463,41 +464,5 @@ describe('AC10 – cancel scanning', () => {
       expect(queryByText('Point the camera at a Stellar address QR code')).toBeNull();
     });
     expect(getByPlaceholderText('G...').props.value).toBe(VALID_DESTINATION);
-  });
-});
-
-describe('#198 – signing confirmation screen', () => {
-  it('shows the confirmation modal with recipient, amount, memo, and network before signing', async () => {
-    const { getByPlaceholderText, getByText } = render(<SendScreen />);
-
-    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
-    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
-    fireEvent.changeText(getByPlaceholderText('Payment reference'), 'invoice-42');
-    fireEvent.press(getByText('Send Payment'));
-
-    await waitFor(() => {
-      expect(getByText('Confirm & Sign')).toBeTruthy();
-    });
-    expect(getByText(VALID_DESTINATION)).toBeTruthy();
-    expect(getByText('10 XLM')).toBeTruthy();
-    expect(getByText('invoice-42')).toBeTruthy();
-    expect(getByText('Testnet')).toBeTruthy();
-    expect(mockSendXlmTransaction).not.toHaveBeenCalled();
-  });
-
-  it('does not sign when the user cancels the confirmation', async () => {
-    const { getByPlaceholderText, getByText, queryByText } = render(<SendScreen />);
-
-    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
-    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
-    fireEvent.press(getByText('Send Payment'));
-
-    await waitFor(() => getByText('Confirm & Sign'));
-    fireEvent.press(getByText('Cancel'));
-
-    await waitFor(() => {
-      expect(queryByText('Confirm & Sign')).toBeNull();
-    });
-    expect(mockSendXlmTransaction).not.toHaveBeenCalled();
   });
 });

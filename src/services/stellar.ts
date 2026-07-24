@@ -2,7 +2,7 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 import * as ExpoCrypto from 'expo-crypto';
 import { Buffer } from 'buffer';
 
-const server = new StellarSdk.Horizon.Server(
+export const server = new StellarSdk.Horizon.Server(
   process.env.EXPO_PUBLIC_STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org'
 );
 
@@ -266,5 +266,4 @@ export const getExplorerTxUrl = (hash: string | null | undefined): string | null
   const explorerNetwork = EXPLORER_NETWORK_PATHS[network];
   if (!explorerNetwork) return null;
   return `https://stellar.expert/explorer/${explorerNetwork}/tx/${hash}`;
-};
 };
