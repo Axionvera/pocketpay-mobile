@@ -8,8 +8,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useAppLockStore } from '../../src/store/appLockStore';
 import { ThemeMode } from '../../src/store/appStore';
-import { Moon, Sun, Monitor, Shield, Info } from 'lucide-react-native';
-import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
+import { Moon, Sun, Monitor, Shield, Info, Globe } from 'lucide-react-native';import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
 
 const THEME_OPTIONS: { mode: ThemeMode; label: string; Icon: typeof Sun }[] = [
   { mode: 'light', label: 'Light', Icon: Sun },
