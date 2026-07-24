@@ -29,12 +29,14 @@ describe('validation utilities', () => {
 
     it('returns null for valid address', () => {
       const valid = 'GC3S2J2C4G3D2O446IXXH2P454G4H5R3C5Y2K5J4D3O2I1H0G8F7E6D5'; // Valid format key
+      const valid = 'GABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABC';
       expect(validateAddress(valid)).toBeNull();
       expect(validateAddress(`  ${valid}  `)).toBeNull(); // trimmed
     });
 
     it('returns error if sending to self', () => {
       const ownKey = 'GC3S2J2C4G3D2O446IXXH2P454G4H5R3C5Y2K5J4D3O2I1H0G8F7E6D5';
+      const ownKey = 'GOWNKEYABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVW';
       expect(validateAddress(ownKey, ownKey)).toBe("You can't send a payment to your own wallet.");
     });
   }); // <--- Closed describe('validateAddress') here!
