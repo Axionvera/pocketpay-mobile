@@ -12,6 +12,7 @@ import {
 } from '../../src/utils/walletStorageErrors';
 import { useAppLockStore } from '../../src/store/appLockStore';
 import { ThemeMode } from '../../src/store/appStore';
+import { Moon, Sun, Monitor, Shield, Info } from 'lucide-react-native';
 import { Moon, Sun, Monitor, Shield, Info, Globe } from 'lucide-react-native';import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
 import { Moon, Sun, Monitor, Shield, AlertTriangle, Activity } from 'lucide-react-native';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
@@ -175,6 +176,19 @@ export default function SettingsScreen() {
             <View style={styles.aboutRow}>
               <Info color={colors.textSecondary} size={20} />
               <View style={styles.aboutTextGroup}>
+                <Text style={styles.aboutLabel}>Version</Text>
+                <Text style={styles.aboutValue}>{appVersion}</Text>
+              </View>
+            </View>
+            <View style={styles.aboutDivider} />
+            <View style={styles.aboutRow}>
+              <Info color={colors.textSecondary} size={20} />
+              <View style={styles.aboutTextGroup}>
+                <Text style={styles.aboutLabel}>Network</Text>
+                {/* Dynamically display active network with fallback */}
+                <Text style={styles.aboutValue}>{activeNetwork}</Text>
+              </View>
+            </View>
                 <Text style={styles.aboutLabel}>Version</Text>
                 <Text style={styles.aboutValue}>{appVersion}</Text>
               </View>
