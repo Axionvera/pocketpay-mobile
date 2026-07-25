@@ -94,6 +94,8 @@ State conventions used throughout the app:
 | **Success** | Vault balance, TESTNET badge, and the locks list (each with locked amount, unlock date, status, and eligible actions for matured locks) render correctly. |
 | **Disabled** | "Lock Funds (30 days)" and withdraw actions must clearly indicate **mock mode** when no real contract is configured (`EXPO_PUBLIC_VAULT_CONTRACT_ID` unset) — this isn't a literal disabled button, but the UI must not imply a live/production action is being taken. Matured vs. immature locks must be visually distinct so users can tell which locks are eligible for withdrawal. |
 | **Pending** | Vault deposit, withdraw, and lock actions should show a clear in-flight state while the transaction is being prepared or confirmed, especially in mock mode where the outcome is simulated. |
+| **Unavailable** | When no wallet is connected, the vault feature is disabled via configuration (`EXPO_PUBLIC_VAULT_ENABLED=false`), or the SDK reports the vault backend as not ready, the interactive form is replaced by a `VaultUnavailableState` card showing why the vault cannot be used and offering fallback navigation (to settings or retry). See `src/utils/vaultAvailability.ts` for evaluation logic. |
+
 
 **Testnet & custody language:** every vault state must follow [Vault UI Guidance](./vault-ui-guidance.md) — no "savings account"/"bank"/"insured"/"secured" language, and mock mode must be visually distinguished from real contract mode at all times, per that doc's Summary Checklist.
 
