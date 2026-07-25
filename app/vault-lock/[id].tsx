@@ -2,8 +2,10 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
+import { VaultUnavailableState } from '../../src/components/VaultUnavailableState';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
+import { useVaultAvailability } from '../../src/hooks/useVaultAvailability';
 import { Lock, Clock, Calendar, CheckCircle, AlertCircle } from 'lucide-react-native';
 
 export default function VaultLockDetailScreen() {
@@ -11,6 +13,7 @@ export default function VaultLockDetailScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isAvailable, reasons } = useVaultAvailability();
 
   // Mock data for the lock
   const mockLock = {
@@ -23,7 +26,20 @@ export default function VaultLockDetailScreen() {
 
   const isEligibleForWithdrawal = new Date(mockLock.unlockDate).getTime() <= Date.now();
 
+  if (!isAvailable) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Stack.Screen options={{ title: 'Vault Lock Details', headerBackTitle: 'Vault' }} />
+        <VaultUnavailableState
+          reasons={reasons}
+          onNavigateToSettings={() => router.push('/(tabs)/settings')}
+        />
+      </ScrollView>
+    );
+  }
+
   return (
+
     <>
       <Stack.Screen options={{ title: 'Vault Lock Details', headerBackTitle: 'Vault' }} />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>

@@ -70,14 +70,14 @@ function setupStores(overrides: Record<string, unknown> = {}) {
   mockDeposit.mockResolvedValue('tx_hash_1234567890abcdef');
   mockWithdraw.mockResolvedValue('tx_hash_abcdef1234567890');
 
-  mockUseWalletStore.mockReturnValue({
+  const walletState = {
     publicKey: 'GPUBLIC123',
     balance: '100.0000000',
     getSecretKey: jest.fn(async () => 'SVALIDSECRET'),
     ...overrides,
-  } as any);
+  };
 
-  mockUseVaultStore.mockReturnValue({
+  const vaultState = {
     balance: '50.0000000',
     locks: [],
     isConfigured: true,
@@ -94,8 +94,17 @@ function setupStores(overrides: Record<string, unknown> = {}) {
     withdraw: mockWithdraw,
     withdrawMaturedLock: jest.fn(),
     ...overrides,
-  } as any);
+  };
+
+  mockUseWalletStore.mockImplementation((selector?: any) =>
+    typeof selector === 'function' ? selector(walletState) : walletState
+  );
+
+  mockUseVaultStore.mockImplementation((selector?: any) =>
+    typeof selector === 'function' ? selector(vaultState) : vaultState
+  );
 }
+
 
 const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 
@@ -416,3 +425,38 @@ describe('validation prevents action', () => {
     expect(queryByText('Confirm Deposit')).toBeNull();
   });
 });
+
+describe('Vault Unavailable State (Issue #309)', () => {
+  it('renders VaultUnavailableState card when publicKey is null', async () => {
+    setupStores({ publicKey: null });
+    const { getByText, queryByText } = render(<VaultScreen />);
+
+    expect(getByText('Vault Unavailable')).toBeTruthy();
+    expect(getByText('Create or import a wallet to use the Soroban Savings Vault.')).toBeTruthy();
+    expect(queryByText('Set Aside for 30 Days')).toBeNull();
+  });
+
+  it('renders VaultUnavailableState card when EXPO_PUBLIC_VAULT_ENABLED is false', async () => {
+    const originalEnv = process.env.EXPO_PUBLIC_VAULT_ENABLED;
+    process.env.EXPO_PUBLIC_VAULT_ENABLED = 'false';
+
+    try {
+      const { getByText, queryByText } = render(<VaultScreen />);
+
+      expect(getByText('Vault Unavailable')).toBeTruthy();
+      expect(getByText('The vault is currently disabled by configuration. This may be temporary while the backend is being updated.')).toBeTruthy();
+      expect(queryByText('Set Aside for 30 Days')).toBeNull();
+    } finally {
+      process.env.EXPO_PUBLIC_VAULT_ENABLED = originalEnv;
+    }
+  });
+
+  it('does not call loadBalance or loadLocks when vault is unavailable', () => {
+    setupStores({ publicKey: null });
+    render(<VaultScreen />);
+
+    expect(mockLoadBalance).not.toHaveBeenCalled();
+    expect(mockLoadLocks).not.toHaveBeenCalled();
+  });
+});
+
