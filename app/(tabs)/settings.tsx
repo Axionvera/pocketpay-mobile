@@ -318,6 +318,7 @@ export default function SettingsScreen() {
               value={appVersion}
             />
             <View style={styles.divider} />
+            {/* ── Diagnostics ─────────────────────────────────────── */}
             <TouchableOpacity
               style={[styles.row, styles.rowInteractive]}
               onPress={() => router.push('/diagnostics')}
@@ -332,6 +333,24 @@ export default function SettingsScreen() {
               </View>
               <ChevronRight color={colors.textMuted} size={18} />
             </TouchableOpacity>
+
+            {/* ── Feature Flags (Dev) ────────────────────────────────── */}
+            {__DEV__ && (
+              <TouchableOpacity
+                style={[styles.row, styles.rowInteractive]}
+                onPress={() => router.push('/settings/flags')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.rowLeft}>
+                  <KeyRound color={colors.primary} size={20} />
+                  <View style={styles.rowTextGroup}>
+                    <Text style={styles.rowText}>Feature Flags</Text>
+                    <Text style={styles.rowHelper}>Development‑only flag view</Text>
+                  </View>
+                </View>
+                <ChevronRight color={colors.textMuted} size={18} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
