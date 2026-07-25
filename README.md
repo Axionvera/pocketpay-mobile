@@ -96,7 +96,7 @@ See [CHANGELOG.md](./CHANGELOG.md) for a full list of notable changes across rel
 ## Security
 
 See the full [Security Guide](docs/security.md) for details on secret key handling, device storage, backups, and safe development practices.
-
+- [Mobile Security Checklist](docs/mobile-security-checklist.md) - Checklist for reviewing security-sensitive changes
 ## License
 
 MIT
