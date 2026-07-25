@@ -39,6 +39,7 @@ import { useAppLockStore } from '../../src/store/appLockStore';
 import { ThemeMode } from '../../src/store/appStore';
 import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
+import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { useNetworkEnvironment, EnvironmentWarning } from '../../src/features/settings';
 
 const THEME_OPTIONS: { mode: ThemeMode; label: string; Icon: typeof Sun }[] = [
@@ -55,7 +56,7 @@ const WARNING_ICON = {
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { clearWallet, getSecretKey } = useWalletStore();
+  const { publicKey, clearWallet, getSecretKey } = useWalletStore();
   const { colors, themeMode, setThemeMode } = useTheme();
   const { isLockEnabled, enableLock, disableLock, authenticate } = useAppLockStore();
   const env = useNetworkEnvironment();
@@ -118,6 +119,18 @@ export default function SettingsScreen() {
       );
     }
   };
+
+  if (!publicKey) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <WalletEmptyState
+          variant="missing"
+          onCreate={() => router.replace('/(auth)/create')}
+          onImport={() => router.replace('/(auth)/import')}
+        />
+      </View>
+    );
+  }
 
   return (
     <>
