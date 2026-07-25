@@ -22,6 +22,7 @@
       "@testing-library/jest-native/extend-expect"
     ],
     "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1",
       "^expo-router$": "<rootDir>/__mocks__/expo-router.ts",
       "^expo-secure-store$": "<rootDir>/__mocks__/expo-secure-store.ts",
       "^pocketpay-sdk$": "<rootDir>/__mocks__/pocketpay-sdk.ts",
