@@ -6,6 +6,9 @@ import {
   Modal,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
@@ -53,7 +56,10 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       statusBarTranslucent
       onRequestClose={onCancel}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <View style={styles.card}>
           <View style={styles.header}>
             {icon ? (
@@ -68,15 +74,24 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               onPress={onCancel}
               disabled={isLoading}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Close, ${cancelLabel}`}
             >
               <X color={colors.textMuted} size={22} />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.message}>{message}</Text>
+          <ScrollView
+            style={styles.scrollBody}
+            contentContainerStyle={styles.scrollBodyContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.message}>{message}</Text>
 
-          {children ? <View style={styles.customContent}>{children}</View> : null}
+            {children ? <View style={styles.customContent}>{children}</View> : null}
+          </ScrollView>
 
           <View style={styles.actions}>
             <TouchableOpacity
@@ -84,6 +99,8 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               onPress={onCancel}
               disabled={isLoading}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={cancelLabel}
             >
               <Text style={styles.cancelButtonText}>{cancelLabel}</Text>
             </TouchableOpacity>
@@ -99,6 +116,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
               onPress={onConfirm}
               disabled={!canConfirm}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={confirmLabel}
+              accessibilityState={{ disabled: !canConfirm, busy: isLoading }}
+              accessibilityHint={
+                destructive && confirmDisabled ? 'Disabled until the confirmation requirement below is met' : undefined
+              }
             >
               {isLoading ? (
                 <ActivityIndicator
@@ -118,7 +141,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -135,9 +158,12 @@ const createStyles = (colors: ThemeColors) =>
     card: {
       width: '100%',
       maxWidth: 400,
+      maxHeight: '90%',
       backgroundColor: colors.surface,
       borderRadius: RADIUS.xl,
-      padding: SIZES.xl,
+      paddingTop: SIZES.xl,
+      paddingHorizontal: SIZES.xl,
+      paddingBottom: SIZES.lg,
       borderWidth: 1,
       borderColor: colors.border,
     },
@@ -184,11 +210,18 @@ const createStyles = (colors: ThemeColors) =>
       marginBottom: SIZES.lg,
     },
     customContent: {
-      marginBottom: SIZES.lg,
+      marginBottom: SIZES.xs,
+    },
+    scrollBody: {
+      flexShrink: 1,
+    },
+    scrollBodyContent: {
+      flexGrow: 1,
     },
     actions: {
       flexDirection: 'row',
       gap: SIZES.sm,
+      marginTop: SIZES.lg,
     },
     actionButton: {
       flex: 1,

@@ -45,6 +45,11 @@ jest.mock('lucide-react-native', () => ({
   ArrowDownLeft: () => null,
   WifiOff: () => null,
   RefreshCw: () => null,
+  ShieldAlert: () => null,
+  CheckSquare: () => null,
+  Square: () => null,
+  Info: () => null,
+  X: () => null,
 }));
 
 import { useWalletStore } from '../src/store/walletStore';
@@ -114,29 +119,29 @@ describe('AC-W1 – refreshWalletData on mount', () => {
 describe('AC-W2, AC-W3, AC-W4 – RefreshControl props', () => {
   it('attaches a RefreshControl to the ScrollView', () => {
     setup();
-    const { UNSAFE_getByType } = render(<HomeScreen />);
-    const scrollView = UNSAFE_getByType(ScrollView);
+    const { UNSAFE_getAllByType } = render(<HomeScreen />);
+    const scrollView = UNSAFE_getAllByType(ScrollView)[0];
     expect(scrollView.props.refreshControl).toBeDefined();
   });
 
   it('passes refreshing=false to RefreshControl when not loading', () => {
     setup({ isLoading: false });
-    const { UNSAFE_getByType } = render(<HomeScreen />);
-    const scrollView = UNSAFE_getByType(ScrollView);
+    const { UNSAFE_getAllByType } = render(<HomeScreen />);
+    const scrollView = UNSAFE_getAllByType(ScrollView)[0];
     expect(scrollView.props.refreshControl.props.refreshing).toBe(false);
   });
 
   it('passes refreshing=true to RefreshControl while loading', () => {
     setup({ isLoading: true });
-    const { UNSAFE_getByType } = render(<HomeScreen />);
-    const scrollView = UNSAFE_getByType(ScrollView);
+    const { UNSAFE_getAllByType } = render(<HomeScreen />);
+    const scrollView = UNSAFE_getAllByType(ScrollView)[0];
     expect(scrollView.props.refreshControl.props.refreshing).toBe(true);
   });
 
   it('calls refreshWalletData when onRefresh fires', () => {
     const store = setup({ isLoading: false });
-    const { UNSAFE_getByType } = render(<HomeScreen />);
-    const scrollView = UNSAFE_getByType(ScrollView);
+    const { UNSAFE_getAllByType } = render(<HomeScreen />);
+    const scrollView = UNSAFE_getAllByType(ScrollView)[0];
 
     // Simulate the pull gesture completing.
     scrollView.props.refreshControl.props.onRefresh();
@@ -153,14 +158,14 @@ describe('AC-W2, AC-W3, AC-W4 – RefreshControl props', () => {
 describe('AC-W5, AC-W6 – spinner while loading', () => {
   it('marks RefreshControl as refreshing while isLoading is true', () => {
     setup({ isLoading: true });
-    const { UNSAFE_getByType } = render(<HomeScreen />);
-    expect(UNSAFE_getByType(ScrollView).props.refreshControl.props.refreshing).toBe(true);
+    const { UNSAFE_getAllByType } = render(<HomeScreen />);
+    expect(UNSAFE_getAllByType(ScrollView)[0].props.refreshControl.props.refreshing).toBe(true);
   });
 
   it('clears refreshing once isLoading returns to false', () => {
     setup({ isLoading: false });
-    const { UNSAFE_getByType } = render(<HomeScreen />);
-    expect(UNSAFE_getByType(ScrollView).props.refreshControl.props.refreshing).toBe(false);
+    const { UNSAFE_getAllByType } = render(<HomeScreen />);
+    expect(UNSAFE_getAllByType(ScrollView)[0].props.refreshControl.props.refreshing).toBe(false);
   });
 });
 
@@ -177,8 +182,8 @@ describe('AC-W7 – no duplicate requests while already refreshing', () => {
      * a single additional call — and that the store guard is in place.
      */
     const store = setup({ isLoading: true });
-    const { UNSAFE_getByType } = render(<HomeScreen />);
-    const rc = UNSAFE_getByType(ScrollView).props.refreshControl;
+    const { UNSAFE_getAllByType } = render(<HomeScreen />);
+    const rc = UNSAFE_getAllByType(ScrollView)[0].props.refreshControl;
 
     rc.props.onRefresh();
 
@@ -203,10 +208,11 @@ describe('AC-W8 – error state', () => {
 
   it('resets refreshing (isLoading=false) after a failed refresh', () => {
     setup({ isLoading: false, error: 'Horizon down' });
-    const { UNSAFE_getByType } = render(<HomeScreen />);
-    expect(UNSAFE_getByType(ScrollView).props.refreshControl.props.refreshing).toBe(false);
+    const { UNSAFE_getAllByType } = render(<HomeScreen />);
+    expect(UNSAFE_getAllByType(ScrollView)[0].props.refreshControl.props.refreshing).toBe(false);
   });
 });
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AC-W9 – Balance value is rendered
