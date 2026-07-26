@@ -17,6 +17,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
 import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
 import { EmptyState } from '../../src/components/EmptyState';
+import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
 import { groupTransactionsByDate } from '../../src/utils/transactions';
 
@@ -109,11 +110,25 @@ export default function HistoryScreen() {
 
   // Load the first page on mount.
   useEffect(() => {
-    refreshWalletData();
+    if (publicKey) {
+      refreshWalletData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [publicKey]);
 
   const [filter, setFilter] = useState<FilterType>('all');
+
+  if (!publicKey) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <WalletEmptyState
+          variant="missing"
+          onCreate={() => router.replace('/(auth)/create')}
+          onImport={() => router.replace('/(auth)/import')}
+        />
+      </View>
+    );
+  }
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(tx => {
