@@ -4,7 +4,7 @@ This module provides utilities and types for handling transaction-related functi
 
 ## Overview
 
-The transaction feature module centralizes transaction data handling, formatting, and validation to ensure consistent behavior across the app.
+The transaction feature module centralizes transaction data handling, formatting, and validation to ensure consistent behavior across the app. It also includes the signing confirmation flow that provides security and UX improvements for transaction signing.
 
 ## Files
 
@@ -56,6 +56,18 @@ const isSent = isSentTransaction(transaction, userPublicKey);
 ```
 
 ## Integration Points
+
+### Signing Confirmation Flow
+**NEW**: `app/sign-confirmation.tsx` - Pre-signing confirmation screen that:
+- Shows transaction summary before signing
+- Educates users about signing implications  
+- Provides clear cancellation option
+- Hides sensitive technical details (XDR, sequence numbers)
+- Separates approval intent from execution
+
+**Flow**: Send → **Sign Confirmation** → Review Transaction → Payment Success
+
+See [Signing Confirmation Documentation](../../docs/features/SIGNING_CONFIRMATION.md) for details.
 
 ### Transaction Detail Screen
 `app/transaction/[id].tsx` - Shows full transaction details including:

@@ -42,10 +42,11 @@ Presented modally, or pushed onto the stack above the tabs.
 
 | Route Path            | File on Disk                                                 | Presentation | Purpose                                                      | Primary Entry: Navigate Here From…          |
 | --------------------- | ------------------------------------------------------------ | ------------ | ------------------------------------------------------------ | -------------------------------------------- |
-| `/send`               | [app/send.tsx](file:///c:/Users/Muhammad/.trae/Grantfox/pocketpay-mobile/app/send.tsx) | Stack push   | Payment form: destination, amount, memo. Validates before navigation to review. | Home [Send XLM], Activity [New Payment] CTA, contact row tap, scan success |
+| `/send`               | [app/send.tsx](file:///c:/Users/Muhammad/.trae/Grantfox/pocketpay-mobile/app/send.tsx) | Stack push   | Payment form: destination, amount, memo. Validates before navigation to sign confirmation. | Home [Send XLM], Activity [New Payment] CTA, contact row tap, scan success |
+| `/sign-confirmation`  | [app/sign-confirmation.tsx](file:///c:/Users/Muhammad/.trae/Grantfox/pocketpay-mobile/app/sign-confirmation.tsx) | Stack push   | Pre-signing confirmation: shows transaction summary, explains signing implications, provides clear cancel option. Separates approval intent from execution. | Send form [Send Payment] button             |
 | `/receive`            | [app/receive.tsx](file:///c:/Users/Muhammad/.trae/Grantfox/pocketpay-mobile/app/receive.tsx) | Stack push   | Public-key QR code, address copy + share sheet              | Home [Receive] icon / button                 |
 | `/scan`               | [app/scan.tsx](file:///c:/Users/Muhammad/.trae/Grantfox/pocketpay-mobile/app/scan.tsx) | Stack push   | `expo-camera` QR scanner. On valid decode → navigates back to `/send` with `?destination=` prefilled. | Home [Scan] icon, Send form [Scan] button    |
-| `/review-transaction` | [app/review-transaction.tsx](file:///c:/Users/Muhammad/.trae/Grantfox/pocketpay-mobile/app/review-transaction.tsx) | Modal-like push | 8-phase Sign & Send flow: review summary → handoff → signing → submitting → completed / failed → success screen | Send form [Review]                           |
+| `/review-transaction` | [app/review-transaction.tsx](file:///c:/Users/Muhammad/.trae/Grantfox/pocketpay-mobile/app/review-transaction.tsx) | Modal-like push | 8-phase Sign & Send flow: review summary → handoff → signing → submitting → completed / failed → success screen | Sign confirmation [Sign Transaction]         |
 | `/payment-success`    | [app/payment-success.tsx](file:///c:/Users/Muhammad/.trae/Grantfox/pocketpay-mobile/app/payment-success.tsx) | `replace` (no back history) | Post-send confirmation: big success checkmark, tx hash copy, explorer link, Back to Home | Review transaction [phase → completed]       |
 | `/contacts`           | [app/contacts.tsx](file:///c:/Users/Muhammad/.trae/Grantfox/pocketpay-mobile/app/contacts.tsx) | Stack push   | Address book: list, search, add/edit/delete, duplicate guards. Tapping a contact pushes to `/send` with destination prefilled. | Settings [Address Book], Send form [Pick contact] |
 | `/diagnostics`        | [app/diagnostics.tsx](file:///c:/Users/Muhammad/.trae/Grantfox/pocketpay-mobile/app/diagnostics.tsx) | Stack push   | Read-only dev/debug panel: redacted `getDiagnostics()` JSON, environment summary, synthetic-error trigger if enabled | Settings → About → [Open Diagnostics]       |
@@ -82,6 +83,9 @@ Read top-down from the single JS entry point `expo-router/entry`. Arrow `→` me
                                                           /send                    /receive       /scan       /contacts    /diagnostics
                                                               │  (form validates)                 │
                                                               ▼                                   └── on decode: /send ?destination=...
+                                                     /sign-confirmation
+                                                              │  (user approves signing intent)
+                                                              ▼
                                                      /review-transaction
                                                               │
                                                      (8-phase signer SM)
