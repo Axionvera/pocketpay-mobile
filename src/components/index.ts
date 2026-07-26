@@ -13,3 +13,5 @@ export { VaultLockList } from "./VaultLockList";
 export { VaultLockDetail } from "./VaultLockDetail";
 export { MaturedLockWithdrawalModal } from "./MaturedLockWithdrawalModal";
 export { SigningConfirmModal } from "./SigningConfirmModal";
+export { VaultUnavailableState } from "./VaultUnavailableState";
+

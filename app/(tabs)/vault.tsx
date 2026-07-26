@@ -5,17 +5,19 @@ import { VaultLockList } from '../../src/components/VaultLockList';
 import { VaultConfirmModal } from '../../src/components/VaultConfirmModal';
 import { VaultIntroModal } from '../../src/components/VaultIntroModal';
 import { VaultLockEducationModal } from '../../src/components/VaultLockEducationModal';
+import { VaultUnavailableState } from '../../src/components/VaultUnavailableState';
 import { Input } from '../../src/components/Input';
 import { AsyncActionButton } from '../../src/components/AsyncActionButton';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useVault } from '../../src/hooks/useVault';
+import { useVaultAvailability } from '../../src/hooks/useVaultAvailability';
 import { useVaultDepositForm } from '../../src/features/vault/useVaultDepositForm';
 import { useWalletStore } from '../../src/store/walletStore';
 import { formatTimeRemaining } from '../../src/utils/lockTime';
 import { validateAmount } from '../../src/utils/validation';
 import { WALLET_SECRET_ACCESS_MESSAGE } from '../../src/utils/walletStorageErrors';
-import { PiggyBank, Info, Lock, HelpCircle, ShieldCheck, AlertTriangle, XCircle } from 'lucide-react-native';
+import { PiggyBank, Info, Lock, HelpCircle, ShieldCheck, AlertTriangle } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
@@ -28,6 +30,7 @@ export default function VaultScreen() {
 
   // Wallet & Vault stores
   const { publicKey, getSecretKey, balance: walletBalance } = useWalletStore();
+  const { isAvailable, reasons, isContractConfigured } = useVaultAvailability();
   const {
     balance,
     locks,
@@ -55,11 +58,6 @@ export default function VaultScreen() {
   const [pendingAction, setPendingAction] = useState<'deposit' | 'withdraw' | 'lock' | null>(null);
   const [pendingUnlockDate, setPendingUnlockDate] = useState<string>('');
 
-  // Local helpers
-  const isVaultUnavailable = !publicKey;
-  const isMissingContractId = isVaultUnavailable && !isConfigured;
-  const isMissingRpcUrl = false; // For now, default to testnet RPC
-
   // Initial setup
   useEffect(() => {
     const checkIntro = async () => {
@@ -72,11 +70,12 @@ export default function VaultScreen() {
   }, []);
 
   useEffect(() => {
-    if (publicKey) {
+    if (isAvailable && publicKey) {
       loadBalance(publicKey);
       loadLocks();
     }
-  }, [publicKey, loadBalance, loadLocks]);
+  }, [isAvailable, publicKey, loadBalance, loadLocks]);
+
 
   // Handlers
   const dismissIntro = async () => {
@@ -231,7 +230,7 @@ export default function VaultScreen() {
       />
 
 
-      {isConfigured ? (
+      {isContractConfigured ? (
         <View style={styles.infoBox}>
           <ShieldCheck color={colors.success} size={24} style={{ marginRight: SIZES.sm }} />
           <Text style={styles.infoText}>
@@ -251,38 +250,20 @@ export default function VaultScreen() {
         </View>
       )}
 
-      {isVaultUnavailable ? (
-        <View style={styles.unavailableCard}>
-          <XCircle color={colors.error} size={48} />
-          <Text style={styles.unavailableTitle}>Vault Unavailable</Text>
-          <Text style={styles.unavailableText}>
-            The Soroban Savings Vault cannot be used right now because the required configuration is
-            missing.
-          </Text>
-          {isMissingContractId && (
-            <View style={styles.unavailableDetail}>
-              <Text style={styles.unavailableDetailLabel}>Missing configuration:</Text>
-              <Text style={styles.unavailableDetailValue}>EXPO_PUBLIC_VAULT_CONTRACT_ID</Text>
-              <Text style={styles.unavailableDetailHint}>
-                Set this in your .env file to the deployed Soroban contract ID.
-              </Text>
-            </View>
-          )}
-          {isMissingRpcUrl && (
-            <View style={styles.unavailableDetail}>
-              <Text style={styles.unavailableDetailLabel}>Missing configuration:</Text>
-              <Text style={styles.unavailableDetailValue}>EXPO_PUBLIC_SOROBAN_RPC_URL</Text>
-              <Text style={styles.unavailableDetailHint}>
-                Set this in your .env file to a Soroban RPC endpoint.
-              </Text>
-            </View>
-          )}
-          <Text style={styles.unavailableDocsLink}>
-            See docs/vault-ui-guidance.md for more information.
-          </Text>
-        </View>
+      {!isAvailable ? (
+        <VaultUnavailableState
+          reasons={reasons}
+          onNavigateToSettings={() => router.push('/(tabs)/settings')}
+          onRetry={() => {
+            if (publicKey) {
+              loadBalance(publicKey);
+              loadLocks();
+            }
+          }}
+        />
       ) : (
         <View style={styles.form}>
+
           <Input
             label="Amount (XLM)"
             placeholder="0.00"
@@ -320,21 +301,14 @@ export default function VaultScreen() {
             disabled={isSubmitting || depositForm.isSubmitting}
             style={styles.lockButton}
           />
-          <View style={styles.mockLockSection}>
-            <Text style={styles.mockLockTitle}>Mock Active Locks</Text>
-            <TouchableOpacity 
-              style={styles.mockLockItem}
-              onPress={() => router.push('/vault-lock/mock-id-123')}
-            >
-              <View>
-                <Text style={styles.mockLockAmount}>500.0000000 XLM</Text>
-                <Text style={styles.mockLockSubtitle}>Locked • Matures in 15 days</Text>
-              </View>
-              <View style={styles.mockLockBadge}>
-                 <Text style={styles.mockLockBadgeText}>VIEW</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
+          {locks.length === 0 ? (
+            <View style={styles.mockLockSection}>
+              <Text style={styles.mockLockTitle}>No active locks yet</Text>
+              <Text style={styles.mockLockHint}>
+                Use "Set Aside for 30 Days" above to create a time-locked deposit.
+              </Text>
+            </View>
+          ) : null}
         </View>
       )}
     </ScrollView>
@@ -465,40 +439,14 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: SIZES.md,
+    marginBottom: SIZES.xs,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  mockLockItem: {
-    backgroundColor: colors.surface,
-    padding: SIZES.md,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  mockLockAmount: {
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  mockLockSubtitle: {
+  mockLockHint: {
     color: colors.textMuted,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  mockLockBadge: {
-    backgroundColor: 'rgba(255, 196, 0, 0.1)',
-    paddingHorizontal: SIZES.sm,
-    paddingVertical: 4,
-    borderRadius: RADIUS.full,
-  },
-  mockLockBadgeText: {
-    color: colors.warning,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    lineHeight: 18,
   },
   unavailableCard: {
     backgroundColor: colors.surface,

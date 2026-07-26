@@ -40,3 +40,14 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# spec-driven development documentation
+PRD.md
+Architecture.md
+Tasks.md
+task.md
+Memory.md
+Handoff.md
+
+
+
