@@ -89,7 +89,27 @@ Below are the identified gaps and risks that require coordination across reposit
 
 ---
 
+## 5. Vault Availability & Feature Flags
+
+The mobile client evaluates vault availability via `src/utils/vaultAvailability.ts`. This centralised check replaces ad-hoc inline checks across vault screens.
+
+### Feature Flag: `EXPO_PUBLIC_VAULT_ENABLED`
+
+An optional environment variable that can disable the vault UI entirely:
+
+- **Default:** `'true'` (vault is enabled)
+- **Set to `'false'` or `'0'`:** Vault form is hidden and replaced with an unavailable state card
+- **Use case:** Temporarily disable the vault during SDK upgrades, contract redeployment, or when the backend team signals the vault is not ready
+
+### SDK Readiness (future)
+
+When the PocketPay SDK ships a vault readiness signal, it should be wired into `evaluateVaultAvailability()` as a new input. See `docs/vault-sdk-capability-assumptions.md` for the expected interface.
+
+---
+
 ## Related Documentation
 
 - [Vault UI Guidance](./vault-ui-guidance.md) - Wording, Testnet constraints, and balance limitation details
 - [Vault Integration Risks](./vault-integration-risks.md) - Deep dive into risk analysis and contract simulation mechanics
+- [Vault SDK Capability Assumptions](./vault-sdk-capability-assumptions.md) - SDK readiness signals & feature flag assumptions
+

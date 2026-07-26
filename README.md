@@ -21,7 +21,6 @@ React Native Expo wallet for Stellar Testnet. The app aims to feel polished and 
 - [Accessibility Checklist](./docs/accessibility.md) - Mobile accessibility audit checklist for labels, touch targets, contrast, focus, screen-reader, and error/loading states
 - [UI State Catalogue](./docs/ui-states.md) - Screen-by-screen loading, empty, error, success, disabled, and pending states for wallet, send, receive, transactions, contacts, and vault
 - [Release Testing Checklist](./docs/release-testing-checklist.md) - Manual QA checklist run before every tagged build, covering wallet, payment, vault, errors, and environment verification
-- [Navigation Map](./docs/navigation-map.md) - Contributor reference: 20 routes, 3 route groups, deep links, feature ownership grid, and route-addition assumptions
 
 > ⚠️ **This app runs on the Stellar Testnet only.** Testnet XLM has no real monetary value. Read the [Security Guide](docs/security.md) before storing or sharing any keys.
 
@@ -97,7 +96,7 @@ See [CHANGELOG.md](./CHANGELOG.md) for a full list of notable changes across rel
 ## Security
 
 See the full [Security Guide](docs/security.md) for details on secret key handling, device storage, backups, and safe development practices.
-
+- [Mobile Security Checklist](docs/mobile-security-checklist.md) - Checklist for reviewing security-sensitive changes
 ## License
 
 MIT

@@ -39,7 +39,6 @@ import { useAppLockStore } from '../../src/store/appLockStore';
 import { ThemeMode } from '../../src/store/appStore';
 import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
-import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { useNetworkEnvironment, EnvironmentWarning } from '../../src/features/settings';
 
 const THEME_OPTIONS: { mode: ThemeMode; label: string; Icon: typeof Sun }[] = [
