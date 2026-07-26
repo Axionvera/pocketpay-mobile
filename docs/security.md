@@ -61,7 +61,7 @@ PocketPay includes an optional app-level lock that uses [`expo-local-authenticat
 - **Fallback**: If the device lacks biometric hardware or enrollment, the lock falls back to the device passcode / pattern.
 - **After 5 failed attempts**: The OS enforces its own lockout policy (e.g., requiring device passcode on iOS).
 
-The app lock protects *screen access only* — it is a UX-layer security measure on top of the keychain-backed secret key storage.
+The app lock protects *screen access only* — it is a UX-layer security measure on top of the keychain-backed secret key storage. For a detailed architectural specification of lock triggers, rate limiting, and future storage assumptions, see the [App Lock Model Design Note](app-lock-model.md).
 
 Recommended backup steps:
 1. After creating a wallet, write your secret key down on paper and store it somewhere physically secure (e.g. a safe).
