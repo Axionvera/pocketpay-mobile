@@ -5,6 +5,7 @@ This module provides utilities and types for handling transaction-related functi
 ## Overview
 
 The transaction feature module centralizes transaction data handling, formatting, and validation to ensure consistent behavior across the app. It also includes the signing confirmation flow that provides security and UX improvements for transaction signing.
+The transaction feature module centralizes transaction data handling, formatting, and validation to ensure consistent behavior across the app.
 
 ## Files
 
