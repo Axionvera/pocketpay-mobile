@@ -69,8 +69,8 @@ export default function PaymentSuccessScreen() {
       <View style={styles.successIcon}>
         <CheckCircle color={COLORS.success} size={72} />
       </View>
-      <Text style={styles.title}>Payment Sent</Text>
-      <Text style={styles.subtitle}>Your transaction was submitted successfully.</Text>
+      <Text style={styles.title}>Payment Confirmed</Text>
+      <Text style={styles.subtitle}>Your transaction was confirmed on the network.</Text>
 
       <View style={styles.card}>
         <View style={styles.row}>

@@ -38,6 +38,7 @@ import {
 import { useAppLockStore } from '../../src/store/appLockStore';
 import { ThemeMode } from '../../src/store/appStore';
 import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirmModal';
+import { StatusBadge, BadgeTone } from '../../src/components/StatusBadge';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
 import { useNetworkEnvironment, EnvironmentWarning } from '../../src/features/settings';
 
@@ -369,8 +370,6 @@ export default function SettingsScreen() {
 
 // ─── Sub-components ──────────────────────────────────────────────────────
 
-type BadgeTone = 'info' | 'success' | 'warning' | 'error';
-
 interface EnvRowBadge {
   text: string;
   tone: BadgeTone;
@@ -412,40 +411,10 @@ function EnvRow({
             >
               {value}
             </Text>
-            {badge ? <Badge styles={styles} colors={colors} badge={badge} /> : null}
+            {badge ? <StatusBadge text={badge.text} tone={badge.tone} /> : null}
           </View>
         </View>
       </View>
-    </View>
-  );
-}
-
-function Badge({
-  styles,
-  colors,
-  badge,
-}: {
-  styles: ReturnType<typeof createStyles>;
-  colors: ThemeColors;
-  badge: EnvRowBadge;
-}) {
-  const bg = {
-    info: 'rgba(0, 229, 255, 0.12)',
-    success: 'rgba(0, 230, 118, 0.12)',
-    warning: 'rgba(255, 196, 0, 0.12)',
-    error: 'rgba(255, 61, 0, 0.12)',
-  }[badge.tone];
-
-  const fg = {
-    info: colors.primary,
-    success: colors.success,
-    warning: colors.warning,
-    error: colors.error,
-  }[badge.tone];
-
-  return (
-    <View style={[styles.badge, { backgroundColor: bg }]}>
-      <Text style={[styles.badgeText, { color: fg }]}>{badge.text}</Text>
     </View>
   );
 }
@@ -571,17 +540,6 @@ const createStyles = (colors: ThemeColors) =>
     rowValueEmphasis: {
       fontSize: 15,
       fontWeight: '600',
-    },
-    badge: {
-      paddingHorizontal: SIZES.sm,
-      paddingVertical: 2,
-      borderRadius: RADIUS.round,
-    },
-    badgeText: {
-      fontSize: 10,
-      fontWeight: '700',
-      letterSpacing: 0.4,
-      textTransform: 'uppercase',
     },
     divider: {
       height: StyleSheet.hairlineWidth,

@@ -8,6 +8,7 @@
  *  AC4 – Receipt provides navigation back to wallet or activity.
  *  AC5 – Explorer link is shown where available (and hidden when not).
  *  AC6 – Secret key information is never rendered on the receipt.
+ *  AC7 – Copy is honest about confirmation, not a vague "submitted" claim (issue #253).
  */
 
 import React from 'react';
@@ -86,6 +87,19 @@ describe('AC1-3 – receipt shows transaction details', () => {
   it('shows the destination address', () => {
     const { getByText } = render(<PaymentSuccessScreen />);
     expect(getByText(DESTINATION)).toBeTruthy();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AC7 – Honest confirmation copy (issue #253)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('AC7 – honest confirmation copy', () => {
+  it('states the transaction was confirmed, not just vaguely "sent"', () => {
+    const { getByText, queryByText } = render(<PaymentSuccessScreen />);
+    expect(getByText('Payment Confirmed')).toBeTruthy();
+    expect(getByText('Your transaction was confirmed on the network.')).toBeTruthy();
+    expect(queryByText('Payment Sent')).toBeNull();
   });
 });
 

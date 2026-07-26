@@ -32,7 +32,11 @@ export type HandoffPhase =
   | 'handoff'       // Transaction has been sent to the signer
   | 'signing'       // Signer is actively signing
   | 'submitting'    // Signed transaction is being submitted to the network
-  | 'completed'     // Transaction submitted successfully
+  // Horizon's classic submit is synchronous (resolves already confirmed-or-failed), so
+  // this isn't a real waiting window — it exists to separate "network responded" from
+  // "UI flow fully done", so downstream UI never has to treat submit-resolved as final.
+  | 'confirming'    // Network call resolved; wrapping up before the flow is done
+  | 'completed'     // Flow finished successfully
   | 'failed'        // Signing or submission failed
   | 'cancelled';    // User or signer cancelled the flow
 

@@ -212,6 +212,10 @@ export default function HistoryScreen() {
           styles.listContent,
           transactions.length === 0 && styles.listContentEmpty,
         ]}
+        // This manual refresh is what reconciles optimistic pending transactions
+        // against Horizon (see walletStore.refreshWalletData). A future polling
+        // hook could trigger it automatically on an interval, shaped like
+        // useOnlineStatus.ts (setInterval + AppState foreground listener).
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
