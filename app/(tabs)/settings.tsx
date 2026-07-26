@@ -55,7 +55,7 @@ const WARNING_ICON = {
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { clearWallet, getSecretKey } = useWalletStore();
+  const { publicKey, clearWallet, getSecretKey } = useWalletStore();
   const { colors, themeMode, setThemeMode } = useTheme();
   const { isLockEnabled, enableLock, disableLock, authenticate } = useAppLockStore();
   const env = useNetworkEnvironment();
@@ -118,6 +118,18 @@ export default function SettingsScreen() {
       );
     }
   };
+
+  if (!publicKey) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <WalletEmptyState
+          variant="missing"
+          onCreate={() => router.replace('/(auth)/create')}
+          onImport={() => router.replace('/(auth)/import')}
+        />
+      </View>
+    );
+  }
 
   return (
     <>

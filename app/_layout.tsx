@@ -6,7 +6,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useWalletStore } from '../src/store/walletStore';
 import { useAppStore } from '../src/store/appStore';
 import { LockScreen } from '../src/components/LockScreen';
-import { View, ActivityIndicator, Text, StyleSheet, Alert } from 'react-native';
+import { WalletEmptyState } from '../src/components/WalletEmptyState';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '../src/hooks/useTheme';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { Button } from '../src/components/Button';
@@ -67,8 +68,8 @@ function RootContent() {
 
   if (!isInitialized || !walletChecked) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <WalletEmptyState variant="loading" />
       </View>
     );
   }

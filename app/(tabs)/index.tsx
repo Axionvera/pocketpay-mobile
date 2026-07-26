@@ -8,6 +8,7 @@ import { Button } from '../../src/components/Button';
 import { FundButton } from '../../src/components/FundButton';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
 import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
+import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
 import { Clock, RefreshCw } from 'lucide-react-native';
 import { formatAmount } from '../../src/utils/amount';
@@ -50,6 +51,18 @@ export default function HomeScreen() {
 
   const isFunded = balance !== '0.0000000';
   const recentTransactions = transactions.slice(0, 3); // Preview
+
+  if (!publicKey) {
+    return (
+      <View style={styles.container}>
+        <WalletEmptyState
+          variant="missing"
+          onCreate={() => router.replace('/(auth)/create')}
+          onImport={() => router.replace('/(auth)/import')}
+        />
+      </View>
+    );
+  }
 
   return (
     <>
