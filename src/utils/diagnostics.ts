@@ -2,12 +2,15 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { useAppStore } from '../store/appStore';
 import { useWalletStore } from '../store/walletStore';
+import { getLastErrorReport } from './errorReporting';
+import { redactSensitiveString } from './redactSensitive';
 
 export const getDiagnostics = () => {
   const appState = useAppStore.getState();
   const walletState = useWalletStore.getState();
+  const lastError = getLastErrorReport();
 
-  // Redact sensitive data
+  // Redact sensitive data — never include secret keys, public keys, or balances.
   const redactedDiagnostics = {
     environment: {
       platform: Platform.OS,
@@ -25,8 +28,23 @@ export const getDiagnostics = () => {
       isBalanceLoaded: walletState.balance !== '0.0000000',
       transactionsCount: walletState.transactions.length,
       isLoading: walletState.isLoading,
-      lastError: walletState.error,
+      lastError: walletState.error
+        ? redactSensitiveString(walletState.error)
+        : null,
     },
+    /**
+     * Most recent failure captured by reportError (ErrorBoundary / global
+     * handlers). Messages are already redacted at the reporting boundary.
+     */
+    lastReportedError: lastError
+      ? {
+          source: lastError.source,
+          name: lastError.name,
+          message: lastError.message,
+          isFatal: Boolean(lastError.isFatal),
+          timestamp: lastError.timestamp,
+        }
+      : null,
     timestamp: new Date().toISOString(),
   };
 

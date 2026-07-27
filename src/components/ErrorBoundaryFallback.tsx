@@ -5,12 +5,17 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { AlertTriangle, ChevronDown, ChevronUp, Bug } from 'lucide-react-native';
 import { useTheme } from '../hooks/useTheme';
 import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
 import { Button } from './Button';
+import { sanitizeError } from '../utils/redactSensitive';
+import { getDiagnostics } from '../utils/diagnostics';
+import { reloadApp } from '../utils/appReload';
 
 export interface ErrorBoundaryFallbackProps {
   error: Error | null;
@@ -24,9 +29,40 @@ export const ErrorBoundaryFallback: React.FC<ErrorBoundaryFallbackProps> = ({
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [showDetails, setShowDetails] = useState(false);
+  const router = useRouter();
 
-  const errorMessage = error?.message || 'Unknown error';
-  const errorStack = error?.stack || '';
+  const sanitized = error ? sanitizeError(error) : null;
+  const errorMessage = sanitized?.message || 'Unknown error';
+  const errorStack = sanitized?.stack || '';
+
+  const handleTryAgain = () => {
+    onReset();
+  };
+
+  const handleGoHome = () => {
+    onReset();
+    try {
+      router.replace('/(tabs)');
+    } catch {
+      // Navigation may be unavailable if the router tree was torn down.
+    }
+  };
+
+  const handleRestart = () => {
+    onReset();
+    reloadApp();
+  };
+
+  const handleShareDiagnostics = async () => {
+    try {
+      await Share.share({
+        message: getDiagnostics(),
+        title: 'App Diagnostics Log',
+      });
+    } catch {
+      // Sharing can fail if the OS sheet is unavailable; ignore.
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -35,32 +71,50 @@ export const ErrorBoundaryFallback: React.FC<ErrorBoundaryFallbackProps> = ({
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Header Icon Container */}
           <View style={styles.iconContainer}>
             <View style={styles.iconBackground}>
               <AlertTriangle size={48} color={colors.error} />
             </View>
           </View>
 
-          {/* User Facing Copy */}
           <Text style={styles.title}>Something went wrong</Text>
           <Text style={styles.subtitle}>
             An unexpected problem occurred in the app. Don't worry — your data and funds on the network are safe.
           </Text>
 
-          {/* Action Button */}
           <View style={styles.actionContainer}>
             <Button
               title="Try Again"
-              onPress={onReset}
+              onPress={handleTryAgain}
               variant="primary"
               accessibilityLabel="Try again and reset the app"
               style={styles.retryButton}
             />
+            <Button
+              title="Go to Home"
+              onPress={handleGoHome}
+              variant="outline"
+              accessibilityLabel="Reset and go to the home screen"
+              style={styles.secondaryButton}
+            />
+            <Button
+              title="Restart App"
+              onPress={handleRestart}
+              variant="muted"
+              accessibilityLabel="Restart the application"
+              style={styles.secondaryButton}
+            />
+            <Button
+              title="Share Diagnostics"
+              onPress={handleShareDiagnostics}
+              variant="muted"
+              accessibilityLabel="Share redacted diagnostics log"
+              style={styles.secondaryButton}
+            />
           </View>
 
-          {/* Technical / Developer Debug Details (Rendered ONLY in __DEV__) */}
-          {__DEV__ && error && (
+          {/* Technical details — redacted, and only in __DEV__ */}
+          {__DEV__ && sanitized && (
             <View style={styles.devSection}>
               <TouchableOpacity
                 style={styles.devHeader}
@@ -82,7 +136,7 @@ export const ErrorBoundaryFallback: React.FC<ErrorBoundaryFallbackProps> = ({
 
               {showDetails && (
                 <View style={styles.devBox}>
-                  <Text style={styles.devErrorTitle}>{error.name || 'Error'}</Text>
+                  <Text style={styles.devErrorTitle}>{sanitized.name || 'Error'}</Text>
                   <Text style={styles.devErrorMessage}>{errorMessage}</Text>
                   {Boolean(errorStack) && (
                     <ScrollView horizontal style={styles.stackScroll} nestedScrollEnabled>
@@ -153,6 +207,10 @@ const createStyles = (colors: ThemeColors) =>
     },
     retryButton: {
       width: '100%',
+    },
+    secondaryButton: {
+      width: '100%',
+      marginTop: SIZES.sm,
     },
     devSection: {
       width: '100%',

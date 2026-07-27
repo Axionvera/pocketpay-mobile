@@ -1,0 +1,100 @@
+# Global Error Handling
+
+This document describes how PocketPay Mobile catches unexpected failures, shows a safe fallback UI, recovers without exposing secrets, and feeds non-sensitive context into Diagnostics.
+
+---
+
+## Goals
+
+1. **Never leave the user on a broken screen** after a render-time crash.
+2. **Offer recovery actions** (retry, go home, restart, share diagnostics).
+3. **Hide sensitive material** (secret keys, public keys, mnemonics) from production UI and from logs/exports.
+4. **Keep developer logs useful** via a single redacted reporting funnel.
+5. **Integrate with Diagnostics** so support can inspect the last failure without seeing wallet secrets.
+
+---
+
+## Architecture
+
+```
+App startup (app/_layout.tsx)
+  └─ installGlobalErrorHandlers()     // JS exceptions + unhandled rejections
+  └─ <ErrorBoundary>                  // Render / lifecycle failures
+       └─ <RootContent /> … screens
+```
+
+| Layer | File(s) | Catches | User-visible effect |
+|-------|---------|---------|---------------------|
+| React Error Boundary | `src/components/ErrorBoundary.tsx`, `ErrorBoundaryFallback.tsx` | Render, lifecycle, constructors below the boundary | Full-screen fallback with recovery CTAs |
+| Global JS handler | `src/utils/globalErrorHandler.ts` | Fatal / non-fatal JS exceptions via `ErrorUtils` | Reports then defers to RN default (RedBox / crash) |
+| Promise rejections | same | Unhandled promise rejections | Reports only (does not swallow) |
+| Reporting funnel | `src/utils/errorReporting.ts` | All of the above | Redacted `console.error` + in-memory last report |
+| Redaction | `src/utils/redactSensitive.ts` | Strings / objects before log or export | Secrets → `[REDACTED_*]` tokens |
+| Diagnostics | `src/utils/diagnostics.ts`, `app/diagnostics.tsx` | N/A (read-only) | Redacted JSON + last reported failure |
+
+React error boundaries **do not** catch event-handler or async errors. That is why `installGlobalErrorHandlers()` must run as early as possible in `_layout.tsx` (before the root tree can throw).
+
+---
+
+## Fallback UI & Recovery Actions
+
+`ErrorBoundaryFallback` is the default UI when the root boundary catches an error. Production users see a calm message and **no** stack traces. Development builds can expand redacted debug details.
+
+| Action | Behavior |
+|--------|----------|
+| **Try Again** | Clears boundary state and re-renders children |
+| **Go to Home** | Clears boundary state, then `router.replace('/(tabs)')` |
+| **Restart App** | Clears boundary state, then best-effort `DevSettings.reload()` |
+| **Share Diagnostics** | Opens the OS share sheet with `getDiagnostics()` JSON (already redacted) |
+
+Custom fallbacks remain supported via the `fallback` prop on `ErrorBoundary` (node or render function).
+
+---
+
+## Sensitive Data Boundaries
+
+| Surface | Production | Development |
+|---------|------------|-------------|
+| Fallback copy | Friendly message only | Same + optional redacted stack |
+| `console.error` via `reportError` | Redacted message + context | Same (always redacted) |
+| Diagnostics export | Counters / flags / redacted last error | Same + “Trigger Test Error” |
+| SecureStore / secret key | Never read by error UI | Never read by error UI |
+
+Redaction covers Stellar `S…` secrets, `G…` public keys, muxed `M…` accounts, BIP39-like phrases, and 64-char hex seeds. Object keys named like `secretKey` / `mnemonic` are replaced wholesale.
+
+---
+
+## Diagnostics Integration
+
+1. Every `reportError` call stores a **redacted** `LastErrorReport` in memory (`getLastErrorReport()`).
+2. `getDiagnostics()` includes that snapshot under `lastReportedError`.
+3. Settings → About → **Diagnostics** shows the snapshot and can export it.
+4. In `__DEV__`, Diagnostics includes **Trigger Test Error** to exercise the boundary (see `docs/release-testing-checklist.md` §5.3).
+
+See also [Development Diagnostics Export](./diagnostics.md).
+
+---
+
+## What This Does *Not* Cover
+
+- Expected domain errors (network failures, insufficient balance, SecureStore restore failures) — those use dedicated UI (banners, wallet restore screen, etc.).
+- Shipping a third-party crash reporter — `reportError` has a production hook stub for Sentry/Bugsnag; wire it there when ready.
+- Guaranteeing `DevSettings.reload()` in all production builds — Restart is best-effort; Try Again / Go to Home remain the primary recovery paths.
+
+---
+
+## Contributor Checklist
+
+- [ ] Unexpected render failures are left to the root boundary (do not swallow with empty `catch` that leaves a blank screen).
+- [ ] New logging of errors goes through `reportError` (or at least `redactSensitiveString` / `sanitizeError`).
+- [ ] Production UI never shows raw `error.stack` or secret-bearing messages.
+- [ ] Tests cover fallback visibility, recovery reset, and redaction when you change this area (`__tests__/ErrorBoundary.test.tsx`, `__tests__/globalErrorHandler.test.tsx`, `src/utils/__tests__/redactSensitive.test.ts`).
+
+---
+
+## References
+
+- [Mobile Security Checklist](./mobile-security-checklist.md) — Error & Recovery Flows
+- [Diagnostics](./diagnostics.md)
+- [Navigation Map](./navigation-map.md) — safety wrappers on every route
+- [Release Testing Checklist](./release-testing-checklist.md) §5.3 React Error Boundary

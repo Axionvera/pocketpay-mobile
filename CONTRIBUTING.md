@@ -172,6 +172,7 @@ We strive to build a wallet that is accessible to everyone. Before submitting a 
 - **Never commit secret keys, `.env` files, or credentials** to version control.
 - All key storage must go through `expo-secure-store` as documented in the [Storage Guide](docs/storage.md).
 - Read the full [Security Guide](docs/security.md) before touching key management, storage, or any authentication flow.
+- Unexpected crashes are handled by the root ErrorBoundary and redacted reporting funnel — see [Global Error Handling](docs/error-handling.md).
 - If you discover a security vulnerability, please report it privately rather than opening a public issue.
 
 ---
