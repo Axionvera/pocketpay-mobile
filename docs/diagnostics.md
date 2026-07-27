@@ -22,8 +22,11 @@ The following information is **REDACTED**:
 
 The exported JSON string includes useful metadata for debugging:
 - **Environment**: OS Platform, OS Version, App Version, Build Version, Development status
-- **App State**: Initialization status, UI Theme (Dark Mode), total count of saved contacts
-- **Wallet State**: Wallet initialization status (has public key), balance load status, transaction count, loading state, and the most recent error message (if any)
+- **App State**: Initialization status, UI Theme, total count of saved contacts
+- **Wallet State**: Wallet initialization status (has public key), balance load status, transaction count, loading state, and the most recent wallet-store error message (if any, already redacted)
+- **Last Reported Failure**: Snapshot from the global `reportError` funnel (ErrorBoundary / JS handler / unhandled rejection) — source, name, redacted message, fatal flag, timestamp
+
+In **development builds**, the Diagnostics screen also exposes a **Trigger Test Error** control so contributors can exercise the root ErrorBoundary fallback (see [Error Handling](./error-handling.md) and the release testing checklist §5.3).
 
 ### Example Payload
 
@@ -37,7 +40,7 @@ The exported JSON string includes useful metadata for debugging:
   },
   "appState": {
     "isInitialized": true,
-    "isDarkMode": true,
+    "themeMode": "system",
     "contactsCount": 2
   },
   "walletState": {
@@ -47,5 +50,15 @@ The exported JSON string includes useful metadata for debugging:
     "isLoading": false,
     "lastError": null
   },
-  "timestamp": "2026-07-23T11:15:00.000Z"
+  "lastReportedError": {
+    "source": "ErrorBoundary",
+    "name": "Error",
+    "message": "Synthetic diagnostics error for ErrorBoundary testing",
+    "isFatal": false,
+    "timestamp": "2026-07-27T17:00:00.000Z"
+  },
+  "timestamp": "2026-07-27T17:00:00.000Z"
 }
+```
+
+For the full app-wide error recovery model, see [Global Error Handling](./error-handling.md).

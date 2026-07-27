@@ -31,6 +31,7 @@ This checklist should be reviewed by contributors when making changes that affec
 - [ ] Confirm that storage errors surface appropriate user‑friendly messages and do not purge the secret key.
 - [ ] Verify that any reset flow clearly warns users about key loss and requires manual backup confirmation.
 - [ ] Ensure that error boundaries do not expose stack traces or internal details in production.
+- [ ] Route unexpected failures through `reportError` so logs/diagnostics stay redacted (see [Global Error Handling](./error-handling.md)).
 
 ## Diagnostics & Telemetry
 - [ ] If adding analytics or telemetry, exclude any fields that could contain secret keys or personal identifiers.
