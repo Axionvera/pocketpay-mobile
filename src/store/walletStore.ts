@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as StellarSdk from '@stellar/stellar-sdk';
-import { fetchXlmBalance, fetchTransactionsPage, fundWithFriendbot, PaymentRecord } from '../services/stellar';
+import { fetchXlmBalance, fetchTransactionsPage, fetchAccountDetails, fundWithFriendbot, PaymentRecord } from '../services/stellar';
+import type { BalanceState, FundingStatus } from '../types/balance';
 import {
   CLEAR_WALLET_ERROR,
   PERSIST_WALLET_ERROR,
@@ -43,15 +44,18 @@ interface WalletState {
   /** True once the initial `loadWalletFromStorage` call has resolved (success or failure). */
   walletChecked: boolean;
 
-  // Pagination
-  isLoadingMore: boolean;
-  hasMoreTransactions: boolean;
-  nextCursor: string | null;
+  // ---- Issue #329: Balance state ----
+  /** Tracks the lifecycle of the balance fetch — not just its value. */
+  balanceState: BalanceState;
+
+  // ---- Issue #330: Account funding status ----
+  /** Whether the account exists on the Stellar network. */
+  fundingStatus: FundingStatus;
 
   // Pagination
-  nextCursor: string | null;
-  hasMoreTransactions: boolean;
   isLoadingMore: boolean;
+  hasMoreTransactions: boolean;
+  nextCursor: string | null;
 
   // Actions
   setWallet: (publicKey: string, secretKey: string) => Promise<boolean>;
@@ -68,6 +72,8 @@ interface WalletState {
   markBackupPending: () => Promise<void>;
   /** Marks the backup reminder as acknowledged and persists that state. */
   acknowledgeBackupReminder: () => Promise<void>;
+  /** Check whether the account exists on the Stellar network (funding check). */
+  checkFundingStatus: () => Promise<void>;
 }
 
 const resetWalletState = () => ({
@@ -124,6 +130,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   isFunding: false,
   fundError: null,
   error: null,
+  balanceState: 'idle' as BalanceState,
+  fundingStatus: 'unknown' as FundingStatus,
   isLoadingMore: false,
   hasMoreTransactions: false,
   nextCursor: null,
@@ -208,7 +216,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     const { publicKey } = get();
     if (!publicKey) return;
 
-    set({ isLoading: true, error: null, isLoadingMore: false, nextCursor: null, hasMoreTransactions: false });
+    set({ isLoading: true, error: null, balanceState: 'loading', isLoadingMore: false, nextCursor: null, hasMoreTransactions: false });
     try {
       const [balance, page] = await Promise.all([
         fetchXlmBalance(publicKey),
@@ -228,6 +236,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         Object.entries(get().pendingTransactions).filter(([hash]) => !confirmedHashes.has(hash))
       );
 
+      const isZero = balance === '0.0000000';
       set({
         balance,
         transactions: [...Object.values(remainingPending), ...page.records],
@@ -236,10 +245,17 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         hasMoreTransactions: page.hasMore,
         lastRefreshed: Date.now(),
         isLoading: false,
+        balanceState: 'available',
+        // Also update funding status: if we got balance data, the account exists
+        fundingStatus: 'funded',
       });
     } catch (err: any) {
       console.error('Failed to refresh wallet data');
-      set({ isLoading: false, error: err.message || 'Failed to sync data' });
+      set({
+        isLoading: false,
+        balanceState: 'unavailable',
+        error: err.message || 'Failed to sync data',
+      });
     }
   },
 
@@ -337,10 +353,35 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       await fundWithFriendbot(publicKey);
       // Refresh balance after successful funding
       await get().refreshWalletData();
-      set({ isFunding: false });
+      set({ isFunding: false, fundingStatus: 'funded' });
     } catch (err: any) {
       console.error('Friendbot funding failed:', err);
       set({ isFunding: false, fundError: err.message || 'Funding failed. Please try again.' });
     }
-  }
+  },
+
+  checkFundingStatus: async () => {
+    const { publicKey } = get();
+    if (!publicKey) {
+      set({ fundingStatus: 'unknown' });
+      return;
+    }
+
+    set({ fundingStatus: 'checking' });
+    try {
+      await fetchAccountDetails(publicKey);
+      // Account exists on the network
+      set({ fundingStatus: 'funded' });
+    } catch (err: any) {
+      const message = err?.message || '';
+      if (/not found|404/i.test(message)) {
+        // Account doesn't exist yet — not funded
+        set({ fundingStatus: 'unfunded' });
+      } else {
+        // Network error — we can't determine the status
+        console.error('Failed to check funding status:', err);
+        set({ fundingStatus: 'unknown' });
+      }
+    }
+  },
 }));
