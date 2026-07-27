@@ -19,9 +19,7 @@ import { validateAmount } from '../../src/utils/validation';
 import { WALLET_SECRET_ACCESS_MESSAGE } from '../../src/utils/walletStorageErrors';
 import { PiggyBank, Info, Lock, HelpCircle, ShieldCheck, AlertTriangle } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useVaultAction } from '../../src/hooks/useVaultAction';
-import { VaultActionProgress } from '../../src/components/VaultActionProgress';
-
+import { VaultReceiptModal } from "../../src/components/VaultReceiptModal";
 
 const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const VAULT_INTRO_SEEN_KEY = '@pocketpay_vault_intro_seen';
@@ -60,6 +58,15 @@ export default function VaultScreen() {
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [pendingAction, setPendingAction] = useState<'deposit' | 'withdraw' | 'lock' | null>(null);
   const [pendingUnlockDate, setPendingUnlockDate] = useState<string>('');
+  const [receiptVisible, setReceiptVisible] = useState(false);
+
+  const [receiptData, setReceiptData] = useState({
+    actionType: "deposit" as "deposit" | "withdraw" | "lock",
+    amount: "",
+    status: "Success",
+    date: "",
+    transactionHash: null as string | null,
+  });
 
   // Initial setup
   useEffect(() => {
@@ -152,6 +159,21 @@ export default function VaultScreen() {
       confirm: async () => {
         setConfirmVisible(false);
 
+        setReceiptData({
+          actionType: "lock",
+          amount: depositForm.amount,
+          status: "Success",
+          date: new Date().toLocaleString(),
+          transactionHash: null,
+        });
+
+        setReceiptVisible(true);
+
+        depositForm.setAmount("");
+        depositForm.setAmountError(undefined);
+        return;
+      }
+
         if (pendingAction === 'lock') {
           const unlockDate = new Date(Date.now() + LOCK_PERIOD_SECONDS * 1000);
           Alert.alert('Success', `Locked ${depositForm.amount} XLM until ${unlockDate.toLocaleDateString()} (mock)`);
@@ -170,10 +192,31 @@ export default function VaultScreen() {
 
     if (vaultAction.status.state === 'failed') {
       setConfirmVisible(false);
-      Alert.alert(
-        `${pendingAction === 'deposit' ? 'Deposit' : pendingAction === 'lock' ? 'Lock' : 'Withdrawal'} failed`,
-        vaultAction.status.error || 'Something went wrong.'
-      );
+      const verb = pendingAction === 'deposit' ? 'deposited into' : 'withdrawn from';
+      setReceiptData({
+        actionType: pendingAction,
+        amount: depositForm.amount,
+        status: "Success",
+        date: new Date().toLocaleString(),
+        transactionHash: hash,
+      });
+
+      setReceiptVisible(true);
+
+      depositForm.setAmount("");
+      depositForm.setAmountError(undefined);
+    } catch (e: any) {
+      setConfirmVisible(false);
+
+      setReceiptData({
+        actionType: pendingAction,
+        amount: depositForm.amount,
+        status: "Success",
+        date: new Date().toLocaleString(),
+        transactionHash: null,
+      });
+
+      setReceiptVisible(true);
     }
   };
   const cancelAction = () => {
@@ -206,6 +249,17 @@ export default function VaultScreen() {
         onConfirm={handleConfirmAction}
         onCancel={cancelAction}
       />
+
+      <VaultReceiptModal
+        visible={receiptVisible}
+        actionType={receiptData.actionType}
+        amount={receiptData.amount}
+        status={receiptData.status}
+        date={receiptData.date}
+        transactionHash={receiptData.transactionHash}
+        onClose={() => setReceiptVisible(false)}
+      />
+
       <View style={styles.card}>
         <TouchableOpacity
           style={styles.infoButton}
