@@ -4,4 +4,5 @@ export { useSignerHandoff } from "./useSignerHandoff";
 export { useTheme } from "./useTheme";
 export { useVault } from "./useVault";
 export { useVaultAvailability } from "./useVaultAvailability";
+export { useVaultCapabilities } from "./useVaultCapabilities";
 

@@ -12,6 +12,8 @@ interface VaultLockListProps {
   isLoading: boolean;
   onUnlock?: (lockId: string) => void;
   onInfoPress?: () => void;
+  /** Issue #331: When unlock is not supported, show this reason instead of the unlock button. */
+  unlockDisabledReason?: string | null;
 }
 
 export const VaultLockList: React.FC<VaultLockListProps> = ({
@@ -19,6 +21,7 @@ export const VaultLockList: React.FC<VaultLockListProps> = ({
   isLoading,
   onUnlock,
   onInfoPress,
+  unlockDisabledReason,
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -97,12 +100,15 @@ export const VaultLockList: React.FC<VaultLockListProps> = ({
                   {lock.status === 'matured' ? 'Unlocked' : `Unlocks ${new Date(lock.unlockDate).toLocaleDateString()}`}
                 </Text>
               </View>
-              {lock.status === 'matured' && onUnlock && (
+              {lock.status === 'matured' && (onUnlock || unlockDisabledReason) && (
                 <TouchableOpacity 
-                  style={styles.unlockButton} 
-                  onPress={() => onUnlock(lock.id)}
+                  style={[styles.unlockButton, !!unlockDisabledReason && styles.unlockButtonDisabled]} 
+                  onPress={() => onUnlock?.(lock.id)}
+                  disabled={!!unlockDisabledReason || !onUnlock}
                 >
-                  <Text style={styles.unlockButtonText}>Unlock</Text>
+                  <Text style={[styles.unlockButtonText, !!unlockDisabledReason && styles.unlockButtonTextDisabled]}>
+                    {unlockDisabledReason ? 'Unlock Unavailable' : 'Unlock'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -236,6 +242,15 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.background,
     fontSize: 14,
     fontWeight: '600',
+  },
+  unlockButtonDisabled: {
+    backgroundColor: colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  unlockButtonTextDisabled: {
+    color: colors.textMuted,
+    fontSize: 12,
   },
   infoButton: {
     alignSelf: 'center',
