@@ -19,6 +19,9 @@ import { validateAmount } from '../../src/utils/validation';
 import { WALLET_SECRET_ACCESS_MESSAGE } from '../../src/utils/walletStorageErrors';
 import { PiggyBank, Info, Lock, HelpCircle, ShieldCheck, AlertTriangle } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useVaultAction } from '../../src/hooks/useVaultAction';
+import { VaultActionProgress } from '../../src/components/VaultActionProgress';
+
 
 const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const VAULT_INTRO_SEEN_KEY = '@pocketpay_vault_intro_seen';
@@ -88,6 +91,7 @@ export default function VaultScreen() {
     depositForm.setAmountError(undefined);
   };
 
+  const vaultAction = useVaultAction();
   const handleAction = async (action: 'deposit' | 'withdraw' | 'lock') => {
     // Validate amount
     let amountError: string | undefined;
@@ -118,48 +122,60 @@ export default function VaultScreen() {
     setConfirmVisible(true);
   };
 
-  const handleConfirmAction = async () => {
+ const handleConfirmAction = async () => {
     if (!publicKey || !pendingAction) return;
 
-    try {
-      if (pendingAction === 'lock') {
-        const unlockDate = new Date(Date.now() + LOCK_PERIOD_SECONDS * 1000);
-        await addLock(depositForm.amount, unlockDate.toISOString());
+    await vaultAction.run({
+      sign: async () => {
+        if (pendingAction === 'withdraw') {
+          const secret = await getSecretKey();
+          if (!secret) throw new Error(WALLET_SECRET_ACCESS_MESSAGE);
+          return secret;
+        }
+        return null;
+      },
+      submit: async () => {
+        if (pendingAction === 'lock') {
+          const unlockDate = new Date(Date.now() + LOCK_PERIOD_SECONDS * 1000);
+          await addLock(depositForm.amount, unlockDate.toISOString());
+          return { txHash: 'mock-lock' };
+        } else if (pendingAction === 'deposit') {
+          const hash = await depositForm.submit(publicKey, getSecretKey, deposit, walletBalance);
+          return { txHash: hash || 'mock-deposit' };
+        } else {
+          const secret = await getSecretKey();
+          if (!secret) throw new Error(WALLET_SECRET_ACCESS_MESSAGE);
+          const hash = await withdraw(secret, publicKey, depositForm.amount);
+          return { txHash: hash || 'mock-withdraw' };
+        }
+      },
+      confirm: async () => {
         setConfirmVisible(false);
-        Alert.alert('Success', `Locked ${depositForm.amount} XLM until ${unlockDate.toLocaleDateString()} (mock)`);
-        depositForm.setAmount('');
-        depositForm.setAmountError(undefined);
-        return;
-      }
 
-      let hash: string | null = null;
-      if (pendingAction === 'deposit') {
-        hash = await depositForm.submit(publicKey, getSecretKey, deposit, walletBalance);
-      } else {
-        const secret = await getSecretKey();
-        if (!secret) throw new Error(WALLET_SECRET_ACCESS_MESSAGE);
-        hash = await withdraw(secret, publicKey, depositForm.amount);
-        depositForm.setAmount('');
-        depositForm.setAmountError(undefined);
-      }
+        if (pendingAction === 'lock') {
+          const unlockDate = new Date(Date.now() + LOCK_PERIOD_SECONDS * 1000);
+          Alert.alert('Success', `Locked ${depositForm.amount} XLM until ${unlockDate.toLocaleDateString()} (mock)`);
+          depositForm.setAmount('');
+          depositForm.setAmountError(undefined);
+        } else {
+          const verb = pendingAction === 'deposit' ? 'deposited into' : 'withdrawn from';
+          Alert.alert('Success', `Funds ${verb} the Soroban vault.`);
+          if (pendingAction === 'withdraw') {
+            depositForm.setAmount('');
+            depositForm.setAmountError(undefined);
+          }
+        }
+      },
+    });
 
-      setConfirmVisible(false);
-      const verb = pendingAction === 'deposit' ? 'deposited into' : 'withdrawn from';
-      Alert.alert(
-        'Success',
-        hash
-          ? `Funds ${verb} the Soroban vault.\n\nTransaction: ${hash.slice(0, 8)}…${hash.slice(-8)}`
-          : `Funds ${verb} the vault (mock — no real funds moved).`
-      );
-    } catch (e: any) {
+    if (vaultAction.status.state === 'failed') {
       setConfirmVisible(false);
       Alert.alert(
-        `${pendingAction === 'deposit' ? 'Deposit' : 'Withdrawal'} failed`,
-        e.message
+        `${pendingAction === 'deposit' ? 'Deposit' : pendingAction === 'lock' ? 'Lock' : 'Withdrawal'} failed`,
+        vaultAction.status.error || 'Something went wrong.'
       );
     }
   };
-
   const cancelAction = () => {
     setConfirmVisible(false);
   };
@@ -263,6 +279,7 @@ export default function VaultScreen() {
         />
       ) : (
         <View style={styles.form}>
+       <VaultActionProgress state={vaultAction.state} errorMessage={vaultAction.status.error} />
 
           <Input
             label="Amount (XLM)"
