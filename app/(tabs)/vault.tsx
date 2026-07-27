@@ -98,6 +98,7 @@ export default function VaultScreen() {
     depositForm.setAmountError(undefined);
   };
 
+  const vaultAction = useVaultAction();
   const handleAction = async (action: 'deposit' | 'withdraw' | 'lock') => {
     // Validate amount
     let amountError: string | undefined;
@@ -128,13 +129,34 @@ export default function VaultScreen() {
     setConfirmVisible(true);
   };
 
-  const handleConfirmAction = async () => {
+ const handleConfirmAction = async () => {
     if (!publicKey || !pendingAction) return;
 
-    try {
-      if (pendingAction === 'lock') {
-        const unlockDate = new Date(Date.now() + LOCK_PERIOD_SECONDS * 1000);
-        await addLock(depositForm.amount, unlockDate.toISOString());
+    await vaultAction.run({
+      sign: async () => {
+        if (pendingAction === 'withdraw') {
+          const secret = await getSecretKey();
+          if (!secret) throw new Error(WALLET_SECRET_ACCESS_MESSAGE);
+          return secret;
+        }
+        return null;
+      },
+      submit: async () => {
+        if (pendingAction === 'lock') {
+          const unlockDate = new Date(Date.now() + LOCK_PERIOD_SECONDS * 1000);
+          await addLock(depositForm.amount, unlockDate.toISOString());
+          return { txHash: 'mock-lock' };
+        } else if (pendingAction === 'deposit') {
+          const hash = await depositForm.submit(publicKey, getSecretKey, deposit, walletBalance);
+          return { txHash: hash || 'mock-deposit' };
+        } else {
+          const secret = await getSecretKey();
+          if (!secret) throw new Error(WALLET_SECRET_ACCESS_MESSAGE);
+          const hash = await withdraw(secret, publicKey, depositForm.amount);
+          return { txHash: hash || 'mock-withdraw' };
+        }
+      },
+      confirm: async () => {
         setConfirmVisible(false);
 
         setReceiptData({
@@ -152,17 +174,23 @@ export default function VaultScreen() {
         return;
       }
 
-      let hash: string | null = null;
-      if (pendingAction === 'deposit') {
-        hash = await depositForm.submit(publicKey, getSecretKey, deposit, walletBalance);
-      } else {
-        const secret = await getSecretKey();
-        if (!secret) throw new Error(WALLET_SECRET_ACCESS_MESSAGE);
-        hash = await withdraw(secret, publicKey, depositForm.amount);
-        depositForm.setAmount('');
-        depositForm.setAmountError(undefined);
-      }
+        if (pendingAction === 'lock') {
+          const unlockDate = new Date(Date.now() + LOCK_PERIOD_SECONDS * 1000);
+          Alert.alert('Success', `Locked ${depositForm.amount} XLM until ${unlockDate.toLocaleDateString()} (mock)`);
+          depositForm.setAmount('');
+          depositForm.setAmountError(undefined);
+        } else {
+          const verb = pendingAction === 'deposit' ? 'deposited into' : 'withdrawn from';
+          Alert.alert('Success', `Funds ${verb} the Soroban vault.`);
+          if (pendingAction === 'withdraw') {
+            depositForm.setAmount('');
+            depositForm.setAmountError(undefined);
+          }
+        }
+      },
+    });
 
+    if (vaultAction.status.state === 'failed') {
       setConfirmVisible(false);
       const verb = pendingAction === 'deposit' ? 'deposited into' : 'withdrawn from';
       setReceiptData({
@@ -191,7 +219,6 @@ export default function VaultScreen() {
       setReceiptVisible(true);
     }
   };
-
   const cancelAction = () => {
     setConfirmVisible(false);
   };
@@ -306,6 +333,7 @@ export default function VaultScreen() {
         />
       ) : (
         <View style={styles.form}>
+       <VaultActionProgress state={vaultAction.state} errorMessage={vaultAction.status.error} />
 
           <Input
             label="Amount (XLM)"
