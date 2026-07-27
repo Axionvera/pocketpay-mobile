@@ -11,6 +11,7 @@ React Native Expo wallet for Stellar Testnet. The app aims to feel polished and 
 
 ## Documentation
 
+- [Architecture Readiness Review](./docs/architecture-readiness-review.md) - Feature boundaries, duplicated state, SDK integration blockers, security-sensitive areas, and test gaps
 - [Storage Guide](./docs/storage.md) - SecureStore vs AsyncStorage
 - [Contacts Guide](./docs/contacts.md) - Contact storage, backup limitations, and future export/import ideas
 - [Polyfills Guide](./docs/polyfills.md) - React Native polyfills and import order for Stellar SDK
