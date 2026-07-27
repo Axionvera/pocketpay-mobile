@@ -94,3 +94,19 @@ See the full [Security Guide](docs/security.md) for details on secret key handli
 ## License
 
 MIT
+
+## Security
+
+For mobile security review guidelines, see the [Mobile Security Review Checklist](docs/mobile-security-checklist.md).
+
+This checklist covers:
+- Secure storage
+- Wallet operations
+- Transaction flows
+- Vault operations
+- Diagnostics & logging
+- Clipboard & sharing
+- Network communication
+- User authentication
+- Secure code review
+- Compliance & privacy
