@@ -97,10 +97,6 @@ See [CHANGELOG.md](./CHANGELOG.md) for a full list of notable changes across rel
 
 See the full [Security Guide](docs/security.md) for details on secret key handling, device storage, backups, and safe development practices.
 - [Mobile Security Checklist](docs/mobile-security-checklist.md) - Checklist for reviewing security-sensitive changes
-## Analytics Design
-
-- [Analytics Security Design](docs/analytics-security-design.md) - Design guidelines for safe analytics events.
-
 ## License
 
 MIT

@@ -127,13 +127,17 @@ export default function SendScreen() {
     if (fieldErrors.destination || fieldErrors.amount || fieldErrors.memo) {
       return;
     }
-    // Navigate to the full review screen for the signer handoff flow
+    // Navigate to the signing confirmation screen
     router.push({
-      pathname: '/review-transaction',
+      pathname: '/sign-confirmation',
       params: {
+        source: publicKey || '',
         destination: destination.trim(),
         amount: amount.trim(),
+        assetCode: 'XLM',
         memo: memo.trim(),
+        fee: '100',
+        network: getNetworkLabel(),
       },
     });
   };
