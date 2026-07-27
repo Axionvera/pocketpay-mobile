@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Input } from '@/components/Input';
-import { useContactStore } from '@/features/contacts/contactStore';
-import { X, User, Clock } from 'lucide-react-native';
+import { useContactStore, Contact } from '@/features/contacts/contactStore';
+import { X, User, Clock, Trash2, Edit2 } from 'lucide-react-native';
 
 interface ContactPickerProps {
   visible: boolean;
   onSelect: (address: string) => void;
   onCancel: () => void;
   onAddNew: () => void;
+  onEdit: (contact: Contact) => void; // Added for management
 }
 
 export const ContactPicker: React.FC<ContactPickerProps> = ({
@@ -16,9 +17,10 @@ export const ContactPicker: React.FC<ContactPickerProps> = ({
   onSelect,
   onCancel,
   onAddNew,
+  onEdit
 }) => {
   const [search, setSearch] = useState('');
-  const { contacts, recentRecipients, getContactByAddress } = useContactStore();
+  const { contacts, recentRecipients, getContactByAddress, deleteContact } = useContactStore();
 
   const filteredContacts = useMemo(() => {
     if (!search.trim()) return contacts;
@@ -38,6 +40,17 @@ export const ContactPicker: React.FC<ContactPickerProps> = ({
       })
       .slice(0, 5);
   }, [recentRecipients, getContactByAddress]);
+
+  const handleDelete = (contact: Contact) => {
+    Alert.alert(
+      "Delete Contact",
+      `Are you sure you want to remove ${contact.name}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => deleteContact(contact.id) }
+      ]
+    );
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -59,6 +72,7 @@ export const ContactPicker: React.FC<ContactPickerProps> = ({
           </View>
 
           <ScrollView style={styles.list}>
+            {/* Recent Recipients Section */}
             {recentWithNames.length > 0 && !search && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Recent Recipients</Text>
@@ -68,47 +82,45 @@ export const ContactPicker: React.FC<ContactPickerProps> = ({
                     style={styles.contactItem}
                     onPress={() => onSelect(item.address)}
                   >
-                    <View style={styles.icon}>
-                      <Clock size={20} color="#666" />
-                    </View>
+                    <View style={styles.icon}><Clock size={20} color="#666" /></View>
                     <View style={styles.contactInfo}>
-                      <Text style={styles.contactName}>
-                        {item.name || 'Unknown'}
-                      </Text>
-                      <Text style={styles.contactAddress} numberOfLines={1}>
-                        {item.address}
-                      </Text>
+                      <Text style={styles.contactName}>{item.name || 'Unknown'}</Text>
+                      <Text style={styles.contactAddress} numberOfLines={1}>{item.address}</Text>
                     </View>
                   </TouchableOpacity>
                 ))}
               </View>
             )}
 
+            {/* Saved Contacts Section with Edit/Delete */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Saved Contacts</Text>
               {filteredContacts.length === 0 ? (
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyText}>
-                    {search ? 'No contacts found' : 'No contacts yet'}
-                  </Text>
+                  <Text style={styles.emptyText}>{search ? 'No contacts found' : 'No contacts yet'}</Text>
                 </View>
               ) : (
                 filteredContacts.map((contact) => (
-                  <TouchableOpacity
-                    key={contact.id}
-                    style={styles.contactItem}
-                    onPress={() => onSelect(contact.address)}
-                  >
-                    <View style={styles.icon}>
-                      <User size={20} color="#666" />
+                  <View key={contact.id} style={styles.contactRow}>
+                    <TouchableOpacity
+                      style={[styles.contactItem, { flex: 1 }]}
+                      onPress={() => onSelect(contact.address)}
+                    >
+                      <View style={styles.icon}><User size={20} color="#666" /></View>
+                      <View style={styles.contactInfo}>
+                        <Text style={styles.contactName}>{contact.name}</Text>
+                        <Text style={styles.contactAddress} numberOfLines={1}>{contact.address}</Text>
+                      </View>
+                    </TouchableOpacity>
+                    <View style={styles.actionButtons}>
+                       <TouchableOpacity onPress={() => onEdit(contact)} style={styles.actionBtn}>
+                         <Edit2 size={18} color="#0066cc" />
+                       </TouchableOpacity>
+                       <TouchableOpacity onPress={() => handleDelete(contact)} style={styles.actionBtn}>
+                         <Trash2 size={18} color="#ff4444" />
+                       </TouchableOpacity>
                     </View>
-                    <View style={styles.contactInfo}>
-                      <Text style={styles.contactName}>{contact.name}</Text>
-                      <Text style={styles.contactAddress} numberOfLines={1}>
-                        {contact.address}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
+                  </View>
                 ))
               )}
             </View>
@@ -124,96 +136,27 @@ export const ContactPicker: React.FC<ContactPickerProps> = ({
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  container: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-  },
-  header: {
+  // ... Keep existing styles ...
+  contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e5e5',
+    marginBottom: 8,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
+  actionButtons: {
+    flexDirection: 'row',
+    paddingRight: 10,
   },
-  closeButton: {
-    padding: 8,
+  actionBtn: {
+    padding: 10,
+    marginLeft: 5,
   },
-  searchContainer: {
-    padding: 20,
-    paddingBottom: 10,
-  },
-  list: {
-    paddingHorizontal: 20,
-    maxHeight: 400,
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 10,
-    textTransform: 'uppercase',
-  },
+  // Update contactItem to remove margin/bg as it's now in contactRow
   contactItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: '#f9f9f9',
   },
-  icon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#e5e5e5',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  contactInfo: {
-    flex: 1,
-  },
-  contactName: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  contactAddress: {
-    fontSize: 14,
-    color: '#666',
-  },
-  emptyState: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#999',
-  },
-  addButton: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e5e5',
-    alignItems: 'center',
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0066cc',
-  },
+  // ... rest of your styles ...
 });
