@@ -6,20 +6,24 @@ import { VaultConfirmModal } from '../../src/components/VaultConfirmModal';
 import { VaultIntroModal } from '../../src/components/VaultIntroModal';
 import { VaultLockEducationModal } from '../../src/components/VaultLockEducationModal';
 import { VaultUnavailableState } from '../../src/components/VaultUnavailableState';
+import { VaultActionProgress } from '../../src/components/VaultActionProgress';
 import { Input } from '../../src/components/Input';
 import { AsyncActionButton } from '../../src/components/AsyncActionButton';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useVault } from '../../src/hooks/useVault';
 import { useVaultAvailability } from '../../src/hooks/useVaultAvailability';
+import { useVaultCapabilities } from '../../src/hooks/useVaultCapabilities';
 import { useVaultDepositForm } from '../../src/features/vault/useVaultDepositForm';
+import { useVaultAction } from '../../src/hooks/useVaultAction';
 import { useWalletStore } from '../../src/store/walletStore';
 import { formatTimeRemaining } from '../../src/utils/lockTime';
 import { validateAmount } from '../../src/utils/validation';
 import { WALLET_SECRET_ACCESS_MESSAGE } from '../../src/utils/walletStorageErrors';
-import { PiggyBank, Info, Lock, HelpCircle, ShieldCheck, AlertTriangle } from 'lucide-react-native';
+import { PiggyBank, Info, Lock, HelpCircle, ShieldCheck, AlertTriangle, Ban } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VaultReceiptModal } from "../../src/components/VaultReceiptModal";
+import { isActionSupported, getActionUnsupportedReason, getActionUnsupportedDetail } from '../../src/utils/vaultCapabilities';
 
 const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const VAULT_INTRO_SEEN_KEY = '@pocketpay_vault_intro_seen';
@@ -48,6 +52,13 @@ export default function VaultScreen() {
     deposit,
     withdraw,
   } = useVault();
+
+  // Issue #331: Vault capability gates
+  const capabilities = useVaultCapabilities();
+  const canDeposit = isActionSupported(capabilities, 'deposit');
+  const canWithdraw = isActionSupported(capabilities, 'withdraw');
+  const canLock = isActionSupported(capabilities, 'lock');
+  const canUnlock = isActionSupported(capabilities, 'unlock');
 
   // Vault form
   const depositForm = useVaultDepositForm();
@@ -158,65 +169,33 @@ export default function VaultScreen() {
       },
       confirm: async () => {
         setConfirmVisible(false);
-
+        const hash = vaultAction.status.txHash;
         setReceiptData({
-          actionType: "lock",
+          actionType: pendingAction as 'deposit' | 'withdraw' | 'lock',
           amount: depositForm.amount,
-          status: "Success",
+          status: vaultAction.status.state === 'confirmed' ? 'Success' : 'Failed',
           date: new Date().toLocaleString(),
-          transactionHash: null,
+          transactionHash: hash || null,
         });
-
         setReceiptVisible(true);
 
         depositForm.setAmount("");
         depositForm.setAmountError(undefined);
-        return;
-      }
-
-        if (pendingAction === 'lock') {
-          const unlockDate = new Date(Date.now() + LOCK_PERIOD_SECONDS * 1000);
-          Alert.alert('Success', `Locked ${depositForm.amount} XLM until ${unlockDate.toLocaleDateString()} (mock)`);
-          depositForm.setAmount('');
-          depositForm.setAmountError(undefined);
-        } else {
-          const verb = pendingAction === 'deposit' ? 'deposited into' : 'withdrawn from';
-          Alert.alert('Success', `Funds ${verb} the Soroban vault.`);
-          if (pendingAction === 'withdraw') {
-            depositForm.setAmount('');
-            depositForm.setAmountError(undefined);
-          }
-        }
       },
     });
 
     if (vaultAction.status.state === 'failed') {
       setConfirmVisible(false);
-      const verb = pendingAction === 'deposit' ? 'deposited into' : 'withdrawn from';
       setReceiptData({
-        actionType: pendingAction,
+        actionType: pendingAction as 'deposit' | 'withdraw' | 'lock',
         amount: depositForm.amount,
-        status: "Success",
-        date: new Date().toLocaleString(),
-        transactionHash: hash,
-      });
-
-      setReceiptVisible(true);
-
-      depositForm.setAmount("");
-      depositForm.setAmountError(undefined);
-    } catch (e: any) {
-      setConfirmVisible(false);
-
-      setReceiptData({
-        actionType: pendingAction,
-        amount: depositForm.amount,
-        status: "Success",
+        status: 'Failed',
         date: new Date().toLocaleString(),
         transactionHash: null,
       });
-
       setReceiptVisible(true);
+      depositForm.setAmount("");
+      depositForm.setAmountError(undefined);
     }
   };
   const cancelAction = () => {
@@ -292,11 +271,13 @@ export default function VaultScreen() {
         )}
       </View>
 
+      {/* Issue #331: Pass unlock capability to lock list */}
       <VaultLockList
         locks={locks}
         isLoading={isLoadingLocks}
-        onUnlock={handleUnlock}
+        onUnlock={canUnlock ? handleUnlock : undefined}
         onInfoPress={() => setLockEducationVisible(true)}
+        unlockDisabledReason={!canUnlock ? getActionUnsupportedReason(capabilities, 'unlock') : undefined}
       />
 
 
@@ -333,7 +314,22 @@ export default function VaultScreen() {
         />
       ) : (
         <View style={styles.form}>
-       <VaultActionProgress state={vaultAction.state} errorMessage={vaultAction.status.error} />
+          <VaultActionProgress state={vaultAction.state} errorMessage={vaultAction.status.error} />
+
+          {/* Issue #331: Capability gate explanations */}
+          {(!canDeposit || !canWithdraw || !canLock) && (
+            <View style={styles.capabilityNotice}>
+              <Ban color={colors.warning} size={18} style={{ marginRight: SIZES.sm }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.capabilityNoticeTitle}>Some actions are unavailable</Text>
+                <Text style={styles.capabilityNoticeText}>
+                  {getActionUnsupportedReason(capabilities, 'deposit')}
+                  {getActionUnsupportedReason(capabilities, 'withdraw') ? `\nWithdraw: ${getActionUnsupportedReason(capabilities, 'withdraw')}` : ''}
+                  {getActionUnsupportedReason(capabilities, 'lock') ? `\nLock: ${getActionUnsupportedReason(capabilities, 'lock')}` : ''}
+                </Text>
+              </View>
+            </View>
+          )}
 
           <Input
             label="Amount (XLM)"
@@ -346,30 +342,30 @@ export default function VaultScreen() {
           />
           <View style={styles.actions}>
             <AsyncActionButton
-              title="Deposit"
+              title={canDeposit ? 'Deposit' : 'Deposit Unavailable'}
               onPress={() => handleAction('deposit')}
               isLoading={depositForm.isSubmitting || (isSubmitting && pendingAction === 'deposit')}
               loadingText="Depositing…"
-              disabled={isLoadingBalance}
+              disabled={!canDeposit || isLoadingBalance}
               style={styles.actionButton}
             />
             <AsyncActionButton
-              title="Withdraw"
+              title={canWithdraw ? 'Withdraw' : 'Withdraw Unavailable'}
               variant="secondary"
               onPress={() => handleAction('withdraw')}
               isLoading={isSubmitting && pendingAction === 'withdraw'}
               loadingText="Withdrawing…"
-              disabled={isLoadingBalance || depositForm.isSubmitting}
+              disabled={!canWithdraw || isLoadingBalance || depositForm.isSubmitting}
               style={styles.actionButton}
             />
           </View>
           <AsyncActionButton
-            title="Set Aside for 30 Days"
+            title={canLock ? 'Set Aside for 30 Days' : 'Lock Unavailable'}
             variant="outline"
             onPress={() => handleAction('lock')}
             isLoading={isSubmitting && pendingAction === 'lock'}
             loadingText="Locking…"
-            disabled={isSubmitting || depositForm.isSubmitting}
+            disabled={!canLock || isSubmitting || depositForm.isSubmitting}
             style={styles.lockButton}
           />
           {locks.length === 0 ? (
@@ -502,6 +498,27 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   lockButton: {
     marginTop: SIZES.md,
+  },
+  capabilityNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255, 196, 0, 0.08)',
+    padding: SIZES.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 196, 0, 0.25)',
+    marginBottom: SIZES.md,
+  },
+  capabilityNoticeTitle: {
+    color: colors.warning,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  capabilityNoticeText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
   },
   mockLockSection: {
     marginTop: SIZES.xl,
