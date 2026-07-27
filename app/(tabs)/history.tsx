@@ -18,6 +18,7 @@ import { TransactionListItem } from '../../src/components/TransactionListItem';
 import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
 import { EmptyState } from '../../src/components/EmptyState';
 import { WalletEmptyState } from '../../src/components/WalletEmptyState';
+import { LoadingState } from '../../src/components/LoadingState';
 import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
 import { groupTransactionsByDate } from '../../src/utils/transactions';
 
@@ -49,10 +50,12 @@ const ListFooter: React.FC<{
 
   if (isLoadingMore) {
     return (
-      <View style={styles.footer} testID="loading-more-indicator">
-        <ActivityIndicator color={colors.primary} size="small" />
-        <Text style={styles.footerText}>Loading older transactions…</Text>
-      </View>
+      <LoadingState
+        inline
+        message="Loading older transactions…"
+        style={styles.footerLoading}
+        testID="loading-more-indicator"
+      />
     );
   }
 
@@ -305,6 +308,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: SIZES.lg,
     gap: SIZES.sm,
+  },
+  // LoadingState supplies its own row layout and spacing, so this only needs
+  // to match the sibling footer's vertical rhythm.
+  footerLoading: {
+    paddingVertical: SIZES.lg,
   },
   footerText: {
     color: colors.textMuted,

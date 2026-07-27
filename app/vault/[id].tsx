@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useVault } from '../../src/hooks/useVault';
@@ -8,6 +8,7 @@ import { VaultUnavailableState } from '../../src/components/VaultUnavailableStat
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { Lock } from '../../src/store/vaultStore';
 import { VaultLockDetail } from '../../src/components/VaultLockDetail';
+import { LoadingState } from '../../src/components/LoadingState';
 
 export default function VaultLockDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -35,9 +36,9 @@ export default function VaultLockDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading lock details...</Text>
+      <View style={styles.container}>
+        <Stack.Screen options={{ title: 'Vault Lock Details' }} />
+        <LoadingState fullScreen message="Loading lock details..." />
       </View>
     );
   }
@@ -70,10 +71,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   centered: {
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  loadingText: {
-    color: colors.textSecondary,
-    marginTop: SIZES.md,
   },
   errorText: {
     color: colors.error,

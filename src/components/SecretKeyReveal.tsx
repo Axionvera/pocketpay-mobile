@@ -4,6 +4,7 @@ import { Eye, EyeOff, Copy } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { RADIUS, SIZES, ThemeColors } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useConfirm } from '../hooks/useConfirm';
 import { Button } from './Button';
 
 interface SecretKeyRevealProps {
@@ -21,6 +22,7 @@ export const SecretKeyReveal: React.FC<SecretKeyRevealProps> = ({
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { confirm, confirmationDialog } = useConfirm();
   const [isRevealed, setIsRevealed] = useState(false);
 
   useEffect(() => {
@@ -41,18 +43,13 @@ export const SecretKeyReveal: React.FC<SecretKeyRevealProps> = ({
       return;
     }
 
-    Alert.alert(
-      warningTitle,
-      warningMessage,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reveal',
-          style: 'destructive',
-          onPress: () => setIsRevealed(true)
-        }
-      ]
-    );
+    void confirm({
+      title: warningTitle,
+      message: warningMessage,
+      confirmLabel: 'Reveal',
+      destructive: true,
+      onConfirm: () => setIsRevealed(true),
+    });
   };
 
   const handleCopy = async () => {
@@ -107,6 +104,8 @@ export const SecretKeyReveal: React.FC<SecretKeyRevealProps> = ({
           )}
         </View>
       </View>
+
+      {confirmationDialog}
     </View>
   );
 };
