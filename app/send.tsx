@@ -31,6 +31,7 @@ import {
   ScanLine,
   ChevronDown,
   User,
+  Info,
 } from "lucide-react-native";
 import { ScreenHeader } from "@/components";
 
@@ -50,9 +51,13 @@ export default function SendScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { publicKey, getSecretKey, refreshWalletData, balance } =
+  const { publicKey, getSecretKey, refreshWalletData, balance, fundingStatus } =
     useWalletStore();
   const contacts = useAppStore((state) => state.contacts);
+
+  // Issue #330: Disable send when account is unfunded
+  const isUnfunded = fundingStatus === 'unfunded';
+  const sendDisabled = isUnfunded || !publicKey;
 
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("");
@@ -156,6 +161,16 @@ export default function SendScreen() {
           subtitle={`Available Balance: ${formatAmount(balance)} XLM`}
         />
 
+        {/* Issue #330: Show unfunded account warning */}
+        {isUnfunded && (
+          <View style={styles.unfundedWarning}>
+            <Info color={colors.warning} size={18} style={{ marginRight: SIZES.sm }} />
+            <Text style={styles.unfundedWarningText}>
+              Your account has not been funded yet. Fund it with Friendbot on the home screen before sending.
+            </Text>
+          </View>
+        )}
+
         <View style={styles.form}>
           <FormField
             label="Destination Address (Public Key)"
@@ -246,10 +261,11 @@ export default function SendScreen() {
         </View>
 
         <AsyncActionButton
-          title="Send Payment"
+          title={sendDisabled ? 'Funding Required' : 'Send Payment'}
           onPress={handleSend}
           isLoading={isLoading}
           loadingText="Sending…"
+          disabled={sendDisabled}
           style={styles.sendButton}
         />
       </KeyboardAvoidingView>
@@ -334,7 +350,23 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 13,
       fontWeight: "500",
     },
-    sendButton: {
-      marginBottom: SIZES.xxl,
-    },
+  unfundedWarning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255, 196, 0, 0.1)',
+    padding: SIZES.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 196, 0, 0.25)',
+    marginBottom: SIZES.md,
+  },
+  unfundedWarningText: {
+    flex: 1,
+    color: colors.warning,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  sendButton: {
+    marginBottom: SIZES.xxl,
+  },
   });

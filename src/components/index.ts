@@ -16,3 +16,7 @@ export { SigningConfirmModal } from "./SigningConfirmModal";
 export { VaultUnavailableState } from "./VaultUnavailableState";
 export { StatusBadge } from "./StatusBadge";
 export type { BadgeTone } from "./StatusBadge";
+export { BalanceDisplay } from "./BalanceDisplay";
+export type { BalanceDisplayProps } from "./BalanceDisplay";
+export { FundingStatusBanner } from "./FundingStatusBanner";
+export type { FundingStatus, FundingStatusBannerProps } from "./FundingStatusBanner";
