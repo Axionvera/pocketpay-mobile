@@ -6,6 +6,7 @@ import { VaultConfirmModal } from '../../src/components/VaultConfirmModal';
 import { VaultIntroModal } from '../../src/components/VaultIntroModal';
 import { VaultLockEducationModal } from '../../src/components/VaultLockEducationModal';
 import { VaultUnavailableState } from '../../src/components/VaultUnavailableState';
+import { VaultErrorBanner } from '../../src/components/VaultErrorBanner';
 import { LoadingState } from '../../src/components/LoadingState';
 import { VaultActionProgress } from '../../src/components/VaultActionProgress';
 import { Input } from '../../src/components/Input';
@@ -46,12 +47,14 @@ export default function VaultScreen() {
     isLoadingLocks,
     isSubmitting,
     balanceError,
+    vaultError,
     loadBalance,
     loadLocks,
     addLock,
     unlockLock,
     deposit,
     withdraw,
+    clearVaultError,
   } = useVault();
 
   // Issue #331: Vault capability gates
@@ -320,6 +323,16 @@ export default function VaultScreen() {
       ) : (
         <View style={styles.form}>
           <VaultActionProgress state={vaultAction.state} errorMessage={vaultAction.status.error} />
+
+          {vaultError && (
+            <VaultErrorBanner
+              guidance={vaultError}
+              onRetry={() => {
+                clearVaultError();
+              }}
+              onDismiss={clearVaultError}
+            />
+          )}
 
           {/* Issue #331: Capability gate explanations */}
           {(!canDeposit || !canWithdraw || !canLock) && (

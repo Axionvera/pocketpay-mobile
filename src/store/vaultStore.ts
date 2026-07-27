@@ -17,6 +17,7 @@ import {
   evaluateWithdrawalEligibility,
   toWithdrawalErrorCode,
 } from '../features/vault/maturedLockWithdrawal';
+import { classifyVaultError, type VaultRecoveryGuidance } from '../utils/vaultErrors';
 
 const LOCKS_KEY = '@pocketpay_vault_locks';
 
@@ -37,6 +38,8 @@ interface VaultState {
   isLoadingLocks: boolean;
   isSubmitting: boolean;
   balanceError: string | null;
+  /** Classified recovery guidance for the most recent vault action failure. */
+  vaultError: VaultRecoveryGuidance | null;
 
   loadBalance: (publicKey: string) => Promise<void>;
   loadLocks: () => Promise<void>;
@@ -44,6 +47,8 @@ interface VaultState {
   unlockLock: (lockId: string) => Promise<void>;
   deposit: (secretKey: string, publicKey: string, amount: string) => Promise<string | null>;
   withdraw: (secretKey: string, publicKey: string, amount: string) => Promise<string | null>;
+  /** Clear the current vault error state. */
+  clearVaultError: () => void;
   /**
    * Withdraw a single matured lock back to the wallet.
    *
@@ -78,6 +83,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   isLoadingLocks: false,
   isSubmitting: false,
   balanceError: null,
+  vaultError: null,
+
+  clearVaultError: () => set({ vaultError: null }),
 
   loadBalance: async (publicKey: string) => {
     set({ isLoadingBalance: true, balanceError: null });
@@ -116,7 +124,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   },
 
   addLock: async (amount: string, unlockDate: string) => {
-    set({ isSubmitting: true });
+    set({ isSubmitting: true, vaultError: null });
     try {
       const newLock: Lock = {
         id: Date.now().toString(),
@@ -129,17 +137,23 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       const updatedLocks = [...get().locks, newLock];
       await AsyncStorage.setItem(LOCKS_KEY, JSON.stringify(updatedLocks));
       set({ locks: updatedLocks });
+    } catch (err: unknown) {
+      set({ vaultError: classifyVaultError(err) });
+      throw err;
     } finally {
       set({ isSubmitting: false });
     }
   },
 
   unlockLock: async (lockId: string) => {
-    set({ isSubmitting: true });
+    set({ isSubmitting: true, vaultError: null });
     try {
       const updatedLocks = get().locks.filter(lock => lock.id !== lockId);
       await AsyncStorage.setItem(LOCKS_KEY, JSON.stringify(updatedLocks));
       set({ locks: updatedLocks });
+    } catch (err: unknown) {
+      set({ vaultError: classifyVaultError(err) });
+      throw err;
     } finally {
       set({ isSubmitting: false });
     }
@@ -149,7 +163,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
   // Returns the transaction hash on-chain, or null in mock mode.
   deposit: async (secretKey: string, publicKey: string, amount: string) => {
-    set({ isSubmitting: true });
+    set({ isSubmitting: true, vaultError: null });
     try {
       let hash: string | null = null;
       if (get().isConfigured) {
@@ -159,13 +173,16 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       }
       await get().loadBalance(publicKey);
       return hash;
+    } catch (err: unknown) {
+      set({ vaultError: classifyVaultError(err) });
+      throw err;
     } finally {
       set({ isSubmitting: false });
     }
   },
 
   withdraw: async (secretKey: string, publicKey: string, amount: string) => {
-    set({ isSubmitting: true });
+    set({ isSubmitting: true, vaultError: null });
     try {
       let hash: string | null = null;
       if (get().isConfigured) {
@@ -175,6 +192,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       }
       await get().loadBalance(publicKey);
       return hash;
+    } catch (err: unknown) {
+      set({ vaultError: classifyVaultError(err) });
+      throw err;
     } finally {
       set({ isSubmitting: false });
     }
@@ -192,7 +212,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     }
 
     const isConfigured = get().isConfigured;
-    set({ isSubmitting: true });
+    set({ isSubmitting: true, vaultError: null });
     try {
       let hash: string | null = null;
 

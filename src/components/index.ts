@@ -25,3 +25,5 @@ export { BalanceDisplay } from "./BalanceDisplay";
 export type { BalanceDisplayProps } from "./BalanceDisplay";
 export { FundingStatusBanner } from "./FundingStatusBanner";
 export type { FundingStatus, FundingStatusBannerProps } from "./FundingStatusBanner";
+export { VaultErrorBanner } from "./VaultErrorBanner";
+export type { VaultErrorBannerProps } from "./VaultErrorBanner";
