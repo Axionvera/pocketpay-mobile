@@ -1,5 +1,7 @@
 # Mobile Security Review Checklist
 
+This checklist should be reviewed by contributors when making changes that affect security-sensitive parts of the PocketPay mobile app.
+
 ## Overview
 
 This checklist provides a comprehensive security review guide for mobile changes involving wallets, transactions, vaults, diagnostics, and storage. Use this checklist during PR reviews to ensure security-sensitive changes are properly vetted.
@@ -19,6 +21,9 @@ Mobile applications handle sensitive financial data, private keys, and transacti
   - Secrets are stored in secure enclave / hardware-backed keystore
   - Biometric authentication is used for accessing sensitive data
   - Data is encrypted at rest using platform-specific encryption
+  - **All stored secrets use `expo-secure-store` (Keychain on iOS, Android Keystore on Android)**
+  - **No fallback to `AsyncStorage` for any secret material**
+  - **Add error handling for SecureStore read/write failures without auto‑deleting keys**
 
 - [ ] **Key Management**
   - Keys are generated and stored securely
@@ -63,6 +68,7 @@ Mobile applications handle sensitive financial data, private keys, and transacti
   - Import process requires authentication
   - Imported keys are securely stored
   - Import history is not stored
+  - **Verify that any new code handling keys reads from `expo-secure-store` and does not persist them to `AsyncStorage` or the filesystem**
 
 - [ ] **Wallet Export**
   - Export requires strong authentication
@@ -75,6 +81,7 @@ Mobile applications handle sensitive financial data, private keys, and transacti
   - User is warned about irreversible action
   - Keys are securely wiped
   - Backup recommendation is shown
+  - **Verify that any reset flow clearly warns users about key loss and requires manual backup confirmation**
 
 ### Common Vulnerabilities
 
@@ -96,6 +103,9 @@ Mobile applications handle sensitive financial data, private keys, and transacti
   - Transaction details are clearly displayed
   - Amount and recipient are shown in full
   - User can verify before signing
+  - **Confirm that transaction signing occurs via the `Signer` abstraction and that the secret never leaves SecureStore**
+  - **When adding new signing pathways, ensure they respect the existing `Signer` interface and do not introduce direct key usage**
+  - **Validate that any external signer integration follows the documented handoff design**
 
 - [ ] **Transaction Validation**
   - Amount is within valid range
@@ -175,18 +185,26 @@ Mobile applications handle sensitive financial data, private keys, and transacti
   - No transaction payloads are logged
   - No personally identifiable information (PII) is logged
   - Log level is appropriate for environment
+  - **Audit new log statements to ensure no sensitive data (secret keys, mnemonics, seed phrases) are included**
+  - **Use `console.log` for non-sensitive debugging only under `__DEV__` guards**
+  - **Remove or mask error objects that may contain request parameters or private data before logging**
 
 - [ ] **Error Messages**
   - Error messages are not exposing sensitive data
   - User-facing errors are generic
   - Developer errors are detailed
   - Error context is sanitized
+  - **Confirm that storage errors surface appropriate user‑friendly messages and do not purge the secret key**
+  - **Ensure that error boundaries do not expose stack traces or internal details in production**
+  - **Route unexpected failures through `reportError` so logs/diagnostics stay redacted**
 
 - [ ] **Analytics**
   - Analytics events do not contain PII
   - No transaction details in analytics
   - No wallet data in analytics
   - Analytics data is aggregated and anonymized
+  - **If adding analytics or telemetry, exclude any fields that could contain secret keys or personal identifiers**
+  - **Review that any performance logs respect privacy guidelines**
 
 - [ ] **Diagnostics**
   - Diagnostic data is opt-in
@@ -214,6 +232,7 @@ Mobile applications handle sensitive financial data, private keys, and transacti
   - Clipboard is cleared after a timeout
   - Users are warned about clipboard risks
   - Clipboard access is monitored
+  - **Verify that any UI that copies public keys to the clipboard includes a warning about clipboard privacy**
 
 - [ ] **Sharing**
   - Sharing requires user confirmation
@@ -225,6 +244,8 @@ Mobile applications handle sensitive financial data, private keys, and transacti
   - Screenshots are blocked on sensitive screens
   - App content is hidden in app switcher
   - Users are warned about screenshot risks
+  - **Avoid displaying secret keys or QR codes containing private information on-screen in screenshots**
+  - **Ensure test screenshots used in documentation do not contain real secret keys**
 
 ### Common Vulnerabilities
 
@@ -311,6 +332,7 @@ Mobile applications handle sensitive financial data, private keys, and transacti
   - No debug code in production
   - No commented-out sensitive code
   - No insecure dependencies
+  - **If exposing a secret for debugging, guard with `if (__DEV__)` and ensure it is removed before production**
 
 - [ ] **Dependencies**
   - Dependencies are up-to-date
@@ -323,6 +345,7 @@ Mobile applications handle sensitive financial data, private keys, and transacti
   - Edge cases are tested
   - Negative scenarios are tested
   - Fuzzing is implemented
+  - **Tests added/updated to cover security-critical paths**
 
 ---
 
@@ -442,6 +465,14 @@ Mobile applications handle sensitive financial data, private keys, and transacti
 
 ---
 
+## Peer Review Checklist
+
+- [ ] All above items have been checked for the modified code
+- [ ] Documentation updated to reflect any new security-relevant behavior
+- [ ] Tests added/updated to cover security-critical paths
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
@@ -449,9 +480,14 @@ Mobile applications handle sensitive financial data, private keys, and transacti
 | 1.0 | 2024-07-25 | Initial release |
 | 1.1 | 2024-07-26 | Added anti-patterns section |
 | 1.2 | 2024-07-27 | Added tools & resources |
+| 1.3 | 2024-07-27 | Merged with PocketPay-specific security checklist |
 
 ---
 
 ## Feedback
 
 If you have suggestions for improving this checklist, please open an issue or submit a PR with your recommendations.
+
+---
+
+*This checklist is intended to maintain the high security standards of PocketPay on the Stellar Testnet.*

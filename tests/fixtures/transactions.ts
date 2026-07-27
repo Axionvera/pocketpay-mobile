@@ -8,6 +8,7 @@ export const transactionFixtures = [
     asset: 'XLM',
     timestamp: '2024-01-15T10:30:00Z',
     hash: 'abc123def456abc123def456abc123def456abc123def456abc123def456abcd',
+    status: 'confirmed',
   },
   {
     id: 'tx2',
@@ -18,6 +19,7 @@ export const transactionFixtures = [
     asset: 'USDC',
     timestamp: '2024-01-15T11:00:00Z',
     hash: 'def789ghi012def789ghi012def789ghi012def789ghi012def789ghi012def7',
+    status: 'pending',
   },
   {
     id: 'tx3',
@@ -28,5 +30,17 @@ export const transactionFixtures = [
     asset: 'XLM',
     timestamp: '2024-01-14T09:00:00Z',
     hash: 'ghi345jkl678ghi345jkl678ghi345jkl678ghi345jkl678ghi345jkl678ghi3',
+    status: 'failed',
+  },
+  {
+    id: 'tx4',
+    type: 'payment',
+    from: 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H',
+    to: 'GDNOEY2L6EGCMAYNZWJN6K3K6TJJKAKNQJQJWY5HXLFY3LJQY7JJ6NVD',
+    amount: '5.0000000',
+    asset: 'XLM',
+    timestamp: '2024-01-13T08:00:00Z',
+    hash: 'jkl901mno234jkl901mno234jkl901mno234jkl901mno234jkl901mno234jkl9',
+    // No status field — mirrors real Horizon records, which never carry one.
   },
 ];

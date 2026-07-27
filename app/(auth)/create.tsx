@@ -1,16 +1,20 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button } from '../../src/components/Button';
-import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
+import { AsyncActionButton } from '../../src/components/AsyncActionButton';
+import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { generateKeypair } from '../../src/services/stellar';
 import { useWalletStore } from '../../src/store/walletStore';
+import { WALLET_SAVE_FAILURE_MESSAGE } from '../../src/utils/walletStorageErrors';
 import { AlertTriangle, Info, Shield, CheckCircle } from 'lucide-react-native';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
 
 export default function CreateWalletScreen() {
   const router = useRouter();
-  const { setWallet } = useWalletStore();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { setWallet, markBackupPending } = useWalletStore();
   const [keypair, setKeypair] = useState<{ publicKey: string; secretKey: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -33,16 +37,17 @@ export default function CreateWalletScreen() {
       'This key is the only way to access your wallet. Without it, funds cannot be recovered. Have you saved it?',
       [
         { text: 'Go Back', style: 'cancel' },
-        { 
-          text: 'Yes, I Saved It', 
+        {
+          text: 'Yes, I Saved It',
           onPress: async () => {
             setIsLoading(true);
             const saved = await setWallet(keypair.publicKey, keypair.secretKey);
             setIsLoading(false);
             if (!saved) {
-              Alert.alert('Wallet Not Saved', 'Failed to persist wallet securely. Please try again.');
+              Alert.alert('Wallet Not Saved', WALLET_SAVE_FAILURE_MESSAGE);
               return;
             }
+            await markBackupPending();
             setIsSuccess(true);
           }
         }
@@ -60,14 +65,14 @@ export default function CreateWalletScreen() {
       <View style={styles.container}>
         <View style={styles.content}>
           <View style={styles.successIcon}>
-            <CheckCircle color={COLORS.success} size={64} />
+            <CheckCircle color={colors.success} size={64} />
           </View>
           <Text style={styles.title}>Wallet Created!</Text>
           <Text style={styles.subtitle}>
             Your Testnet wallet is ready. Fund it with the Friendbot on the home screen to start sending test XLM.
           </Text>
         </View>
-        <Button title="Go to Wallet" onPress={handleGoToWallet} />
+        <AsyncActionButton title="Go to Wallet" onPress={handleGoToWallet} />
       </View>
     );
   }
@@ -78,7 +83,7 @@ export default function CreateWalletScreen() {
       <View style={styles.container}>
         <View style={styles.content}>
           <View style={styles.infoBanner}>
-            <Info color={COLORS.primary} size={20} />
+            <Info color={colors.primary} size={20} />
             <Text style={styles.infoText}>
               You're on <Text style={styles.infoBold}>Stellar Testnet</Text>. Wallets use test funds only — no real value.
             </Text>
@@ -89,7 +94,7 @@ export default function CreateWalletScreen() {
             A new keypair will be generated on your device. Your secret key stays private and never leaves this phone.
           </Text>
         </View>
-        <Button title="Generate Keypair" onPress={handleGenerate} />
+        <AsyncActionButton title="Generate Keypair" onPress={handleGenerate} />
       </View>
     );
   }
@@ -98,7 +103,7 @@ export default function CreateWalletScreen() {
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer} bounces={false}>
       <View style={styles.warningCard}>
-        <AlertTriangle color={COLORS.warning} size={32} style={{ marginBottom: SIZES.sm }} />
+        <AlertTriangle color={colors.warning} size={32} style={{ marginBottom: SIZES.sm }} />
         <Text style={styles.warningTitle}>Save Your Secret Key</Text>
         <Text style={styles.warningText}>
           This is the <Text style={styles.warningBold}>only way</Text> to access your wallet. Anyone with this key can control your funds. Store it safely — it cannot be recovered.
@@ -118,15 +123,15 @@ export default function CreateWalletScreen() {
       </View>
 
       <View style={styles.securityNote}>
-        <Shield color={COLORS.textMuted} size={16} />
+        <Shield color={colors.textMuted} size={16} />
         <Text style={styles.securityNoteText}>
           Copy and store your secret key offline. Never share it with anyone.
         </Text>
       </View>
 
-      <Button 
-        title="I've Saved It — Continue" 
-        onPress={handleContinue} 
+      <AsyncActionButton
+        title="I've Saved It — Continue"
+        onPress={handleContinue}
         isLoading={isLoading}
         style={{ marginTop: SIZES.xl }}
       />
@@ -134,17 +139,17 @@ export default function CreateWalletScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     padding: SIZES.xl,
     justifyContent: 'space-between',
     paddingBottom: SIZES.xxl,
   },
   scrollContainer: {
     flexGrow: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     padding: SIZES.xl,
     paddingBottom: SIZES.xxl,
   },
@@ -155,12 +160,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SIZES.sm,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 24,
   },
   infoBanner: {
@@ -177,12 +182,12 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   infoBold: {
     fontWeight: 'bold',
-    color: COLORS.primary,
+    color: colors.primary,
   },
   warningCard: {
     backgroundColor: 'rgba(255, 196, 0, 0.1)',
@@ -194,38 +199,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   warningTitle: {
-    color: COLORS.warning,
+    color: colors.warning,
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: SIZES.xs,
   },
   warningText: {
-    color: COLORS.warning,
+    color: colors.warning,
     textAlign: 'center',
     lineHeight: 22,
   },
   warningBold: {
     fontWeight: 'bold',
-    color: COLORS.warning,
+    color: colors.warning,
   },
   keyContainer: {
     marginBottom: SIZES.lg,
   },
   keyLabel: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: SIZES.xs,
     fontSize: 14,
     fontWeight: '500',
   },
   keyBox: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     padding: SIZES.md,
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   keyValue: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 14,
   },
   securityNote: {
@@ -237,7 +242,7 @@ const styles = StyleSheet.create({
   securityNoteText: {
     flex: 1,
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     lineHeight: 18,
   },
   successIcon: {

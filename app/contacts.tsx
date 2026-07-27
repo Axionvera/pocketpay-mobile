@@ -11,65 +11,69 @@
  * Accessibility: interactive elements carry accessibilityLabel / accessibilityRole.
  */
 
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Alert,
-  Modal,
-} from 'react-native';
-import { Button } from '../src/components/Button';
-import { Input } from '../src/components/Input';
-import { QrScanner } from '../src/components/QrScanner';
-import { COLORS, SIZES, RADIUS } from '../src/constants/theme';
-import { useAppStore, Contact } from '../src/store/appStore';
-import { validateAddress } from '../src/utils/validation';
-import { Trash2, User, ScanLine } from 'lucide-react-native';
+import React, { useMemo, useState, useCallback } from "react";
+import { View, Text, StyleSheet, FlatList, Alert, Modal } from "react-native";
+import { Button } from "../src/components/Button";
+import { Input } from "../src/components/Input";
+import { QrScanner } from "../src/components/QrScanner";
+import { SIZES, RADIUS, ThemeColors } from "../src/constants/theme";
+import { useTheme } from "../src/hooks/useTheme";
+import { useAppStore, Contact } from "../src/store/appStore";
+import { validateAddress } from "../src/utils/validation";
+import { Trash2, User } from "lucide-react-native";
+import { EmptyState } from "../src/components/EmptyState";
+import { useConfirm } from "../src/hooks/useConfirm";
 
 // ── View modes ───────────────────────────────────────────────────────────────
 type Mode =
-  | 'list'           // Default: show contact list
-  | 'manual'         // Manual add form (name + address)
-  | 'scanning'       // Full-screen QR scanner
-  | 'confirm-scan';  // Post-scan form: address pre-filled, enter name
+  | "list" // Default: show contact list
+  | "manual" // Manual add form (name + address)
+  | "scanning" // Full-screen QR scanner
+  | "confirm-scan"; // Post-scan form: address pre-filled, enter name
 
 export default function ContactsScreen() {
-  const { contacts, addContact, removeContact } = useAppStore();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { contacts, addContactIfUnique, removeContact, findDuplicateContact } =
+    useAppStore();
+  const { confirm, confirmationDialog } = useConfirm();
 
   // ── Form state ──────────────────────────────────────────────────────────────
-  const [mode, setMode] = useState<Mode>('list');
-  const [name, setName] = useState('');
-  const [publicKey, setPublicKey] = useState('');
+  const [mode, setMode] = useState<Mode>("list");
+  const [name, setName] = useState("");
+  const [publicKey, setPublicKey] = useState("");
   const [nameError, setNameError] = useState<string | undefined>();
+  const [nameWarning, setNameWarning] = useState<string | undefined>();
   const [keyError, setKeyError] = useState<string | undefined>();
   const [isSaving, setIsSaving] = useState(false);
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
   const resetForm = useCallback(() => {
-    setName('');
-    setPublicKey('');
+    setName("");
+    setPublicKey("");
     setNameError(undefined);
+    setNameWarning(undefined);
     setKeyError(undefined);
     setIsSaving(false);
   }, []);
-
-  /** Returns true when the address already exists in the contact list. */
-  const isDuplicate = useCallback(
-    (address: string) =>
-      contacts.some(
-        (c) => c.publicKey.toLowerCase() === address.trim().toLowerCase(),
-      ),
-    [contacts],
-  );
 
   // ── Field change handlers ───────────────────────────────────────────────────
 
   const handleNameChange = (value: string) => {
     setName(value);
     if (nameError && value.trim()) setNameError(undefined);
+    // Check for duplicate name (case-insensitive) — warn but don't block
+    if (value.trim()) {
+      const result = findDuplicateContact(value, publicKey || "G");
+      if (result.type === "name") {
+        setNameWarning(result.message);
+      } else {
+        setNameWarning(undefined);
+      }
+    } else {
+      setNameWarning(undefined);
+    }
   };
 
   const handleKeyChange = (value: string) => {
@@ -83,8 +87,10 @@ export default function ContactsScreen() {
       setKeyError(addrError);
       return;
     }
-    if (isDuplicate(value)) {
-      setKeyError('This address is already saved as a contact.');
+    // Check for duplicate address using the store's centralized logic
+    const result = findDuplicateContact(name || "temp", value);
+    if (result.type === "address") {
+      setKeyError(result.message);
       return;
     }
     setKeyError(undefined);
@@ -96,27 +102,14 @@ export default function ContactsScreen() {
     const trimmedName = name.trim();
     const trimmedKey = publicKey.trim();
 
-    const currentNameError = trimmedName ? undefined : 'Please enter a name.';
+    const currentNameError = trimmedName ? undefined : "Please enter a name.";
     const addrValidationError = validateAddress(trimmedKey) ?? undefined;
-    const duplicateError = isDuplicate(trimmedKey)
-      ? 'This address is already saved as a contact.'
-      : undefined;
-    const currentKeyError = addrValidationError ?? duplicateError;
+    const currentKeyError = addrValidationError;
 
     setNameError(currentNameError);
     setKeyError(currentKeyError);
 
     if (currentNameError || currentKeyError) return;
-
-    const existing = contacts.find(
-      (c) => c.publicKey.toLowerCase() === trimmedKey.toLowerCase(),
-    );
-    if (existing) {
-      setKeyError(
-        `This address is already saved as "${existing.name}". You cannot add duplicate addresses.`,
-      );
-      return;
-    }
 
     const newContact: Contact = {
       id: Date.now().toString(),
@@ -126,11 +119,17 @@ export default function ContactsScreen() {
 
     try {
       setIsSaving(true);
-      await addContact(newContact);
+      const result = await addContactIfUnique(newContact);
+
+      if (result.type === "address") {
+        setKeyError(result.message);
+        return;
+      }
+
       resetForm();
-      setMode('list');
+      setMode("list");
     } catch {
-      Alert.alert('Error', 'Failed to save contact. Please try again.');
+      Alert.alert("Error", "Failed to save contact. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -140,50 +139,44 @@ export default function ContactsScreen() {
 
   const handleScanSuccess = useCallback(
     (address: string) => {
-      // Check for duplicates immediately after a successful scan.
-      if (isDuplicate(address)) {
-        const existing = contacts.find(
-          (c) => c.publicKey.toLowerCase() === address.toLowerCase(),
-        );
-        Alert.alert(
-          'Already saved',
-          `This address is already in your contacts${existing ? ` as "${existing.name}"` : ''}.`,
-        );
-        setMode('list');
+      // Check for duplicates using the store's centralized logic.
+      const result = findDuplicateContact("", address);
+      if (result.type === "address") {
+        Alert.alert("Already saved", result.message);
+        setMode("list");
         return;
       }
       // Pre-fill the address and switch to the confirm form.
       setPublicKey(address);
-      setMode('confirm-scan');
+      setMode("confirm-scan");
     },
-    [contacts, isDuplicate],
+    [findDuplicateContact],
   );
 
   const handleScanError = useCallback((message: string) => {
-    Alert.alert('Invalid QR Code', message);
-    setMode('list');
+    Alert.alert("Invalid QR Code", message);
+    setMode("list");
   }, []);
 
   const handleScanClose = useCallback(() => {
-    setMode('list');
+    setMode("list");
     resetForm();
   }, [resetForm]);
 
   // ── Remove handler ──────────────────────────────────────────────────────────
 
   const handleRemove = (id: string) => {
-    Alert.alert('Delete Contact', 'Are you sure you want to remove this contact?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => removeContact(id),
-      },
-    ]);
+    void confirm({
+      title: "Delete Contact",
+      message: "Are you sure you want to remove this contact?",
+      confirmLabel: "Delete",
+      destructive: true,
+      onConfirm: () => removeContact(id),
+    });
   };
 
   // ── Render: full-screen QR scanner ─────────────────────────────────────────
-  if (mode === 'scanning') {
+  if (mode === "scanning") {
     return (
       <Modal
         visible
@@ -201,14 +194,16 @@ export default function ContactsScreen() {
   }
 
   // ── Render: add form (manual or post-scan confirm) ──────────────────────────
-  const isFormMode = mode === 'manual' || mode === 'confirm-scan';
+  const isFormMode = mode === "manual" || mode === "confirm-scan";
 
   return (
     <View style={styles.container}>
       {isFormMode ? (
         <View style={styles.addForm}>
           <Text style={styles.title}>
-            {mode === 'confirm-scan' ? 'Save Scanned Contact' : 'Add New Contact'}
+            {mode === "confirm-scan"
+              ? "Save Scanned Contact"
+              : "Add New Contact"}
           </Text>
 
           {/* Name field */}
@@ -221,6 +216,9 @@ export default function ContactsScreen() {
             autoFocus
             accessibilityLabel="Contact name"
           />
+          {nameWarning && !nameError && (
+            <Text style={styles.warningText}>{nameWarning}</Text>
+          )}
 
           {/* Address field – read-only when pre-filled from scan */}
           <Input
@@ -231,18 +229,18 @@ export default function ContactsScreen() {
             error={keyError}
             autoCapitalize="none"
             autoCorrect={false}
-            editable={mode !== 'confirm-scan'}
+            editable={mode !== "confirm-scan"}
             accessibilityLabel="Stellar public key address"
           />
 
           {/* Scan button (only in manual mode – lets the user switch to scanner) */}
-          {mode === 'manual' && (
+          {mode === "manual" && (
             <Button
               title="Scan QR Instead"
               variant="outline"
               onPress={() => {
                 resetForm();
-                setMode('scanning');
+                setMode("scanning");
               }}
               style={styles.scanInsteadBtn}
               accessibilityLabel="Open QR scanner"
@@ -262,7 +260,7 @@ export default function ContactsScreen() {
               variant="outline"
               onPress={() => {
                 resetForm();
-                setMode('list');
+                setMode("list");
               }}
               style={styles.actionBtn}
               accessibilityLabel="Cancel"
@@ -277,7 +275,7 @@ export default function ContactsScreen() {
               title="+ Add Manually"
               onPress={() => {
                 resetForm();
-                setMode('manual');
+                setMode("manual");
               }}
               style={styles.headerBtn}
               accessibilityLabel="Add contact manually"
@@ -287,7 +285,7 @@ export default function ContactsScreen() {
               variant="secondary"
               onPress={() => {
                 resetForm();
-                setMode('scanning');
+                setMode("scanning");
               }}
               style={styles.headerBtn}
               accessibilityLabel="Scan QR code to add contact"
@@ -300,17 +298,11 @@ export default function ContactsScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
             ListEmptyComponent={
-              <View style={styles.emptyState} accessibilityLiveRegion="polite">
-                <User
-                  color={COLORS.textMuted}
-                  size={48}
-                  style={{ marginBottom: SIZES.md }}
-                />
-                <Text style={styles.emptyText}>No contacts yet</Text>
-                <Text style={styles.emptySubText}>
-                  Add a contact manually or scan a QR code.
-                </Text>
-              </View>
+              <EmptyState
+                icon={<User color={colors.textMuted} size={48} />}
+                title="No contacts yet"
+                message="Add a contact manually or scan a QR code."
+              />
             }
             renderItem={({ item }) => (
               <View style={styles.contactItem}>
@@ -325,7 +317,7 @@ export default function ContactsScreen() {
                   </Text>
                 </View>
                 <Trash2
-                  color={COLORS.error}
+                  color={colors.error}
                   size={20}
                   onPress={() => handleRemove(item.id)}
                   accessibilityLabel={`Remove ${item.name}`}
@@ -336,94 +328,89 @@ export default function ContactsScreen() {
           />
         </>
       )}
+
+      {confirmationDialog}
     </View>
   );
 }
 
 // ── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    padding: SIZES.lg,
-  },
-  // ── Header ──────────────────────────────────────────────────────────────────
-  headerActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: SIZES.lg,
-    gap: SIZES.sm,
-  },
-  headerBtn: {
-    flex: 1,
-  },
-  // ── Add / confirm form ───────────────────────────────────────────────────────
-  addForm: {
-    backgroundColor: COLORS.surface,
-    padding: SIZES.xl,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  title: {
-    color: COLORS.textPrimary,
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: SIZES.lg,
-  },
-  scanInsteadBtn: {
-    marginBottom: SIZES.md,
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: SIZES.md,
-    gap: SIZES.sm,
-  },
-  actionBtn: {
-    flex: 1,
-  },
-  // ── Contact list ─────────────────────────────────────────────────────────────
-  listContent: {
-    paddingBottom: SIZES.xxl,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    padding: SIZES.lg,
-    borderRadius: RADIUS.md,
-    marginBottom: SIZES.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  contactInfo: {
-    flex: 1,
-    marginRight: SIZES.md,
-  },
-  contactName: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  contactKey: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-  },
-  // ── Empty state ───────────────────────────────────────────────────────────────
-  emptyState: {
-    alignItems: 'center',
-    marginTop: SIZES.xxl * 2,
-  },
-  emptyText: {
-    color: COLORS.textMuted,
-    fontSize: 16,
-    marginBottom: SIZES.xs,
-  },
-  emptySubText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    textAlign: 'center',
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      padding: SIZES.lg,
+    },
+    // ── Header ──────────────────────────────────────────────────────────────────
+    headerActions: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: SIZES.lg,
+      gap: SIZES.sm,
+    },
+    headerBtn: {
+      flex: 1,
+    },
+    // ── Add / confirm form ───────────────────────────────────────────────────────
+    addForm: {
+      backgroundColor: colors.surface,
+      padding: SIZES.xl,
+      borderRadius: RADIUS.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    title: {
+      color: colors.textPrimary,
+      fontSize: 20,
+      fontWeight: "bold",
+      marginBottom: SIZES.lg,
+    },
+    warningText: {
+      color: colors.warning,
+      fontSize: 12,
+      marginTop: -SIZES.xs,
+      marginBottom: SIZES.md,
+      marginLeft: SIZES.xs,
+    },
+    scanInsteadBtn: {
+      marginBottom: SIZES.md,
+    },
+    actions: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: SIZES.md,
+      gap: SIZES.sm,
+    },
+    actionBtn: {
+      flex: 1,
+    },
+    // ── Contact list ─────────────────────────────────────────────────────────────
+    listContent: {
+      paddingBottom: SIZES.xxl,
+    },
+    contactItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      padding: SIZES.lg,
+      borderRadius: RADIUS.md,
+      marginBottom: SIZES.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    contactInfo: {
+      flex: 1,
+      marginRight: SIZES.md,
+    },
+    contactName: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    contactKey: {
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+  });

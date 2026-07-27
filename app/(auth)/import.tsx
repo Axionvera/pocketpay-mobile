@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button } from '../../src/components/Button';
+import { AsyncActionButton } from '../../src/components/AsyncActionButton';
 import { FormField } from '../../src/components/FormField';
-import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
+import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
+import { WALLET_SAVE_FAILURE_MESSAGE } from '../../src/utils/walletStorageErrors';
 import { importWallet } from 'pocketpay-sdk';
 import { Info, Shield, CheckCircle } from 'lucide-react-native';
 
@@ -12,9 +14,10 @@ const SECRET_KEY_LENGTH = 56;
 
 export default function ImportWalletScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { setWallet } = useWalletStore();
   const [secretKey, setSecretKey] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -39,21 +42,17 @@ export default function ImportWalletScreen() {
     }
 
     try {
-      setIsLoading(true);
       const { publicKey } = await importWallet(trimmedKey);
 
       const saved = await setWallet(publicKey, trimmedKey);
       if (!saved) {
-        setError('Failed to persist wallet. Please try again.');
-        setIsLoading(false);
+        setError(WALLET_SAVE_FAILURE_MESSAGE);
         return;
       }
 
-      setIsLoading(false);
       setIsSuccess(true);
     } catch {
       setError('Invalid secret key. It may be malformed or from the wrong network.');
-      setIsLoading(false);
     }
   };
 
@@ -67,21 +66,21 @@ export default function ImportWalletScreen() {
       <View style={styles.container}>
         <View style={styles.contentCenter}>
           <View style={styles.successIcon}>
-            <CheckCircle color={COLORS.success} size={64} />
+            <CheckCircle color={colors.success} size={64} />
           </View>
           <Text style={styles.title}>Wallet Imported!</Text>
           <Text style={styles.subtitle}>
             Your Testnet wallet has been restored. You can now send and receive test XLM.
           </Text>
         </View>
-        <Button title="Go to Wallet" onPress={handleGoToWallet} />
+        <AsyncActionButton title="Go to Wallet" onPress={handleGoToWallet} />
       </View>
     );
   }
 
   // ── Import Form ────────────────────────────────────────────
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
@@ -94,14 +93,14 @@ export default function ImportWalletScreen() {
         </View>
 
         <View style={styles.infoBanner}>
-          <Info color={COLORS.primary} size={18} />
+          <Info color={colors.primary} size={18} />
           <Text style={styles.infoText}>
             This app runs on <Text style={styles.infoBold}>Testnet</Text>. Only test-net secret keys will work.
           </Text>
         </View>
 
         <View style={styles.warningCard}>
-          <Shield color={COLORS.warning} size={18} />
+          <Shield color={colors.warning} size={18} />
           <Text style={styles.warningText}>
             Never paste your secret key from an untrusted source. Anyone with this key can access your funds.
           </Text>
@@ -123,19 +122,19 @@ export default function ImportWalletScreen() {
         />
       </View>
 
-      <Button 
-        title="Import Wallet" 
-        onPress={handleImport} 
-        isLoading={isLoading}
+      <AsyncActionButton
+        title="Import Wallet"
+        onPress={handleImport}
+        loadingText="Importing…"
       />
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     padding: SIZES.xl,
     justifyContent: 'space-between',
     paddingBottom: SIZES.xxl,
@@ -154,12 +153,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SIZES.sm,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 24,
   },
   infoBanner: {
@@ -176,12 +175,12 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   infoBold: {
     fontWeight: 'bold',
-    color: COLORS.primary,
+    color: colors.primary,
   },
   warningCard: {
     flexDirection: 'row',
@@ -197,7 +196,7 @@ const styles = StyleSheet.create({
   warningText: {
     flex: 1,
     fontSize: 13,
-    color: COLORS.warning,
+    color: colors.warning,
     lineHeight: 18,
   },
   successIcon: {
