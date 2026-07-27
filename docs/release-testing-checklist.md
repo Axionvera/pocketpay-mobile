@@ -1,273 +1,510 @@
-# PocketPay Mobile — Release Testing Checklist
+# Mobile Release Testing and Regression Checklist
 
-Run this checklist before any tagged release build (staging or production). Each box represents a manual verification step performed on a real device or simulator using the exact bundle that will ship.
+## Overview
 
-- **Tester:** ____________________________
-- **Release version:** (e.g. 1.4.0) ______
-- **Build / commit hash:** __________________
-- **Date tested:** ____ / ____ / _________
-- **Final result:** &nbsp; ✅ PASS &nbsp; / &nbsp; ⚠️ PASS WITH NOTES &nbsp; / &nbsp; ❌ FAIL
+This checklist provides a comprehensive testing guide for mobile releases. Use this checklist before every release to ensure key flows work correctly and no regressions are introduced.
 
----
+## Quick Reference
 
-## 0. Pre-Test Setup & Build Verification
-
-Run these steps *before* executing any user journey. Failures here block further testing.
-
-- [ ] Build installs without errors on at least **one iOS device/simulator** and **one Android device/emulator**
-- [ ] No Metro bundler warnings about missing polyfills when the app boots (watch for `Buffer`, `process`, or `getRandomValues` references in the console)
-- [ ] Splash screen renders, app transitions to a screen without crashing within 10 seconds
-- [ ] Expo manifest version in **Settings → About → Version** matches the version you are releasing
-- [ ] Open **Settings → Network & Environment** and **confirm every line matches the target release**:
-  - [ ] Network row shows the correct tier: Testnet / Custom / (if applicable) Mainnet
-  - [ ] Tier badge tone is correct: `Test` (info) / `Custom` (warning) / `Live` (error)
-  - [ ] Horizon Server hostname matches target network
-  - [ ] Soroban RPC hostname matches target network
-  - [ ] Vault Mode badge: `Real` (success) only when `EXPO_PUBLIC_VAULT_CONTRACT_ID` is set for this build; else `Mock` (warning)
-  - [ ] If Vault Mode = Real: Contract row shows **truncated** (6-ellipsis-6) contract ID, NOT the full 56-char contract address
-  - [ ] Warnings stack shows the correct banners for the build: at minimum "Testnet only" (testnet), "Vault running in mock mode" (no contract ID), "Custom network configured" (custom name), or "Mainnet in use" (live)
-  - [ ] **No secret, full URL, or full contract ID appears anywhere in the Settings screen** (copy all visible text and grep the paste if unsure)
-
-### 0.1 Test Accounts Required
-
-Prepare these 2 accounts *before* starting the checklist. Use Testnet only; never real keys.
-
-| Role | Notes |
-|---|---|
-| **Account A (Fresh)** | No existing wallet on the test device. Will test Create Wallet, Fund via Friendbot, first-send, first-time vault. |
-| **Account B (Restored)** | Pre-existing wallet on a wiped device. Will test Import Secret Key, balance restore, tx pagination, matured vault lock withdrawal. |
+| Phase | Time | Purpose |
+|-------|------|---------|
+| Smoke Tests | 15 min | Verify core functionality works |
+| Regression Tests | 45 min | Ensure no new bugs introduced |
+| Platform Tests | 30 min | Test on iOS and Android |
+| Security Tests | 20 min | Verify security features |
+| Accessibility Tests | 20 min | Ensure accessibility compliance |
+| Performance Tests | 15 min | Check app performance |
+| **Total** | **~2.5 hours** | |
 
 ---
 
-## 1. Build Smoke Tests — Happy-Path Boot
+## 1. Wallet Tests
 
-- [ ] ✨ **Fresh start (Account A):** Delete the app, reinstall, and launch. No crash on first run. The **Create Wallet / Import Wallet** choice screen loads.
-- [ ] ✨ **Cold start (Account B):** Close the app from the app switcher, re-open. Wallet is still loaded and the Home balance screen renders in under 5 seconds.
-- [ ] ✨ **App Lock gate:** Open Settings, enable App Lock, background and foreground the app. The **Lock screen overlay** appears and blocks access until biometrics or device passcode succeeds.
-- [ ] ✨ **Network offline:** Disable all network connectivity. The red **OfflineBanner** drops down from the top of all tab screens and remains visible until connectivity returns.
-- [ ] ✨ **Theme system:** Change theme between Light → Dark → System in Settings. Every tab re-renders and background/text colors update correctly. Re-open the app; the chosen theme persists.
+### Wallet Creation
+- [ ] Create new wallet with seed phrase
+- [ ] Seed phrase is displayed only once
+- [ ] Seed phrase confirmation works
+- [ ] Wallet backup reminder is shown
 
----
+### Wallet Import
+- [ ] Import wallet with valid seed phrase
+- [ ] Import wallet with invalid seed phrase (rejected)
+- [ ] Import wallet with valid private key
+- [ ] Import wallet with invalid private key (rejected)
+- [ ] Import history is not stored
 
-## 2. Wallet Flows — Create, Import, Persistence
+### Wallet Management
+- [ ] Switch between multiple wallets
+- [ ] View wallet balance
+- [ ] View wallet address
+- [ ] Copy wallet address
+- [ ] QR code for wallet address
+- [ ] Delete wallet (with confirmation)
 
-### 2.1 Wallet Creation (Account A)
+### Error States
+- [ ] Network error during wallet creation
+- [ ] Network error during wallet import
+- [ ] Invalid seed phrase handling
+- [ ] Insufficient balance handling
+- [ ] Error messages are user-friendly
 
-- [ ] Tap **Create New Wallet** from the auth landing
-- [ ] **Step 1 Generate** — taps Generate, shows public key (G...) and secret key (S...) without crashing
-- [ ] **Step 2 Reveal** — secret key is displayed, copy-to-clipboard copies it correctly (paste somewhere to verify)
-- [ ] **Step 3 Confirm** — "I backed up my keys" checkbox → Continue completes without crashing
-- [ ] **Backup Reminder modal** appears on Home after creation
-- [ ] Acknowledge the modal. After next app launch it does **not** reappear.
-- [ ] Tap **Fund my Wallet** (Friendbot). Within ~15 seconds the balance updates from `0.0000000` to roughly `10,000.0000000` XLM.
-- [ ] **Export Secret Key** from Settings → Wallet. After authentication the secret key matches what was copied during creation.
-- [ ] Toggle **Hide Secret Key** again; secret value is removed from screen and clipboard (verify a paste yields non-secret text if applicable).
-
-### 2.2 Wallet Import (Account B)
-
-- [ ] Delete app + reinstall (or Sign Out from previous test), choose **Import Wallet**
-- [ ] Type random garbage (not a valid StrKey) into the secret field → validation error, import is blocked
-- [ ] Paste Account B's valid secret → import succeeds, redirects to Home
-- [ ] Balance matches Account B's last-known on-chain balance (to within 1 ledger close, ~5 s)
-- [ ] Transaction history loads the last page of operations (older dates as you scroll down)
-
-### 2.3 Sign Out & Wallet Erasure
-
-- [ ] Settings → **Sign Out & Clear Wallet** → the destructive confirm modal appears
-- [ ] Tap **Cancel** → wallet is NOT cleared, still authenticated, modal dismisses
-- [ ] Repeat → tap **Confirm** → SecureStore and AsyncStorage wallet data are cleared, app redirects to auth landing (Create/Import)
-- [ ] Background + foreground the app after sign-out: user is **still** on the auth landing (no stuck half-authenticated state)
-
-### 2.4 Address Book / Contacts
-
-- [ ] Settings → **Address Book** → empty state renders (if no contacts)
-- [ ] Add a contact with name "Alice" and a valid Testnet G-address → saves, list updates
-- [ ] Add the **same G-address** again under "Bob" → duplicate guard blocks save; error message shown
-- [ ] Add the **same name** "Alice" with a different valid G-address → duplicate guard blocks save (name + address uniqueness both enforced)
-- [ ] Delete Alice → row removed, list shrinks
-- [ ] Reopen app → deleted contact does not reappear; surviving contacts are preserved
+### Loading States
+- [ ] Loading spinner during wallet creation
+- [ ] Loading spinner during wallet import
+- [ ] Skeleton screens for balance display
+- [ ] Loading states are smooth
 
 ---
 
-## 3. Payment Flows — Send, Receive, Review, Success
+## 2. Payment Tests
 
-### 3.1 Receive
+### Send Payment
+- [ ] Enter valid recipient address
+- [ ] Enter invalid recipient address (rejected)
+- [ ] Enter amount
+- [ ] Enter amount with decimals
+- [ ] Enter memo (optional)
+- [ ] Verify transaction details before sending
+- [ ] Transaction signing confirmation
+- [ ] Success toast/notification
+- [ ] Transaction appears in history
 
-- [ ] Navigate to **Receive tab/button**
-- [ ] QR code renders without errors (no blurry or broken SVG box)
-- [ ] Copy public key button → clipboard matches what's shown on the Home screen and on Receive
-- [ ] Share sheet opens from the Receive screen (if available on that platform)
-- [ ] Scan the QR with a second device — decoded content is the plain G-address (no extra prefix, no suffix whitespace)
+### Receive Payment
+- [ ] Display QR code
+- [ ] QR code scans correctly
+- [ ] Copy wallet address
+- [ ] Share wallet address
+- [ ] QR code with amount pre-filled
+- [ ] QR code with memo pre-filled
 
-### 3.2 Scan → Prefill Send
+### Transaction History
+- [ ] View transaction list
+- [ ] Transaction direction indicators (sent/received)
+- [ ] View transaction details
+- [ ] Transaction status (pending/completed/failed)
+- [ ] Transaction timestamp
+- [ ] Transaction amount and asset
+- [ ] Transaction hash (tap to copy)
+- [ ] Pull to refresh
+- [ ] Pagination/loading more
 
-- [ ] Navigate to **Scan** → camera permission request (first run only) is granted
-- [ ] Scan the QR code from Receive above → scanner auto-dismisses and prefills the **Send** destination
-- [ ] Amount field is still empty and memo field is still empty (no accidental data leaking from QR if none was encoded)
+### Error States
+- [ ] Network error during send
+- [ ] Insufficient balance error
+- [ ] Invalid address error
+- [ ] Network error during receive
+- [ ] Network error during history load
+- [ ] Error messages are user-friendly
 
-### 3.3 Send XLM — Happy Path
-
-> Use Account A → Account B on Testnet. Send exactly `50.0000000` XLM with memo `Rent-August` for regression.
-
-- [ ] **Send form** — destination (G-address), amount, memo all filled. No validation errors.
-- [ ] **Review screen** shows: correct source, correct destination (or truncated + label if contact), correct 50 XLM amount, fee estimate, memo `Rent-August`
-- [ ] Tap **Sign & Send**. Phase overlay progresses: Review → Handoff → Signing → Submitting → Complete (no stuck intermediate phase)
-- [ ] Within 30s app transitions to **Payment Success** screen
-- [ ] Success screen displays the transaction hash. Copy hash → paste to stellar.expert via `getExplorerTxUrl()` — page resolves to the correct operation.
-- [ ] Go back to Home → Account A balance decreased by `~50.0000100` (50 XLM + fee)
-- [ ] Go to Activity / History → top of list contains **a new row** for today, destination matches Account B, amount matches
-- [ ] Tap that history row → **Transaction Detail** screen opens with memo `Rent-August` visible, correct fee, correct operation type (payment)
-
-### 3.4 Send — Negative Validation Cases
-
-- [ ] Send to an invalid address (random text, missing first G, wrong length) → **address validation** blocks navigation to Review screen; inline error shown
-- [ ] Send `0` XLM → **amount validation** fails (positive amount required)
-- [ ] Send `99,999,999` XLM (more than balance + reserve) → **submit fails** gracefully, inline error banner shows under the Sign button, balance is NOT decreased, retry button / dismiss works.
-- [ ] Send with a memo containing > **28 UTF-8 bytes** (e.g. 14 CJK characters × 3 bytes each) → memo validation error, Review not reached.
-
-### 3.5 Send — Cancel & Dismiss Recovery
-
-- [ ] Begin Send → navigate to Review. Press the hardware/OS back button or tap Back on the nav. App returns to Send form with fields intact.
-- [ ] Begin send, reach the in-progress **Signing phase overlay** → no cancel button/action should be able to double-submit. Rapid double-tap Sign & Send → **only one** submission reaches Horizon (confirm via stellar.expert hash count later).
-
----
-
-## 4. Vault Flows — Mock & Real Contract Paths
-
-The vault has two runtime modes. Run BOTH sub-sections for any build that could ship with either configuration.
-
-### 4.1 Mock Mode (default; `EXPO_PUBLIC_VAULT_CONTRACT_ID` unset)
-
-- [ ] Navigate to Vault tab → **Vault Intro Modal** first run appears. Acknowledge. It does **not** reappear on next tab visit.
-- [ ] **Network & Environment card in Settings still shows "Vault running in mock mode" warning banner** (confirms the mock isn't silently treated as real)
-- [ ] Vault balance starts at `0.0000000` XLM, vault balance row shows `Local Mock` label or equivalent
-- [ ] Tap **Deposit** → enter valid amount, confirm modal, submit. In mock mode the operation "succeeds" within 2 seconds and balance increases by that amount.
-- [ ] Tap **Withdraw** → amount exceeds balance → validation fails inline, submit blocked.
-- [ ] Withdraw an amount ≤ balance → succeeds, balance decreases by that amount, remainder on-chain (or mock remainder) is sensible.
-
-### 4.2 Time-Lock Flows (works in BOTH mock + real)
-
-- [ ] Create a **30-day lock** from the vault screen → lock appears in the list under Pending with countdown of ~30 days
-- [ ] Try to **Withdraw Pending** lock → action is disabled / fails with "not yet matured" copy (exact wording depends on build — confirm no funds move)
-- [ ] Simulate a matured lock (for tests, either set device clock forward in mock-only, or use a pre-seeded matured test lock):
-  - [ ] Lock appears under **Matured** section with "Available to withdraw" label
-  - [ ] Initiate **Withdraw matured lock** → eligibility evaluation runs server-side (NOT from UI state alone) in the store action
-  - [ ] After success → lock is **removed from list** only after the on-chain (or mock) transaction succeeds, never before.
-  - [ ] Vault balance increases by exactly the locked principal + any rewards shown at lock creation.
-- [ ] Repeat matured withdrawal rapidly on the same lock → server-side guard or optimistic client-side guard prevents double-withdrawal.
-
-### 4.3 Real Soroban Contract Mode (when `EXPO_PUBLIC_VAULT_CONTRACT_ID` is configured)
-
-- [ ] Open Settings → Network & Environment → Vault Mode badge reads `Real` (success tone), Contract row shows truncated ID
-- [ ] Vault Intro Modal does **not** show a warning that says "this is a mock" (copy should be correct for real mode)
-- [ ] Any successful deposit shows up on-chain (verify via stellar.expert / Soroban RPC) within 1 ledger close.
-- [ ] Any successful withdrawal decreases vault balance on-chain and in-app within 10 seconds.
+### Loading States
+- [ ] Loading spinner during send
+- [ ] Skeleton screens for history
+- [ ] Pending transaction status
+- [ ] Refresh indicator
 
 ---
 
-## 5. Error Handling & Edge-Case Regression
+## 3. Contacts Tests
 
-### 5.1 Network Errors
+### Contact Management
+- [ ] Add new contact
+- [ ] Edit existing contact
+- [ ] Delete contact
+- [ ] Contact name and address
+- [ ] Contact name only
+- [ ] Duplicate contact handling
 
-- [ ] **Home screen, Pull-to-refresh while offline** → offline banner, spinner eventually stops, no crash, last-known balance still visible.
-- [ ] **Horizon server returns 5xx during balance refresh** → NetworkStatusBanner with severity warning appears, shows copy "Unable to reach Stellar network" (or team's chosen error copy), balance stays at cached value.
-- [ ] **Soroban RPC returns error during vault balance load** → vault card shows a per-card error state (not crash) while Home and History still render with their Horizon data.
+### Contact Usage
+- [ ] Select contact for payment
+- [ ] Contact autocomplete in send
+- [ ] Contact QR code
+- [ ] Contact details view
 
-### 5.2 Wallet Storage Corruption Recovery
+### Error States
+- [ ] Network error during contact add
+- [ ] Duplicate contact error
+- [ ] Network error during contact list load
+- [ ] Error messages are user-friendly
 
-- [ ] **Mimic corrupt secret storage** (manual test: inject empty string / invalid JSON into SecureStore key `pocketpay_wallet_secret` via dev tools if possible) → next app boot:
-  - [ ] Invalid value is silently deleted (see walletStore test cases)
-  - [ ] User lands on **auth landing** (not stuck on half-authenticated Home)
-  - [ ] No crash, no red screen, no raw error message displayed to user beyond a polite toast if implemented
-- [ ] **Sign Out** after corruption is repeatable; re-import valid secret afterwards succeeds and rehydrates balance from chain.
-
-### 5.3 React Error Boundary
-
-- [ ] Trigger a synthetic render-time error via **Diagnostics screen** (or a local dev-only method of throwing inside child render):
-  - [ ] **ErrorBoundaryFallback** screen appears — full overlay, not a partial crash
-  - [ ] Fallback has a reload/retry CTA
-  - [ ] Global exception handler runs: check for the `reportError` funnel call in console/monitoring (if Sentry wired)
-
-### 5.4 Signing Handoff State Machine
-
-Use the diagnostics panel or store inspection to verify phase never jumps backwards:
-
-- [ ] Signing phases progress exactly `idle → review → handoff → signing → submitting → completed`
-- [ ] Failure path phases exactly `… → failed` with a structured error type; re-tap resets cleanly from failed back to review
-- [ ] Cancel path phases exactly `… → cancelled`; restart from review works
+### Loading States
+- [ ] Loading spinner during contact add
+- [ ] Skeleton screens for contact list
+- [ ] Loading spinner during contact edit
+- [ ] Loading spinner during contact delete
 
 ---
 
-## 6. Accessibility Spot Checks (Mobile)
+## 4. Vault Tests
 
-Full audit → [Accessibility Checklist](./accessibility.md). For releases, at minimum spot-check:
+### Vault Access
+- [ ] Vault requires authentication
+- [ ] Biometric authentication works
+- [ ] PIN authentication works
+- [ ] Failed authentication attempts limited
+- [ ] Access timeout works
 
-- [ ] Every tappable row in Settings, History, Vault list has an accessible label (`accessibilityLabel`) and a 44×44 pt minimum touch target
-- [ ] Home screen balance is marked as a header / heading (not just a `<Text>`) for screen-reader navigation
-- [ ] The Sign & Send button on the Review screen has `accessibilityRole="button"` and a descriptive label that **includes the amount** if possible (not just "Next")
-- [ ] Error banners and warning banners announce themselves as live regions and read their full title + message on TalkBack/VoiceOver
-- [ ] Vault countdown labels are exposed as Text nodes, not just rendered SVG/gradients that screen readers skip
-- [ ] Dark mode: vault success badge, warning badge, and error banner text all meet **minimum 4.5:1 contrast** (eye-check or use dev-tools color picker)
+### Vault Storage
+- [ ] Add item to vault
+- [ ] View vault items
+- [ ] Edit vault items
+- [ ] Delete vault items
+- [ ] Item encryption
 
----
+### Vault Export/Import
+- [ ] Export vault data
+- [ ] Export requires authentication
+- [ ] Import vault data
+- [ ] Import validates data integrity
 
-## 7. Settings, Persistence & Environment Final Checks
+### Error States
+- [ ] Authentication error
+- [ ] Network error during vault access
+- [ ] Invalid import data error
+- [ ] Error messages are user-friendly
 
-- [ ] **Settings → About → Diagnostics** link → Diagnostics screen opens and shows redacted counters only. Full G-address never appears; instead `hasPublicKey: true/false` is shown.
-- [ ] Close the app from task switcher, re-open:
-  - [ ] Theme choice persists (light/dark/system)
-  - [ ] App Lock toggle persists (enabled yesterday still enabled today)
-  - [ ] Contacts list persists (Alice/Bob rows same as last session)
-  - [ ] Backup reminder acknowledged flag persists
-  - [ ] Vault intro modal acknowledged flag persists
-- [ ] Change network name `EXPO_PUBLIC_STELLAR_NETWORK=CUSTOMNET` in a test build → Settings → Network & Environment:
-  - [ ] Label says `CUSTOMNET` (correct raw name)
-  - [ ] Tier badge = `Custom` (warning tone)
-  - [ ] Warning banner stack **now includes** "Custom network configured" advisory
-
----
-
-## 8. Cross-Platform & Environment Matrix
-
-Fill one row per device-config combination tested. Minimum for release = 4 cells completed.
-
-| OS       | Device / Simulator | Theme    | Vault Mode | Result (✅/⚠️/❌) | Notes |
-|---|---|---|---|---|---|
-| iOS 18+  | iPhone 15 / SE 3rd gen | Light    | Mock     | | |
-| iOS 18+  | iPhone 15 / SE 3rd gen | Dark     | Mock     | | |
-| Android 14+ | Pixel 8 / emulator 64-bit | System | Real (if applicable) | | |
-| Android 14+ | Pixel 8 / emulator 64-bit | Light  | Mock     | | |
-| *Optional:* Tablet (iPadOS / Android Tab) | | | | | |
+### Loading States
+- [ ] Loading spinner during vault access
+- [ ] Skeleton screens for vault items
+- [ ] Loading spinner during import/export
 
 ---
 
-## 9. Automated Checks (Record Results)
+## 5. QR Code Tests
 
-Run locally before tagging the release. Copy-paste output or note exit codes.
+### QR Scanning
+- [ ] QR scanner opens correctly
+- [ ] Camera permissions requested
+- [ ] QR code detection works
+- [ ] Stellar address QR code detection
+- [ ] Payment request QR code detection
+- [ ] Invalid QR code handling
 
-| Automated Step | Command | Result |
-|---|---|---|
-| TypeScript strict | `npx tsc --noEmit` | ✅ exit 0 / ❌ ___ errors |
-| Jest suite | `npm test` (pinned jest-expo preset) | ✅ ___ passed / ❌ ___ failed |
-| SDK API baseline | `npm run api:check` | ✅ matches baseline / ❌ drift |
-| Expo doctor | `npx expo-doctor` | ✅ 0 issues / ⚠️ ___ warnings |
-| Deduplicated pagination (walletStore) | Verified via `__tests__/walletStore.pagination.test.ts` | ✅ / ❌ |
-| Matured withdrawal server-side eligibility | Verified via `__tests__/vaultStore.withdrawMaturedLock.test.ts` & `maturedLockWithdrawal.test.ts` | ✅ / ❌ |
-| Global error handler install | Verified via `__tests__/globalErrorHandler.test.tsx` | ✅ / ❌ |
-| Backup reminder persistence | Verified via `__tests__/BackupReminderModal.test.tsx` | ✅ / ❌ |
+### QR Generation
+- [ ] Wallet address QR code
+- [ ] Payment request QR code with amount
+- [ ] Payment request QR code with memo
+- [ ] QR code sharing
+
+### Error States
+- [ ] Camera permission denied
+- [ ] Invalid QR code scanned
+- [ ] Network error during QR generation
+- [ ] Error messages are user-friendly
+
+### Loading States
+- [ ] Loading spinner during QR scan
+- [ ] Loading spinner during QR generation
+- [ ] Processing indicator for QR scan
 
 ---
 
-## 10. Final Sign-Off
+## 6. Settings Tests
 
-- [ ] All Phase 0 → 9 checks above that apply to this build have been run.
-- [ ] Any ⚠️ / ❌ items have a **written note** describing the bug, linked issue ticket, or explicit approval to ship with the known issue.
-- [ ] No Mainnet build was shipped without **Phase 0.1 Network tier = Live (error)** banner confirmation and a second human confirming `EXPO_PUBLIC_STELLAR_NETWORK_PASSPHRASE` matches the public network passphrase.
-- [ ] Release notes / CHANGELOG have been updated to reflect user-facing changes.
-- [ ] Screenshots in README.md (if committed for this release) were captured using Testnet-only dummy accounts with **no real or shared secret keys**.
+### General Settings
+- [ ] Currency display settings
+- [ ] Language settings
+- [ ] Theme settings (light/dark)
+- [ ] Notification preferences
+
+### Security Settings
+- [ ] Password change
+- [ ] Biometric authentication toggle
+- [ ] Session timeout settings
+- [ ] Auto-lock settings
+
+### Privacy Settings
+- [ ] Analytics opt-out
+- [ ] Data sharing preferences
+- [ ] Export data
+- [ ] Delete data
+
+### Error States
+- [ ] Network error during settings save
+- [ ] Invalid password error
+- [ ] Biometric not available error
+- [ ] Error messages are user-friendly
+
+### Loading States
+- [ ] Loading spinner during settings save
+- [ ] Loading spinner during password change
+- [ ] Loading spinner during data export
 
 ---
 
-**Release Manager sign-off:**
+## 7. Security Tests
 
-Name: ________________________ &nbsp; Signature: ________________________ &nbsp; Date: ____ / ____ / ____
+### Authentication
+- [ ] Biometric authentication works
+- [ ] PIN authentication works
+- [ ] Password authentication works
+- [ ] Failed attempts limited
+- [ ] Session timeout works
+
+### Secure Storage
+- [ ] Private keys stored in secure storage
+- [ ] Seeds stored in secure storage
+- [ ] Passwords stored in secure storage
+- [ ] No sensitive data in AsyncStorage
+
+### Clipboard Security
+- [ ] Copy address shows warning
+- [ ] Copy private key blocked
+- [ ] Copy seed phrase blocked
+
+### Screenshots
+- [ ] Screenshots blocked on sensitive screens
+- [ ] App content hidden in app switcher
+
+### Error States
+- [ ] Authentication failure
+- [ ] Biometric not available
+- [ ] Secure storage error
+- [ ] Error messages are user-friendly
+
+### Loading States
+- [ ] Loading spinner during authentication
+- [ ] Loading spinner during biometric setup
+- [ ] Loading spinner during PIN setup
+
+---
+
+## 8. Accessibility Tests
+
+### Screen Reader Support
+- [ ] All screens have appropriate labels
+- [ ] Buttons have accessibility labels
+- [ ] Images have alt text
+- [ ] Touch targets are at least 44x44pt
+- [ ] Focus indicators visible
+
+### Color and Contrast
+- [ ] Text contrast ratio ≥ 4.5:1
+- [ ] Interactive elements have distinct colors
+- [ ] Error messages are color-independent
+- [ ] Dark mode support works
+
+### Text and Typography
+- [ ] Font sizes are scalable
+- [ ] Text truncation works
+- [ ] Bold/italic text works
+- [ ] Dynamic type support (iOS)
+
+### Navigation
+- [ ] Keyboard navigation works (Android)
+- [ ] Tab order is logical
+- [ ] Skip navigation (if applicable)
+
+### Error States
+- [ ] Accessibility error announcements
+- [ ] Error messages are screen-reader friendly
+- [ ] Loading states are announced
+
+### Loading States
+- [ ] Loading states are accessible
+- [ ] Progress indicators announced
+
+---
+
+## 9. Performance Tests
+
+### App Startup
+- [ ] App starts within 3 seconds
+- [ ] Cold start performance
+- [ ] Warm start performance
+
+### Navigation
+- [ ] Screen transitions smooth
+- [ ] Back navigation works
+- [ ] Deep linking works
+
+### Data Loading
+- [ ] Transaction history loads quickly
+- [ ] Contact list loads quickly
+- [ ] Balance updates quickly
+
+### Memory Usage
+- [ ] Memory usage < 200MB
+- [ ] No memory leaks
+- [ ] App doesn't crash under memory pressure
+
+### Battery Usage
+- [ ] App doesn't drain battery excessively
+- [ ] Background processes optimized
+
+---
+
+## 10. Diagnostics Tests
+
+### Error Reporting
+- [ ] Errors are reported correctly
+- [ ] Error context included
+- [ ] Errors are anonymized
+
+### Analytics
+- [ ] Analytics events fire correctly
+- [ ] No sensitive data in analytics
+- [ ] Analytics opt-out works
+
+### Logging
+- [ ] No sensitive data in logs
+- [ ] Log levels are appropriate
+- [ ] Log rotation works
+
+### Network
+- [ ] API requests succeed
+- [ ] Retry logic works
+- [ ] Timeout handling works
+
+---
+
+## 11. Platform-Specific Tests
+
+### iOS Tests
+- [ ] App runs on latest iOS
+- [ ] App runs on iOS 15+
+- [ ] iPhone 14 Pro (latest)
+- [ ] iPhone 12 (medium)
+- [ ] iPhone SE (small)
+
+### Android Tests
+- [ ] App runs on latest Android
+- [ ] App runs on Android 8+
+- [ ] Pixel 7 (latest)
+- [ ] Samsung S22 (medium)
+- [ ] Pixel 4 (small)
+
+### Device Orientation
+- [ ] Portrait mode works
+- [ ] Landscape mode works
+- [ ] Orientation rotation works
+
+### Keyboard Input
+- [ ] Keyboard appears correctly
+- [ ] Keyboard dismisses correctly
+- [ ] Keyboard shortcuts work (Android)
+
+---
+
+## 12. Regression Test Suite
+
+### Critical Paths
+- [ ] Create wallet → Add balance → Send payment
+- [ ] Import wallet → Send payment → View history
+- [ ] Create wallet → Receive payment → View history
+- [ ] Create wallet → Add contact → Send to contact
+- [ ] Create wallet → Create vault item → View vault
+
+### Edge Cases
+- [ ] Zero balance handling
+- [ ] Very large amounts
+- [ ] Very small amounts
+- [ ] Special characters in memo
+- [ ] Long memo
+- [ ] Non-ASCII characters
+- [ ] Emoji support
+
+### Error Recovery
+- [ ] Network disconnection handling
+- [ ] Server error handling
+- [ ] Timeout handling
+- [ ] Retry logic
+
+### State Management
+- [ ] State persists after app restart
+- [ ] State persists after app update
+- [ ] State persists after device restart
+
+---
+
+## 13. Release Build Tests
+
+### App Build
+- [ ] App builds successfully
+- [ ] App size is reasonable
+- [ ] App signing works
+- [ ] App store deployment works
+
+### Version Information
+- [ ] Version number correct
+- [ ] Build number correct
+- [ ] Release notes included
+
+### Update Test
+- [ ] Update from previous version works
+- [ ] Update doesn't break data
+- [ ] Update doesn't break settings
+
+---
+
+## 14. Unsupported Features
+
+### Feature Flags
+- [ ] Disabled features are hidden
+- [ ] Disabled features are inaccessible
+- [ ] Disabled features don't show errors
+
+### Fallback Behavior
+- [ ] Fallback works for missing features
+- [ ] Graceful degradation works
+- [ ] Error messages for missing features
+
+### Platform Limitations
+- [ ] iOS-specific features work
+- [ ] Android-specific features work
+- [ ] Missing features are handled
+
+---
+
+## 15. Test Environment Setup
+
+### Test Devices
+- [ ] iOS simulator/device ready
+- [ ] Android emulator/device ready
+- [ ] Test accounts ready
+- [ ] Test data ready
+
+### Test Network
+- [ ] Testnet configured
+- [ ] Network fallback works
+- [ ] Network error simulation works
+
+### Test Accounts
+- [ ] Wallet with balance
+- [ ] Wallet with contacts
+- [ ] Wallet with transaction history
+- [ ] Wallet with vault items
+
+---
+
+## Test Execution Log
+
+| Date | Tester | Results | Issues Found | Issues Fixed | Sign-off |
+|------|--------|---------|--------------|--------------|----------|
+| | | | | | |
+
+## Test Sign-off
+
+- [ ] All tests passed
+- [ ] All critical issues fixed
+- [ ] All high-priority issues fixed
+- [ ] Known issues documented
+- [ ] Regression plan approved
+- [ ] Release approved
+
+## Quick Test Commands
+
+```bash
+# Run unit tests
+npm run test
+
+# Run integration tests
+npm run test:integration
+
+# Run e2e tests
+npm run test:e2e
+
+# Run accessibility tests
+npm run test:a11y
+
+# Run performance tests
+npm run test:performance
