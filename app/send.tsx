@@ -13,11 +13,14 @@ import { useRouter } from "expo-router";
 import { AsyncActionButton } from "../src/components/AsyncActionButton";
 import { FormField } from "../src/components/FormField";
 import { QrScanner } from "../src/components/QrScanner";
+import { ContactPicker } from "../src/components/ContactPicker";
+import { ContactForm } from "../src/components/ContactForm";
 import { SIZES, RADIUS, ThemeColors } from "../src/constants/theme";
 import { useTheme } from "../src/hooks/useTheme";
 import { sendXlmTransaction } from "../src/services/stellar";
 import { useWalletStore } from "../src/store/walletStore";
 import { useAppStore } from "../src/store/appStore";
+import { useContactStore } from "../src/features/contacts/contactStore";
 import {
   validateAddress,
   validateAmount,
@@ -54,6 +57,7 @@ export default function SendScreen() {
   const { publicKey, getSecretKey, refreshWalletData, balance, fundingStatus } =
     useWalletStore();
   const contacts = useAppStore((state) => state.contacts);
+  const { getContactByAddress, addRecentRecipient } = useContactStore();
 
   // Issue #330: Disable send when account is unfunded
   const isUnfunded = fundingStatus === 'unfunded';
@@ -66,6 +70,8 @@ export default function SendScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [lastSendDestination, setLastSendDestination] = useState("");
 
   const destinationContact =
     destination.trim() && !errors.destination
@@ -109,6 +115,16 @@ export default function SendScreen() {
     setShowContactPicker(false);
   };
 
+  const handleAddNewContact = () => {
+    setShowContactPicker(false);
+    setShowContactForm(true);
+  };
+
+  const handleSaveContact = (name: string, address: string) => {
+    useContactStore.getState().addContact(name, address);
+    setShowContactForm(false);
+  };
+
   const handleScanSuccess = (address: string) => {
     setIsScanning(false);
     handleDestinationChange(address);
@@ -132,6 +148,7 @@ export default function SendScreen() {
     if (fieldErrors.destination || fieldErrors.amount || fieldErrors.memo) {
       return;
     }
+
     // Navigate to the signing confirmation screen
     router.push({
       pathname: '/sign-confirmation',
@@ -193,45 +210,17 @@ export default function SendScreen() {
             }
           />
 
-          {contacts.length > 0 && (
-            <View style={styles.contactPickerContainer}>
-              <TouchableOpacity
-                style={styles.contactPickerButton}
-                onPress={() => setShowContactPicker((prev) => !prev)}
-                accessibilityLabel="Choose from saved contacts"
-                accessibilityRole="button"
-              >
-                <User size={18} color={colors.primary} />
-                <Text style={styles.contactPickerText}>
-                  {showContactPicker
-                    ? "Hide contacts"
-                    : "Choose from saved contacts"}
-                </Text>
-                <ChevronDown size={16} color={colors.textSecondary} />
-              </TouchableOpacity>
-
-              {showContactPicker && (
-                <View style={styles.contactList}>
-                  {contacts.map((contact) => (
-                    <TouchableOpacity
-                      key={contact.id}
-                      style={styles.contactItem}
-                      onPress={() => handleSelectContact(contact.publicKey)}
-                    >
-                      <Text style={styles.contactName}>{contact.name}</Text>
-                      <Text
-                        style={styles.contactKey}
-                        numberOfLines={1}
-                        ellipsizeMode="middle"
-                      >
-                        {contact.publicKey}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
+          <TouchableOpacity
+            style={styles.contactPickerButton}
+            onPress={() => setShowContactPicker(true)}
+            accessibilityLabel="Choose from saved contacts"
+            accessibilityRole="button"
+          >
+            <User size={18} color={colors.primary} />
+            <Text style={styles.contactPickerText}>
+              Choose from saved contacts
+            </Text>
+          </TouchableOpacity>
 
           {destinationContact?.isContact ? (
             <View style={styles.contactMatch}>
@@ -282,6 +271,23 @@ export default function SendScreen() {
           onClose={handleScanClose}
         />
       </Modal>
+
+      <ContactPicker
+        visible={showContactPicker}
+        onCancel={() => setShowContactPicker(false)}
+        onSelect={handleSelectContact}
+        onAddNew={handleAddNewContact}
+      />
+
+      <ContactForm
+        visible={showContactForm}
+        contact={lastSendDestination ? { id: '', name: '', address: lastSendDestination } : null}
+        onCancel={() => {
+          setShowContactForm(false);
+          setLastSendDestination("");
+        }}
+        onSave={handleSaveContact}
+      />
     </>
   );
 }
