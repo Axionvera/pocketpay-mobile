@@ -23,7 +23,8 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react-native';
-import { Button, ScreenHeader } from '@/components';
+import { Button, ScreenHeader, StatusBadge } from '@/components';
+import { UNCONFIRMED_SUBMISSION_MESSAGE } from '../src/utils/paymentErrors';
 
 const getNetworkLabel = (): string => {
   const network = (process.env.EXPO_PUBLIC_STELLAR_NETWORK || 'TESTNET').toUpperCase();
@@ -52,7 +53,7 @@ export default function ReviewTransactionScreen() {
   }>();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { publicKey, getSecretKey, refreshWalletData } = useWalletStore();
+  const { publicKey, getSecretKey, refreshWalletData, addPendingTransaction } = useWalletStore();
   const contacts = useAppStore((state) => state.contacts);
   const store = useSignerStore();
   const { phase, error } = store;
@@ -140,6 +141,23 @@ export default function ReviewTransactionScreen() {
         memo.trim() || undefined,
       );
       store.enterSubmitting();
+      store.enterConfirming();
+
+      addPendingTransaction(result.hash, {
+        id: result.hash,
+        type: 'payment',
+        from: publicKey!,
+        to: destination.trim(),
+        amount: amount.trim(),
+        asset: 'XLM',
+        created_at: new Date().toISOString(),
+      });
+
+      // React batches these consecutive set() calls into a single render, so
+      // without a real gap here 'confirming' never actually paints — this
+      // delay is what makes the phase visible instead of skipping straight
+      // from signing to completed.
+      await new Promise((resolve) => setTimeout(resolve, 400));
 
       const signingResult = {
         hash: result.hash,
@@ -149,10 +167,14 @@ export default function ReviewTransactionScreen() {
       };
       store.completeSigning(signingResult);
     } catch (err: any) {
-      const message = err?.message || 'Transaction failed.';
+      const rawMessage = err?.message || '';
+      // A throw here doesn't prove the transaction was rejected — a client-side
+      // timeout can happen after Horizon already accepted it — so use neutral
+      // copy instead of asserting failure, except for an explicit cancellation.
+      const isCancelled = /cancel|abort/i.test(rawMessage);
       store.failSigning({
-        type: /cancel|abort/i.test(message) ? 'user_cancelled' : 'unknown',
-        message,
+        type: isCancelled ? 'user_cancelled' : 'unknown',
+        message: isCancelled ? rawMessage : UNCONFIRMED_SUBMISSION_MESSAGE,
         raw: err,
       });
     }
@@ -267,19 +289,24 @@ export default function ReviewTransactionScreen() {
       </View>
 
       {/* Phase Indicator */}
-      {(phase === 'handoff' || phase === 'signing' || phase === 'submitting') && (
+      {(phase === 'handoff' || phase === 'signing' || phase === 'submitting' || phase === 'confirming') && (
         <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <ActivityIndicator size="small" color={colors.primary} />
           <View style={styles.statusTextGroup}>
-            <Text style={[styles.statusTitle, { color: colors.textPrimary }]}>
-              {phase === 'handoff' && 'Preparing Transaction...'}
-              {phase === 'signing' && 'Signing...'}
-              {phase === 'submitting' && 'Submitting to Network...'}
-            </Text>
+            <View style={styles.statusTitleRow}>
+              <Text style={[styles.statusTitle, { color: colors.textPrimary }]}>
+                {phase === 'handoff' && 'Preparing Transaction...'}
+                {phase === 'signing' && 'Signing...'}
+                {phase === 'submitting' && 'Submitting to Network...'}
+                {phase === 'confirming' && 'Confirming...'}
+              </Text>
+              <StatusBadge text="Pending" tone="info" />
+            </View>
             <Text style={[styles.statusSubtitle, { color: colors.textMuted }]}>
               {phase === 'handoff' && 'Building the transaction for review.'}
               {phase === 'signing' && 'Your device is signing the transaction securely.'}
               {phase === 'submitting' && 'Transaction signed. Waiting for network confirmation.'}
+              {phase === 'confirming' && 'Network responded. Wrapping up.'}
             </Text>
           </View>
         </View>
@@ -290,7 +317,10 @@ export default function ReviewTransactionScreen() {
         <View style={[styles.resultCard, { backgroundColor: colors.surface, borderColor: colors.success }]}>
           <CheckCircle size={24} color={colors.success} />
           <View style={styles.statusTextGroup}>
-            <Text style={[styles.statusTitle, { color: colors.success }]}>Transaction Submitted</Text>
+            <View style={styles.statusTitleRow}>
+              <Text style={[styles.statusTitle, { color: colors.success }]}>Transaction Confirmed</Text>
+              <StatusBadge text="Confirmed" tone="success" />
+            </View>
             <Text style={[styles.hashText, { color: colors.textSecondary }]} numberOfLines={1}>
               Hash: {store.lastResult.hash}
             </Text>
@@ -303,7 +333,10 @@ export default function ReviewTransactionScreen() {
         <View style={[styles.resultCard, { backgroundColor: colors.surface, borderColor: colors.error }]}>
           <XCircle size={24} color={colors.error} />
           <View style={styles.statusTextGroup}>
-            <Text style={[styles.statusTitle, { color: colors.error }]}>Transaction Failed</Text>
+            <View style={styles.statusTitleRow}>
+              <Text style={[styles.statusTitle, { color: colors.error }]}>Transaction Failed</Text>
+              <StatusBadge text="Failed" tone="error" />
+            </View>
             <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error.message}</Text>
           </View>
           <Button
@@ -320,7 +353,10 @@ export default function ReviewTransactionScreen() {
         <View style={[styles.resultCard, { backgroundColor: colors.surface, borderColor: colors.warning }]}>
           <AlertTriangle size={24} color={colors.warning} />
           <View style={styles.statusTextGroup}>
-            <Text style={[styles.statusTitle, { color: colors.warning }]}>Cancelled</Text>
+            <View style={styles.statusTitleRow}>
+              <Text style={[styles.statusTitle, { color: colors.warning }]}>Cancelled</Text>
+              <StatusBadge text="Cancelled" tone="warning" />
+            </View>
             <Text style={[styles.errorText, { color: colors.textSecondary }]}>
               Signing was cancelled. No transaction was submitted.
             </Text>
@@ -461,6 +497,11 @@ const createStyles = (colors: ThemeColors) =>
     statusTextGroup: {
       flex: 1,
       gap: 2,
+    },
+    statusTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SIZES.sm,
     },
     statusTitle: {
       fontSize: 14,

@@ -5,6 +5,14 @@
  * user-friendly messages with actionable next steps.
  */
 
+/**
+ * Shown when submission throws but we can't tell whether the transaction
+ * actually reached the ledger (e.g. a client-side timeout) — claiming
+ * "Failed" here could be wrong, since Horizon may have accepted it anyway.
+ */
+export const UNCONFIRMED_SUBMISSION_MESSAGE =
+  'Could not confirm submission. Check your transaction history before retrying.';
+
 export interface RecoveryGuidance {
   /** Short, human-readable error title. */
   title: string;

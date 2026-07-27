@@ -14,4 +14,5 @@ export { VaultLockDetail } from "./VaultLockDetail";
 export { MaturedLockWithdrawalModal } from "./MaturedLockWithdrawalModal";
 export { SigningConfirmModal } from "./SigningConfirmModal";
 export { VaultUnavailableState } from "./VaultUnavailableState";
-
+export { StatusBadge } from "./StatusBadge";
+export type { BadgeTone } from "./StatusBadge";

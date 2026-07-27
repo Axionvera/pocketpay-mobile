@@ -29,6 +29,7 @@ interface SignerState {
   enterHandoff: () => void;
   enterSigning: () => void;
   enterSubmitting: () => void;
+  enterConfirming: () => void;
   completeSigning: (result: SigningResult) => void;
   failSigning: (error: SignerError) => void;
   cancelSigning: () => void;
@@ -64,6 +65,8 @@ export const useSignerStore = create<SignerState>((set, get) => ({
   enterSigning: () => set({ phase: 'signing' }),
 
   enterSubmitting: () => set({ phase: 'submitting' }),
+
+  enterConfirming: () => set({ phase: 'confirming' }),
 
   completeSigning: (result) =>
     set({

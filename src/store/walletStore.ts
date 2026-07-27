@@ -22,12 +22,18 @@ const TX_PAGE_SIZE = 20;
 
 // Transaction records from the Stellar Horizon API – use a flexible type
 // until a proper typed SDK wrapper is available.
-export type TransactionRecord = Record<string, any> & { id: string };
+export type TransactionStatus = 'pending' | 'confirmed' | 'failed';
+export type TransactionRecord = Record<string, any> & { id: string; status?: TransactionStatus };
 
 interface WalletState {
   publicKey: string | null;
   balance: string;
   transactions: TransactionRecord[];
+  // Optimistic entries for sends that resolved locally but haven't shown up in a
+  // Horizon refresh yet, keyed by transaction hash so concurrent sends don't
+  // overwrite each other. Reconciled (dropped) in refreshWalletData once the real
+  // record appears; unreconciled entries just stay pending indefinitely.
+  pendingTransactions: Record<string, TransactionRecord>;
   lastRefreshed: number | null;
   isLoading: boolean;
   isFunding: boolean;
@@ -52,6 +58,8 @@ interface WalletState {
   loadWalletFromStorage: () => Promise<boolean>;
   /** Pull-to-refresh: resets pagination and loads the first page fresh. */
   refreshWalletData: () => Promise<void>;
+  /** Optimistically show a just-submitted transaction as pending, keyed by hash. */
+  addPendingTransaction: (hash: string, tx: Record<string, any> & { id: string }) => void;
   loadMoreTransactions: () => Promise<void>;
   clearWallet: () => Promise<boolean>;
   getSecretKey: () => Promise<string | null>;
@@ -66,6 +74,7 @@ const resetWalletState = () => ({
   publicKey: null,
   balance: DEFAULT_BALANCE,
   transactions: [],
+  pendingTransactions: {},
   lastRefreshed: null,
   isLoadingMore: false,
   hasMoreTransactions: false,
@@ -109,6 +118,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   publicKey: null,
   balance: DEFAULT_BALANCE,
   transactions: [],
+  pendingTransactions: {},
   lastRefreshed: null,
   isLoading: false,
   isFunding: false,
@@ -141,7 +151,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   setWallet: async (publicKey: string, secretKey: string) => {
     try {
       await SecureStore.setItemAsync(WALLET_KEY, secretKey);
-      set({ publicKey, balance: DEFAULT_BALANCE, transactions: [], error: null });
+      set({ publicKey, balance: DEFAULT_BALANCE, transactions: [], pendingTransactions: {}, error: null });
       return true;
     } catch {
       console.error(PERSIST_WALLET_ERROR);
@@ -204,9 +214,24 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         fetchXlmBalance(publicKey),
         fetchTransactionsPage(publicKey, TX_PAGE_SIZE),
       ]);
+
+      // Reconcile: drop any optimistic pending entry whose hash now shows up in the
+      // real Horizon response, so it isn't displayed twice. Operation records
+      // expose the transaction hash as `transaction_hash`. Entries that don't
+      // reconcile here are left showing as pending — no forced expiry. Read
+      // pendingTransactions fresh (not before the await above) so an entry added
+      // while this refresh was in flight doesn't get silently dropped.
+      const confirmedHashes = new Set(
+        page.records.map((tx: any) => tx.transaction_hash).filter(Boolean)
+      );
+      const remainingPending = Object.fromEntries(
+        Object.entries(get().pendingTransactions).filter(([hash]) => !confirmedHashes.has(hash))
+      );
+
       set({
         balance,
-        transactions: page.records,
+        transactions: [...Object.values(remainingPending), ...page.records],
+        pendingTransactions: remainingPending,
         nextCursor: page.nextCursor,
         hasMoreTransactions: page.hasMore,
         lastRefreshed: Date.now(),
@@ -216,6 +241,14 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       console.error('Failed to refresh wallet data');
       set({ isLoading: false, error: err.message || 'Failed to sync data' });
     }
+  },
+
+  addPendingTransaction: (hash, tx) => {
+    const pendingRecord: TransactionRecord = { ...tx, status: 'pending' };
+    set((state) => ({
+      pendingTransactions: { ...state.pendingTransactions, [hash]: pendingRecord },
+      transactions: [pendingRecord, ...state.transactions],
+    }));
   },
 
   loadMoreTransactions: async () => {

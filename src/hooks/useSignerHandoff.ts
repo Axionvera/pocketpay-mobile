@@ -26,7 +26,7 @@ function generateRequestId(): string {
  *
  * This is the primary API for components that need to initiate signing.
  * It encapsulates the full lifecycle:
- *   idle -> review -> handoff -> signing -> submitting -> completed/failed
+ *   idle -> review -> handoff -> signing -> submitting -> confirming -> completed/failed
  *
  * Usage:
  *   const { initiateSigning, cancelSigning } = useSignerHandoff();
@@ -123,6 +123,13 @@ export function useSignerHandoff() {
         store.enterSubmitting();
 
         const submitResult = await onSubmit(signedTx);
+
+        // Phase: confirming (network responded, wrapping up before completed)
+        store.enterConfirming();
+
+        // Without a real gap here, React batches this with the completeSigning
+        // call below into a single render and 'confirming' never paints.
+        await new Promise((resolve) => setTimeout(resolve, 400));
 
         // Phase: completed
         const result: SigningResult = {
