@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useContactStore } from '@/features/contacts/contactStore';
 import { ContactForm } from '@/components/ContactForm';
+import { useConfirm } from '@/hooks/useConfirm';
 import { User, Edit2, Trash2, Plus } from 'lucide-react-native';
 
 export const ContactManagement: React.FC = () => {
   const { contacts, addContact, updateContact, deleteContact } = useContactStore();
+  const { confirm, confirmationDialog } = useConfirm();
   const [showForm, setShowForm] = useState(false);
   const [editingContact, setEditingContact] = useState<{
     id: string;
@@ -24,18 +26,13 @@ export const ContactManagement: React.FC = () => {
   };
 
   const handleDelete = (contact: { id: string; name: string }) => {
-    Alert.alert(
-      'Delete Contact',
-      `Are you sure you want to delete "${contact.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteContact(contact.id),
-        },
-      ]
-    );
+    void confirm({
+      title: 'Delete Contact',
+      message: `Are you sure you want to delete "${contact.name}"?`,
+      confirmLabel: 'Delete',
+      destructive: true,
+      onConfirm: () => deleteContact(contact.id),
+    });
   };
 
   const handleSave = (name: string, address: string) => {
@@ -110,6 +107,8 @@ export const ContactManagement: React.FC = () => {
         onSave={handleSave}
         onCancel={handleCancel}
       />
+
+      {confirmationDialog}
     </View>
   );
 };

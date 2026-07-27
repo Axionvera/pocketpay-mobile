@@ -20,7 +20,8 @@ import {
   XCircle,
   Clock,
 } from 'lucide-react-native';
-import { Button, ScreenHeader } from '@/components';
+import { AsyncActionButton, Button, ScreenHeader } from '@/components';
+import { useConfirm } from '../src/hooks/useConfirm';
 
 const getNetworkLabel = (): string => {
   const network = (process.env.EXPO_PUBLIC_STELLAR_NETWORK || 'TESTNET').toUpperCase();
@@ -54,6 +55,7 @@ export default function SignConfirmationScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const contacts = useAppStore((state) => state.contacts);
+  const { confirm, confirmationDialog } = useConfirm();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const source = params.source || '';
@@ -69,21 +71,16 @@ export default function SignConfirmationScreen() {
     : null;
 
   const handleCancel = () => {
-    Alert.alert(
-      'Cancel Signing',
-      'Are you sure you want to cancel? The transaction will not be signed or sent.',
-      [
-        { text: 'Keep Reviewing', style: 'cancel' },
-        {
-          text: 'Cancel',
-          style: 'destructive',
-          onPress: () => {
-            // Navigate back to send screen, clearing the flow
-            router.replace('/(tabs)');
-          },
-        },
-      ]
-    );
+    void confirm({
+      title: 'Cancel Signing',
+      message:
+        'Are you sure you want to cancel? The transaction will not be signed or sent.',
+      confirmLabel: 'Cancel',
+      cancelLabel: 'Keep Reviewing',
+      destructive: true,
+      // Navigate back to send screen, clearing the flow
+      onConfirm: () => router.replace('/(tabs)'),
+    });
   };
 
   const handleConfirmSigning = async () => {
@@ -126,7 +123,7 @@ export default function SignConfirmationScreen() {
             Missing required transaction parameters.
           </Text>
           <Button
-            label="Go Back"
+            title="Go Back"
             onPress={() => router.back()}
             style={styles.errorButton}
           />
@@ -268,21 +265,23 @@ export default function SignConfirmationScreen() {
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
-        <Button
-          label="Cancel"
+        <AsyncActionButton
+          title="Cancel"
           onPress={handleCancel}
           variant="secondary"
           style={styles.cancelButton}
           disabled={isProcessing}
         />
-        <Button
-          label={isProcessing ? 'Processing...' : 'Sign Transaction'}
+        <AsyncActionButton
+          title="Sign Transaction"
+          loadingText="Processing..."
           onPress={handleConfirmSigning}
           style={styles.confirmButton}
-          disabled={isProcessing}
-          loading={isProcessing}
+          isLoading={isProcessing}
         />
       </View>
+
+      {confirmationDialog}
     </View>
   );
 }

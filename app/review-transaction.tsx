@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../src/hooks/useTheme';
@@ -23,8 +22,39 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react-native';
-import { Button, ScreenHeader, StatusBadge } from '@/components';
+import {
+  Button,
+  LoadingState,
+  ReviewConfirm,
+  ReviewItem,
+  ScreenHeader,
+  StatusBadge,
+} from '@/components';
 import { UNCONFIRMED_SUBMISSION_MESSAGE } from '../src/utils/paymentErrors';
+
+/** Copy for each in-flight signing phase, shared by the visible card and its screen-reader label. */
+const PHASE_COPY = {
+  handoff: {
+    title: 'Preparing Transaction...',
+    subtitle: 'Building the transaction for review.',
+  },
+  signing: {
+    title: 'Signing...',
+    subtitle: 'Your device is signing the transaction securely.',
+  },
+  submitting: {
+    title: 'Submitting to Network...',
+    subtitle: 'Transaction signed. Waiting for network confirmation.',
+  },
+  confirming: {
+    title: 'Confirming...',
+    subtitle: 'Network responded. Wrapping up.',
+  },
+} as const;
+
+type InFlightPhase = keyof typeof PHASE_COPY;
+
+const isInFlightPhase = (phase: string): phase is InFlightPhase => phase in PHASE_COPY;
 
 const getNetworkLabel = (): string => {
   const network = (process.env.EXPO_PUBLIC_STELLAR_NETWORK || 'TESTNET').toUpperCase();
@@ -196,7 +226,32 @@ export default function ReviewTransactionScreen() {
     store.reset();
     router.back();
   };
-  
+
+  const reviewItems: ReviewItem[] = useMemo(() => {
+    const items: ReviewItem[] = [
+      { label: 'From', value: publicKey ?? '', truncate: true },
+      {
+        label: 'To',
+        value: destinationContact?.isContact ? destinationContact.label : destination.trim(),
+        secondaryValue: destinationContact?.isContact ? destination.trim() : null,
+        truncate: true,
+      },
+      { label: 'Amount', value: `${formatAmount(amount.trim())} XLM`, emphasis: true },
+    ];
+
+    if (memo.trim()) items.push({ label: 'Memo', value: memo.trim() });
+    items.push({ label: 'Network', value: getNetworkLabel() });
+    if (store.currentReview?.fee) {
+      items.push({ label: 'Fee', value: `~${store.currentReview.fee} stroops` });
+    }
+
+    return items;
+  }, [publicKey, destination, destinationContact, amount, memo, store.currentReview?.fee]);
+
+  // Only the review phase offers actions; every later phase keeps the same
+  // summary on screen so the user can still see what they committed to.
+  const isReviewPhase = phase === 'review';
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -204,74 +259,15 @@ export default function ReviewTransactionScreen() {
     >
       <ScreenHeader title="Review Transaction" subtitle="Verify details before signing" />
 
-      {/* Transaction Details Card */}
-      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={styles.row}>
-          <Text style={[styles.rowLabel, { color: colors.textSecondary }]}>From</Text>
-          <Text
-            style={[styles.rowValue, { color: colors.textPrimary }]}
-            numberOfLines={1}
-            ellipsizeMode="middle"
-          >
-            {publicKey}
-          </Text>
-        </View>
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-        <View style={styles.row}>
-          <Text style={[styles.rowLabel, { color: colors.textSecondary }]}>To</Text>
-          <View style={styles.rowValueGroup}>
-            {destinationContact?.isContact ? (
-              <Text style={[styles.contactLabel, { color: colors.primary }]}>
-                {destinationContact.label}
-              </Text>
-            ) : null}
-            <Text
-              style={[
-                destinationContact?.isContact
-                  ? styles.rowValueSecondary
-                  : styles.rowValue,
-                { color: destinationContact?.isContact ? colors.textMuted : colors.textPrimary },
-              ]}
-              numberOfLines={1}
-              ellipsizeMode="middle"
-            >
-              {destination.trim()}
-            </Text>
-          </View>
-        </View>
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-        <View style={styles.row}>
-          <Text style={[styles.rowLabel, { color: colors.textSecondary }]}>Amount</Text>
-          <Text style={[styles.rowValueEmphasis, { color: colors.primary }]}>
-            {formatAmount(amount.trim())} XLM
-          </Text>
-        </View>
-        {memo.trim() ? (
-          <>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <View style={styles.row}>
-              <Text style={[styles.rowLabel, { color: colors.textSecondary }]}>Memo</Text>
-              <Text style={[styles.rowValue, { color: colors.textPrimary }]}>{memo.trim()}</Text>
-            </View>
-          </>
-        ) : null}
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-        <View style={styles.row}>
-          <Text style={[styles.rowLabel, { color: colors.textSecondary }]}>Network</Text>
-          <Text style={[styles.rowValue, { color: colors.textPrimary }]}>{getNetworkLabel()}</Text>
-        </View>
-        {store.currentReview?.fee ? (
-          <>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <View style={styles.row}>
-              <Text style={[styles.rowLabel, { color: colors.textSecondary }]}>Fee</Text>
-              <Text style={[styles.rowValue, { color: colors.textPrimary }]}>
-                ~{store.currentReview.fee} stroops
-              </Text>
-            </View>
-          </>
-        ) : null}
-      </View>
+      {/* Transaction Details + primary confirmation */}
+      <ReviewConfirm
+        items={reviewItems}
+        confirmLabel={isReviewPhase ? 'Sign & Send' : undefined}
+        onConfirm={isReviewPhase ? handleConfirmSign : undefined}
+        loadingText="Signing…"
+        cancelLabel="Back to Edit"
+        onCancel={isReviewPhase ? () => router.back() : undefined}
+      />
 
       {/* Signer Info Card */}
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -289,24 +285,23 @@ export default function ReviewTransactionScreen() {
       </View>
 
       {/* Phase Indicator */}
-      {(phase === 'handoff' || phase === 'signing' || phase === 'submitting' || phase === 'confirming') && (
+      {isInFlightPhase(phase) && (
         <View style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <ActivityIndicator size="small" color={colors.primary} />
+          <LoadingState
+            message=""
+            size="small"
+            style={styles.statusSpinner}
+            accessibilityLabel={PHASE_COPY[phase].title}
+          />
           <View style={styles.statusTextGroup}>
             <View style={styles.statusTitleRow}>
               <Text style={[styles.statusTitle, { color: colors.textPrimary }]}>
-                {phase === 'handoff' && 'Preparing Transaction...'}
-                {phase === 'signing' && 'Signing...'}
-                {phase === 'submitting' && 'Submitting to Network...'}
-                {phase === 'confirming' && 'Confirming...'}
+                {PHASE_COPY[phase].title}
               </Text>
               <StatusBadge text="Pending" tone="info" />
             </View>
             <Text style={[styles.statusSubtitle, { color: colors.textMuted }]}>
-              {phase === 'handoff' && 'Building the transaction for review.'}
-              {phase === 'signing' && 'Your device is signing the transaction securely.'}
-              {phase === 'submitting' && 'Transaction signed. Waiting for network confirmation.'}
-              {phase === 'confirming' && 'Network responded. Wrapping up.'}
+              {PHASE_COPY[phase].subtitle}
             </Text>
           </View>
         </View>
@@ -364,22 +359,6 @@ export default function ReviewTransactionScreen() {
         </View>
       )}
 
-      {/* Action Buttons */}
-     {phase === 'review' && (
-  <View style={styles.actions}>
-    <Button
-      title="Sign & Send"
-      onPress={handleConfirmSign}
-      style={styles.signButton}
-    />
-    <Button
-      title="Back to Edit"
-      variant="secondary"
-      onPress={() => router.back()}
-    />
-  </View>
-)}
-
       {(phase === 'failed' || phase === 'cancelled') && (
         <View style={styles.actions}>
           <Button
@@ -417,43 +396,6 @@ const createStyles = (colors: ThemeColors) =>
       padding: SIZES.md,
       marginBottom: SIZES.md,
     },
-    row: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      paddingVertical: SIZES.sm,
-    },
-    rowLabel: {
-      fontSize: 12,
-      fontWeight: '500',
-      width: 80,
-    },
-    rowValueGroup: {
-      flex: 1,
-      alignItems: 'flex-end',
-    },
-    rowValue: {
-      fontSize: 13,
-      fontWeight: '600',
-      textAlign: 'right',
-      flexShrink: 1,
-    },
-    rowValueSecondary: {
-      fontSize: 11,
-      textAlign: 'right',
-      marginTop: 2,
-    },
-    rowValueEmphasis: {
-      fontSize: 16,
-      fontWeight: 'bold',
-    },
-    contactLabel: {
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    divider: {
-      height: 1,
-    },
     signerHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -474,6 +416,9 @@ const createStyles = (colors: ThemeColors) =>
     signerDescription: {
       fontSize: 12,
       lineHeight: 18,
+    },
+    statusSpinner: {
+      padding: 0,
     },
     statusCard: {
       flexDirection: 'row',
@@ -522,9 +467,6 @@ const createStyles = (colors: ThemeColors) =>
     actions: {
       gap: SIZES.sm,
       marginBottom: SIZES.md,
-    },
-    signButton: {
-      marginBottom: SIZES.xs,
     },
     retryButton: {
       marginTop: SIZES.sm,

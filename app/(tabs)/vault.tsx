@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { VaultLockList } from '../../src/components/VaultLockList';
 import { VaultConfirmModal } from '../../src/components/VaultConfirmModal';
 import { VaultIntroModal } from '../../src/components/VaultIntroModal';
 import { VaultLockEducationModal } from '../../src/components/VaultLockEducationModal';
 import { VaultUnavailableState } from '../../src/components/VaultUnavailableState';
+import { LoadingState } from '../../src/components/LoadingState';
 import { VaultActionProgress } from '../../src/components/VaultActionProgress';
 import { Input } from '../../src/components/Input';
 import { AsyncActionButton } from '../../src/components/AsyncActionButton';
@@ -252,7 +253,11 @@ export default function VaultScreen() {
         </View>
         <Text style={styles.cardTitle}>Soroban Savings Vault</Text>
         {isLoadingBalance ? (
-          <ActivityIndicator size="large" color={colors.primary} style={styles.balanceLoader} />
+          <LoadingState
+            message=""
+            style={styles.balanceLoader}
+            accessibilityLabel="Loading vault balance"
+          />
         ) : (
           <Text style={styles.balanceValue}>{balance} XLM</Text>
         )}

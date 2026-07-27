@@ -1,3 +1,5 @@
+export { useConfirm } from "./useConfirm";
+export type { ConfirmRequest, UseConfirmResult } from "./useConfirm";
 export { useDirtyForm } from "./useDirtyForm";
 export { useOnlineStatus } from "./useOnlineStatus";
 export { useSignerHandoff } from "./useSignerHandoff";
