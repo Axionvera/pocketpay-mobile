@@ -85,6 +85,8 @@ const resetWalletState = () => ({
   isLoadingMore: false,
   hasMoreTransactions: false,
   nextCursor: null,
+  balanceState: 'idle' as BalanceState,
+  fundingStatus: 'unknown' as FundingStatus,
 });
 
 const parseStoredSecret = (storedValue: string): string | null => {
