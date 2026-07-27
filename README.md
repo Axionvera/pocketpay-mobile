@@ -80,25 +80,3 @@ React Native, Expo Router, Zustand, PocketPay SDK, SecureStore, AsyncStorage
 npm install --legacy-peer-deps
 cp .env.example .env
 npm start
-
-The PocketPay SDK is pinned to an official source commit and built by the
-app's `postinstall` script because the SDK is not currently published to npm.
-
-## Contributing
-
-Before adding new screens or components, read the [Design System guide](docs/design-system.md). It covers colour tokens, typography, spacing, card patterns, buttons, inputs, and dark mode rules derived directly from the existing codebase.
-
-Please read our [Contributing Guidelines](CONTRIBUTING.md) and review our [Accessibility Checklist](docs/accessibility.md) before making UI changes.
-
-## Changelog
-
-See [CHANGELOG.md](./CHANGELOG.md) for a full list of notable changes across releases.
-
-## Security
-
-See the full [Security Guide](docs/security.md) for details on secret key handling, device storage, backups, and safe development practices.
-- [Mobile Security Checklist](docs/mobile-security-checklist.md) - Checklist for reviewing security-sensitive changes
-## License
-
-MIT
-MIT
