@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Input } from '../../src/components/Input';
+import { MultiLockList } from '../../src/components/MultiLockList';
 import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useVaultStore } from '../../src/store/vaultStore';
 import { validateAmount } from '../../src/utils/validation';
 import { PiggyBank, ShieldCheck, AlertTriangle } from 'lucide-react-native';
+import { VaultLock } from '../../src/types/vault';
+import { vaultLockFixtures } from '../../tests/fixtures/vault';
 
 export default function VaultScreen() {
   const { publicKey, getSecretKey, balance: walletBalance } = useWalletStore();
@@ -25,9 +28,15 @@ export default function VaultScreen() {
   const [amount, setAmount] = useState('');
   const [amountError, setAmountError] = useState<string | undefined>();
 
+  // ---- Multi-lock state (placeholder data until contract integration) ----
+  const [locks, setLocks] = useState<VaultLock[]>([]);
+  const [isLoadingLocks, setIsLoadingLocks] = useState(true);
+  const [locksError, setLocksError] = useState<string | null>(null);
+
   useEffect(() => {
     if (publicKey) {
       loadBalance(publicKey);
+      loadLocks();
     }
   }, [publicKey]);
 
@@ -69,6 +78,41 @@ export default function VaultScreen() {
     } catch (e: any) {
       Alert.alert(`${action === 'deposit' ? 'Deposit' : 'Withdrawal'} failed`, e.message);
     }
+  };
+
+  // ---- Multi-lock helpers ----
+
+  /** Simulate fetching locks from the contract. Replace with real RPC call when ready. */
+  const loadLocks = async () => {
+    setIsLoadingLocks(true);
+    setLocksError(null);
+    try {
+      // Simulate network latency for the loading state to be visible.
+      await new Promise((r) => setTimeout(r, 800));
+      // TODO: Replace with actual contract call when multi-lock integration is ready.
+      setLocks(vaultLockFixtures.all);
+    } catch (e: any) {
+      setLocksError(e.message || 'Failed to load locks');
+    } finally {
+      setIsLoadingLocks(false);
+    }
+  };
+
+  const handleWithdrawLock = (lock: VaultLock) => {
+    Alert.alert(
+      'Withdraw Lock',
+      `Withdraw ${lock.amount} XLM from lock ${lock.id}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Withdraw',
+          onPress: () => {
+            // TODO: Call contract to withdraw matured lock.
+            Alert.alert('Coming Soon', 'Lock withdrawal will be available when contract integration is complete.');
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -146,6 +190,15 @@ export default function VaultScreen() {
           />
         </View>
       </View>
+
+      {/* ---- Multi-Lock List ---- */}
+      <MultiLockList
+        locks={locks}
+        isLoading={isLoadingLocks}
+        error={locksError}
+        onWithdraw={handleWithdrawLock}
+        onRetry={loadLocks}
+      />
     </ScrollView>
   );
 }

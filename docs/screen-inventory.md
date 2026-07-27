@@ -39,7 +39,8 @@ This document provides a quick map of the main screens and routes in the Stellar
 
 ## `app/(tabs)/vault.tsx`
 *   **Route Name:** `/(tabs)/vault`
-*   **Purpose:** A placeholder UI for a Soroban Savings Vault integration. Simulates depositing and withdrawing.
-*   **Key Components:** `Input`, `Button`
-*   **State Dependencies:** `useWalletStore` (publicKey, getSecretKey)
+*   **Purpose:** Soroban Savings Vault UI. Shows vault balance, deposit/withdraw form, and a multi-lock list of time-locked positions.
+*   **Key Components:** `Input`, `Button`, `MultiLockList`
+*   **State Dependencies:** `useWalletStore` (publicKey, getSecretKey), `useVaultStore` (balance, isConfigured, contractId, loadBalance, deposit, withdraw)
 *   **Related SDK Calls:** `mockFetchVaultBalance`, `mockDepositToVault`, `mockWithdrawFromVault` (from `src/services/stellar`)
+*   **Placeholder Data:** Lock fixtures from `tests/fixtures/vault.ts` simulate three lock statuses (locked, matured, withdrawn). See `docs/multi-lock.md` for integration roadmap.
