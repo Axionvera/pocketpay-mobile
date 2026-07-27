@@ -112,6 +112,33 @@ Any new vault UI that displays contract interaction details (transaction hashes,
 
 ---
 
+## Vault Unavailable State
+
+When the vault cannot be used (no wallet, feature disabled, or SDK not ready), the UI renders a dedicated `VaultUnavailableState` component instead of the interactive form.
+
+### Triggering Conditions
+
+| Condition | Reason Code | User-Facing Message |
+|---|---|---|
+| No wallet loaded (`publicKey` null) | `no-wallet` | Create or import a wallet to use the Soroban Savings Vault. |
+| `EXPO_PUBLIC_VAULT_ENABLED=false` | `feature-disabled` | The vault is currently disabled by configuration. |
+| SDK reports vault not ready | `sdk-not-ready` | The vault backend is not yet available. |
+
+### UI Behaviour
+
+- The deposit/withdraw/lock form is **replaced** by `VaultUnavailableState`
+- All vault action buttons are not rendered (preventing any interaction)
+- A fallback navigation button is shown:
+  - `no-wallet` → "Go to Settings" (navigates to settings tab)
+  - `feature-disabled` / `sdk-not-ready` → "Try Again" (retriggers availability check)
+- The docs link at the bottom points to this document
+
+### Important
+
+Mock mode (`EXPO_PUBLIC_VAULT_CONTRACT_ID` unset) is **not** treated as "unavailable". The vault form remains accessible with a warning banner explaining that no real funds are moved. This is intentional — mock mode exists for development and demo purposes.
+
+---
+
 ## Summary Checklist
 
 | Guideline | Status |
@@ -124,6 +151,10 @@ Any new vault UI that displays contract interaction details (transaction hashes,
 | Multiple locks supported with distinct UI | Required |
 | Matured/immature locks visually distinct | Required |
 | Empty and loading states handled | Required |
+| Vault unavailable state shown when capability is missing | Required |
+| SDK capability assumptions documented | Required |
+| Fallback navigation available from unavailable state | Required |
+| Actions disabled when vault is unavailable | Required |
 | Contract docs referenced in UI footnotes or tooltips | Recommended |
 | Mock mode distinguished from real contract mode | Required |
 
@@ -134,4 +165,6 @@ Any new vault UI that displays contract interaction details (transaction hashes,
 - [Security Guide](./security.md) — key handling, Testnet risks, and safe development practices
 - [Storage Guide](./storage.md) — how SecureStore and AsyncStorage are used
 - [Vault Integration Assumptions](./vault-integration-assumptions.md) — expected SDK/contract dependencies, placeholder behaviors, and known gaps
+- [Vault SDK Capability Assumptions](./vault-sdk-capability-assumptions.md) — SDK readiness signals & feature flag assumptions
 - [Soroban Savings Vault contract](https://github.com/Axionvera/pocketpay-contracts) — contract source and interface
+

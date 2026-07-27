@@ -34,7 +34,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   // Babel-compiled Node build instead, which is already down-leveled.
   if (moduleName === '@stellar/stellar-sdk') {
     return {
-      filePath: path.resolve(__dirname, 'node_modules/@stellar/stellar-sdk/lib/index.js'),
+      filePath: path.resolve(__dirname, 'node_modules/@stellar/stellar-sdk/lib/cjs/index.js'),
       type: 'sourceFile',
     };
   }

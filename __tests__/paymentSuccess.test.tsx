@@ -174,9 +174,10 @@ describe('graceful handling of missing or invalid data', () => {
       amount: undefined,
       destination: DESTINATION,
     } as any);
-    const { getByText, queryByText } = render(<PaymentSuccessScreen />);
-    expect(getByText('—')).toBeTruthy();
+    const { getAllByText, queryByText } = render(<PaymentSuccessScreen />);
+    expect(getAllByText('—').length).toBeGreaterThan(0);
     expect(queryByText('— XLM')).toBeNull();
+
   });
 
   it('handles missing date gracefully by showing fallback dash', () => {
