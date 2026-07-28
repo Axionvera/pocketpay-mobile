@@ -92,7 +92,7 @@ describe('SecretKeyReveal clipboard error handling', () => {
       'Copy Failed',
       expect.stringContaining('Could not copy to clipboard')
     );
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to copy secret key to clipboard');
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Clipboard copy failed:', expect.any(Error));
     expect(JSON.stringify(consoleErrorSpy.mock.calls)).not.toContain(SECRET);
     expect(JSON.stringify(alertSpy.mock.calls)).not.toContain(SECRET);
   });

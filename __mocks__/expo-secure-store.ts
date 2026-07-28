@@ -7,5 +7,6 @@ export const setItemAsync = jest.fn(async (key: string, value: string) => {
 export const deleteItemAsync = jest.fn(async (key: string) => {
   delete store[key];
 });
+export const isAvailableAsync = jest.fn(async () => true);
 
-export default { getItemAsync, setItemAsync, deleteItemAsync };
+export default { getItemAsync, setItemAsync, deleteItemAsync, isAvailableAsync };

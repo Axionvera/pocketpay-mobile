@@ -181,3 +181,40 @@ export const validateMemo = (memo: string): string | null => {
 
   return null;
 };
+
+// ── Transaction deep-link validation ────────────────────────────────────────
+
+/**
+ * Maximum length for a Horizon operation ID / paging token.  Horizon paging
+ * tokens are typically short numeric strings but we cap at a generous limit
+ * to reject obviously malformed deep-link payloads.
+ */
+const TX_ID_MAX_LENGTH = 128;
+
+/**
+ * Validate a transaction / operation ID received via deep link.
+ * Returns a readable error message, or null if valid.
+ *
+ * Horizon operation IDs are numeric strings (e.g. "123456789012345")
+ * and paging tokens are typically numeric or dot-separated numeric strings.
+ * We reject empty values, control characters, and overly long strings.
+ */
+export const validateTransactionId = (id: string | undefined): string | null => {
+  if (!id || !id.trim()) {
+    return 'No transaction ID provided.';
+  }
+
+  const trimmed = id.trim();
+
+  if (trimmed.length > TX_ID_MAX_LENGTH) {
+    return 'Transaction link is invalid (too long).';
+  }
+
+  // Reject control characters (newlines, tabs, etc.) which could be used
+  // for injection in logs or display contexts.
+  if (/[\x00-\x1f\x7f]/.test(trimmed)) {
+    return 'Transaction link contains invalid characters.';
+  }
+
+  return null;
+};

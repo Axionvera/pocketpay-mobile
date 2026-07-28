@@ -30,8 +30,8 @@ export default function DiagnosticsScreen() {
   const [diagnosticsJson, setDiagnosticsJson] = useState<string>('');
   const [parsedData, setParsedData] = useState<Record<string, any> | null>(null);
 
-  const loadDiagnostics = () => {
-    const raw = getDiagnostics();
+  const loadDiagnostics = async () => {
+    const raw = await getDiagnostics();
     setDiagnosticsJson(raw);
     try {
       setParsedData(JSON.parse(raw));
@@ -81,6 +81,38 @@ export default function DiagnosticsScreen() {
           <View style={styles.row}>
             <Text style={styles.label}>Mode</Text>
             <Text style={styles.value}>{parsedData.environment.isDevelopment ? 'Development' : 'Production'}</Text>
+          </View>
+
+          <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Network</Text>
+          <View style={styles.row}>
+            <Text style={styles.label}>Network</Text>
+            <Text style={styles.value}>{parsedData.network.label}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Horizon</Text>
+            <Text style={styles.value}>{parsedData.network.horizonHost}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Soroban RPC</Text>
+            <Text style={styles.value}>{parsedData.network.sorobanHost}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Vault</Text>
+            <Text style={styles.value}>{parsedData.network.vaultMode === 'configured' ? parsedData.network.vaultContractLabel : 'Mock (no contract)'}</Text>
+          </View>
+
+          <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Feature Flags</Text>
+          {Object.entries(parsedData.featureFlags ?? {}).map(([flag, enabled]) => (
+            <View style={styles.row} key={flag}>
+              <Text style={styles.label}>{flag}</Text>
+              <Text style={styles.value}>{enabled ? 'On' : 'Off'}</Text>
+            </View>
+          ))}
+
+          <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Storage</Text>
+          <View style={styles.row}>
+            <Text style={styles.label}>Secure Storage</Text>
+            <Text style={styles.value}>{parsedData.storage?.secureStoreAvailable ? 'Available' : 'Unavailable'}</Text>
           </View>
 
           <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Wallet Status</Text>

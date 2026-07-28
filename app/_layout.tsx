@@ -1,12 +1,14 @@
 import '../shim'; // MUST BE FIRST (See docs/polyfills.md for details)
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { installGlobalErrorHandlers } from '../src/utils/globalErrorHandler';
 import { StatusBar } from 'expo-status-bar';
 import { useWalletStore } from '../src/store/walletStore';
 import { useAppStore } from '../src/store/appStore';
 import { LockScreen } from '../src/components/LockScreen';
 import { WalletEmptyState } from '../src/components/WalletEmptyState';
+import { StartupLoadingScreen } from '../src/components/StartupLoadingScreen';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '../src/hooks/useTheme';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
@@ -23,14 +25,14 @@ installGlobalErrorHandlers(); // MUST run before anything else can throw
 
 export default function RootLayout() {
   return (
-    <ErrorBoundary>
-      <RootContent />
-    </ErrorBoundary>
+      <ErrorBoundary>
+        <RootContent />
+      </ErrorBoundary>
   );
 }
 
 function RootContent() {
-   const { loadWalletFromStorage, publicKey, error, clearWallet, walletChecked } = useWalletStore();
+  const { loadWalletFromStorage, publicKey, error, clearWallet, walletChecked } = useWalletStore();
   const { initializeApp, isInitialized } = useAppStore();
   const { colors } = useTheme();
   const segments = useSegments();
@@ -38,11 +40,39 @@ function RootContent() {
 
   const [showResetModal, setShowResetModal] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [startupMessage, setStartupMessage] = useState('Preparing your wallet…');
+
+  // Deep link URL preservation: when a logged-out user arrives via a deep link,
+  // we store the URL and replay it after authentication completes.
+  const initialUrl = Linking.useURL();
+  const pendingDeepLink = useRef<string | null>(null);
 
   useEffect(() => {
+    // Start initialization with progress messages
+    setStartupMessage('Loading your settings…');
     initializeApp();
-    loadWalletFromStorage();
+
+    // Give a moment for app store to start loading before wallet
+    setTimeout(() => {
+      setStartupMessage('Restoring your wallet…');
+      loadWalletFromStorage();
+    }, 300);
   }, []);
+
+  // Update progress message based on initialization state
+  useEffect(() => {
+    if (isInitialized && !walletChecked) {
+      setStartupMessage('Restoring your wallet…');
+    } else if (isInitialized && walletChecked && publicKey) {
+      setStartupMessage('Wallet ready!');
+      // Brief pause to show completion before navigation
+      setTimeout(() => {
+        setStartupMessage('Ready');
+      }, 300);
+    } else if (isInitialized && walletChecked && !publicKey) {
+      setStartupMessage('Ready to get started');
+    }
+  }, [isInitialized, walletChecked, publicKey]);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -57,25 +87,41 @@ function RootContent() {
 
     if (publicKey && inAuthGroup) {
       // User is signed in and trying to access auth screens, redirect to main
-      router.replace('/(tabs)');
+      // If there's a pending deep link, replay it now that the user is authenticated.
+      if (pendingDeepLink.current) {
+        const url = pendingDeepLink.current;
+        pendingDeepLink.current = null;
+        // Use Linking.openURL to let Expo Router resolve the path from the full URL
+        Linking.openURL(url);
+      } else {
+        router.replace('/(tabs)');
+      }
     } else if (!publicKey && !inAuthGroup && segments[0] !== 'send' && segments[0] !== 'receive' && segments[0] !== 'review-transaction') {
       // User is NOT signed in and trying to access main screens, redirect to auth.
-      // This also covers a wallet reset that happens while sitting on a (tabs)
-      // screen (e.g. Settings) — publicKey going null must redirect from there too.
+      // Preserve the deep link URL so we can replay it after authentication.
+      if (initialUrl && !pendingDeepLink.current) {
+        pendingDeepLink.current = initialUrl;
+      }
       router.replace('/(auth)');
     }
-  }, [publicKey, isInitialized, walletChecked, segments, error]);
+  }, [publicKey, isInitialized, walletChecked, segments, error, initialUrl]);
 
+  // --- STARTUP LOADING STATE ---
+  // Show the dedicated startup loading screen while either store is initializing.
+  // This ensures users see a clean, intentional loading experience rather than
+  // the wallet empty state or a flash of incorrect content.
   if (!isInitialized || !walletChecked) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <WalletEmptyState variant="loading" />
-      </View>
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+          <StartupLoadingScreen progressMessage={startupMessage} />
+        </View>
     );
   }
 
+  // --- WALLET RESTORE ERROR STATE ---
   if (error === RESTORE_WALLET_ERROR) {
     const handleRetry = async () => {
+      setStartupMessage('Retrying wallet access…');
       await loadWalletFromStorage();
     };
 
@@ -90,54 +136,55 @@ function RootContent() {
       setShowResetModal(false);
       if (!cleared) {
         Alert.alert(
-          'Reset Failed',
-          WALLET_CLEAR_FAILURE_MESSAGE
+            'Reset Failed',
+            WALLET_CLEAR_FAILURE_MESSAGE
         );
       }
     };
 
     return (
-      <View style={[styles.errorContainer, { backgroundColor: colors.background }]}>
-        <View style={styles.errorContent}>
-          <ShieldAlert color={colors.error} size={64} style={{ marginBottom: SIZES.md }} />
-          <Text style={[styles.errorTitle, { color: colors.textPrimary }]}>Secure Storage Inaccessible</Text>
-          <Text style={[styles.errorSubtitle, { color: colors.textSecondary }]}>
-            PocketPay was unable to retrieve your wallet secret. This can happen due to device restrictions, locked keystore/keychain, or missing permissions.
-          </Text>
-
-          <View style={[styles.guidanceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.guidanceTitle, { color: colors.textPrimary }]}>Troubleshooting Guidance:</Text>
-            <Text style={[styles.guidanceText, { color: colors.textSecondary }]}>
-              1. Unlock your phone if it was just restarted.{"\n"}
-              2. Ensure device security (PIN, passcode, or biometrics) is active.{"\n"}
-              3. Check that the app is permitted to use local authentication.{"\n"}
-              4. Try restarting the app.
+        <View style={[styles.errorContainer, { backgroundColor: colors.background }]}>
+          <View style={styles.errorContent}>
+            <ShieldAlert color={colors.error} size={64} style={{ marginBottom: SIZES.md }} />
+            <Text style={[styles.errorTitle, { color: colors.textPrimary }]}>Secure Storage Inaccessible</Text>
+            <Text style={[styles.errorSubtitle, { color: colors.textSecondary }]}>
+              PocketPay was unable to retrieve your wallet secret. This can happen due to device restrictions, locked keystore/keychain, or missing permissions.
             </Text>
+
+            <View style={[styles.guidanceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.guidanceTitle, { color: colors.textPrimary }]}>Troubleshooting Guidance:</Text>
+              <Text style={[styles.guidanceText, { color: colors.textSecondary }]}>
+                1. Unlock your phone if it was just restarted.{'\n'}
+                2. Ensure device security (PIN, passcode, or biometrics) is active.{'\n'}
+                3. Check that the app is permitted to use local authentication.{'\n'}
+                4. Try restarting the app.
+              </Text>
+            </View>
           </View>
-        </View>
 
-        <View style={styles.buttonContainer}>
-          <Button title="Retry Access" onPress={handleRetry} style={{ marginBottom: SIZES.sm }} />
-          <Button title="Reset & Import Again" variant="secondary" onPress={handleReset} />
-        </View>
+          <View style={styles.buttonContainer}>
+            <Button title="Retry Access" onPress={handleRetry} style={{ marginBottom: SIZES.sm }} />
+            <Button title="Reset & Import Again" variant="secondary" onPress={handleReset} />
+          </View>
 
-        <WalletResetConfirmModal
-          visible={showResetModal}
-          isLoading={isResetting}
-          onConfirm={handleResetConfirm}
-          onCancel={() => setShowResetModal(false)}
-        />
-      </View>
+          <WalletResetConfirmModal
+              visible={showResetModal}
+              isLoading={isResetting}
+              onConfirm={handleResetConfirm}
+              onCancel={() => setShowResetModal(false)}
+          />
+        </View>
     );
   }
 
+  // --- MAIN APP ---
   return (
-    <>
-      <StatusBar style="light" />
-      <LockScreen>
-        <Slot />
-      </LockScreen>
-    </>
+      <>
+        <StatusBar style="light" />
+        <LockScreen>
+          <Slot />
+        </LockScreen>
+      </>
   );
 }
 

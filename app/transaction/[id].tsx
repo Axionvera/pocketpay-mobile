@@ -1,43 +1,153 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, ScrollView, Platform, Linking } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, ScrollView, Platform, Linking, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
-import { Copy, Check, ArrowLeft, ArrowUpRight, ArrowDownLeft, ExternalLink, AlertCircle, Clock, CheckCircle, XCircle } from 'lucide-react-native';
+import { Copy, Check, ArrowLeft, ArrowUpRight, ArrowDownLeft, ExternalLink, AlertCircle, Clock, CheckCircle, XCircle, RefreshCw } from 'lucide-react-native';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useAppStore } from '../../src/store/appStore';
 import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
 import { Button } from '../../src/components/Button';
 import { resolveAddressLabel } from '../../src/utils/contacts';
 import { formatAmount } from '../../src/utils/amount';
-import { getExplorerTxUrl } from '../../src/services/stellar';
+import { validateTransactionId } from '../../src/utils/validation';
+import { getExplorerTxUrl, fetchOperationById } from '../../src/services/stellar';
+import type { TransactionDetail } from '../../src/features/transactions/types';
+
+type DeepLinkLoadState = 'idle' | 'loading' | 'loaded' | 'not_found' | 'error' | 'invalid';
 
 export default function TransactionDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { transactions, publicKey } = useWalletStore();
   const contacts = useAppStore((state) => state.contacts);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const { copy, copiedField } = useCopyToClipboard();
 
-  interface TransactionDetail {
-    id: string;
-    from?: string;
-    to?: string;
-    amount?: string;
-    asset?: string;
-    createdAt?: string;
-    created_at?: string;
-    timestamp?: string;
-    hash?: string;
-    transaction_hash?: string;
-    memo?: string;
-    memo_type?: string;
-    transaction_successful?: boolean;
-    is_pending?: boolean;
-    type?: string;
+  // Deep link state: for fetching from network when not in local store
+  const [deepLinkState, setDeepLinkState] = useState<DeepLinkLoadState>('idle');
+  const [fetchedTx, setFetchedTx] = useState<TransactionDetail | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  // Validate the ID param
+  const validationError = validateTransactionId(id);
+
+  // First, try the in-memory store
+  const storeTransaction = transactions.find((tx) => tx.id === id);
+
+  // If not in store and ID is valid, fetch from network (deep link scenario)
+  useEffect(() => {
+    if (validationError) {
+      setDeepLinkState('invalid');
+      return;
+    }
+
+    // If found in store, no network fetch needed
+    if (storeTransaction) {
+      setDeepLinkState('loaded');
+      setFetchedTx(storeTransaction as TransactionDetail);
+      return;
+    }
+
+    // Only fetch on initial load or explicit retry (retryCount changes)
+    if (deepLinkState === 'loaded') {
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchFromNetwork = async () => {
+      setDeepLinkState('loading');
+      try {
+        const record = await fetchOperationById(id!);
+        if (cancelled) return;
+
+        if (record) {
+          setFetchedTx(record as unknown as TransactionDetail);
+          setDeepLinkState('loaded');
+        } else {
+          setDeepLinkState('not_found');
+        }
+      } catch (err: any) {
+        if (cancelled) return;
+        console.error('Deep link transaction fetch failed:', err);
+        setDeepLinkState('error');
+      }
+    };
+
+    fetchFromNetwork();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, storeTransaction, validationError, retryCount]);
+
+  // Derive the final transaction to display
+  const transaction: TransactionDetail | null = storeTransaction
+    ? (storeTransaction as TransactionDetail)
+    : fetchedTx;
+
+  const handleRetry = () => {
+    setDeepLinkState('idle');
+    setFetchedTx(null);
+    setRetryCount((c) => c + 1);
+  };
+
+  // ── Invalid ID State ──────────────────────────────────────
+  if (validationError) {
+    return (
+      <View style={styles.errorContainer} testID="error-container">
+        <AlertCircle color={COLORS.error} size={48} style={{ marginBottom: SIZES.md }} />
+        <Text style={styles.errorTitle}>Invalid Transaction Link</Text>
+        <Text style={styles.errorText}>{validationError}</Text>
+        <Button title="Go Back" onPress={() => router.back()} />
+      </View>
+    );
   }
 
-  const transaction = transactions.find((tx) => tx.id === id);
+  // ── Loading State (deep link network fetch) ───────────────
+  if (deepLinkState === 'loading' || (deepLinkState === 'idle' && !validationError && !storeTransaction)) {
+    return (
+      <View style={styles.errorContainer} testID="loading-container">
+        <ActivityIndicator color={COLORS.primary} size="large" />
+        <Text style={[styles.errorText, { marginTop: SIZES.md }]}>Loading transaction…</Text>
+      </View>
+    );
+  }
 
+  // ── Not Found State ───────────────────────────────────────
+  if (deepLinkState === 'not_found' && !transaction) {
+    return (
+      <View style={styles.errorContainer} testID="error-container">
+        <AlertCircle color={COLORS.warning} size={48} style={{ marginBottom: SIZES.md }} />
+        <Text style={styles.errorTitle}>Transaction Not Found</Text>
+        <Text style={styles.errorText}>
+          This transaction doesn't exist on the network or may belong to a different account.
+        </Text>
+        <View style={{ gap: SIZES.sm, width: '100%' }}>
+          <Button title="Try Again" onPress={handleRetry} />
+          <Button title="Go Back" variant="secondary" onPress={() => router.back()} />
+        </View>
+      </View>
+    );
+  }
+
+  // ── Network Error State ───────────────────────────────────
+  if (deepLinkState === 'error' && !transaction) {
+    return (
+      <View style={styles.errorContainer} testID="error-container">
+        <AlertCircle color={COLORS.error} size={48} style={{ marginBottom: SIZES.md }} />
+        <Text style={styles.errorTitle}>Connection Error</Text>
+        <Text style={styles.errorText}>
+          Unable to load transaction details. Please check your connection and try again.
+        </Text>
+        <View style={{ gap: SIZES.sm, width: '100%' }}>
+          <Button title="Retry" onPress={handleRetry} />
+          <Button title="Go Back" variant="secondary" onPress={() => router.back()} />
+        </View>
+      </View>
+    );
+  }
+
+  // ── Not Found (store lookup, no deep link fetch attempted) ─
   if (!transaction) {
     return (
       <View style={styles.errorContainer} testID="error-container">
@@ -47,7 +157,7 @@ export default function TransactionDetailScreen() {
     );
   }
 
-  const tx = transaction as TransactionDetail;
+  const tx = transaction;
 
   const isSent = !!publicKey && tx.from === publicKey;
   const directionLabel = isSent ? 'Sent' : 'Received';
@@ -80,14 +190,8 @@ export default function TransactionDetailScreen() {
 
   const handleCopy = async (text: string, fieldName: string) => {
     if (!text) return;
-    try {
-      await Clipboard.setStringAsync(text);
-      setCopiedField(fieldName);
-      setTimeout(() => {
-        setCopiedField(null);
-      }, 2000);
-    } catch (error: any) {
-      console.error('Clipboard copy failed:', error);
+    const result = await copy(text, fieldName);
+    if (!result.ok) {
       Alert.alert('Copy Failed', 'Failed to copy to clipboard. Please try again.');
     }
   };
@@ -354,11 +458,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SIZES.xl,
   },
-  errorText: {
+  errorTitle: {
     color: COLORS.textPrimary,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: SIZES.lg,
+    marginBottom: SIZES.sm,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: COLORS.textSecondary,
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: SIZES.xl,
+    lineHeight: 24,
   },
   heroSection: {
     alignItems: 'center',
@@ -437,7 +549,7 @@ const styles = StyleSheet.create({
     gap: SIZES.xs,
     paddingHorizontal: SIZES.md,
     paddingVertical: SIZES.sm,
-    borderRadius: RADIUS.full,
+    borderRadius: RADIUS.round,
     marginTop: SIZES.md,
   },
   statusText: {
