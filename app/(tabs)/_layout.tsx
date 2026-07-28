@@ -2,14 +2,16 @@ import { View } from "react-native";
 import { Tabs } from "expo-router";
 import { Home, History, PiggyBank, Settings } from "lucide-react-native";
 import { useTheme } from "../../src/hooks/useTheme";
-import { OfflineBanner } from "../../src/components/OfflineBanner";
+import { useNetworkState } from "../../src/hooks/useNetworkState";
+import { NetworkStateBanner } from "../../src/components/NetworkStateBanner";
 
 export default function TabsLayout() {
   const { colors } = useTheme();
+  const { state: networkState, retry } = useNetworkState();
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <OfflineBanner />
+      <NetworkStateBanner state={networkState} onRetry={retry} />
       <Tabs
         screenOptions={{
           headerStyle: {

@@ -8,6 +8,7 @@
  *  AC4 – Receipt provides navigation back to wallet or activity.
  *  AC5 – Explorer link is shown where available (and hidden when not).
  *  AC6 – Secret key information is never rendered on the receipt.
+ *  AC7 – Copy is honest about confirmation, not a vague "submitted" claim (issue #253).
  */
 
 import React from 'react';
@@ -90,6 +91,19 @@ describe('AC1-3 – receipt shows transaction details', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// AC7 – Honest confirmation copy (issue #253)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('AC7 – honest confirmation copy', () => {
+  it('states the transaction was confirmed, not just vaguely "sent"', () => {
+    const { getByText, queryByText } = render(<PaymentSuccessScreen />);
+    expect(getByText('Payment Confirmed')).toBeTruthy();
+    expect(getByText('Your transaction was confirmed on the network.')).toBeTruthy();
+    expect(queryByText('Payment Sent')).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // AC4 – Navigation back to wallet or activity
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -160,5 +174,45 @@ describe('copy transaction hash', () => {
     await waitFor(() => {
       expect(Clipboard.setStringAsync).toHaveBeenCalledWith(TX_HASH);
     });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Graceful fallback for missing/invalid data
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('graceful handling of missing or invalid data', () => {
+  it('handles missing amount gracefully by showing fallback dash without XLM suffix', () => {
+    mockUseLocalSearchParams.mockReturnValue({
+      hash: TX_HASH,
+      amount: undefined,
+      destination: DESTINATION,
+    } as any);
+    const { getAllByText, queryByText } = render(<PaymentSuccessScreen />);
+    expect(getAllByText('—').length).toBeGreaterThan(0);
+    expect(queryByText('— XLM')).toBeNull();
+
+  });
+
+  it('handles missing date gracefully by showing fallback dash', () => {
+    mockUseLocalSearchParams.mockReturnValue({
+      hash: TX_HASH,
+      amount: AMOUNT,
+      destination: DESTINATION,
+      date: undefined,
+    } as any);
+    const { getByText } = render(<PaymentSuccessScreen />);
+    expect(getByText('—')).toBeTruthy();
+  });
+
+  it('handles invalid date gracefully by showing fallback dash', () => {
+    mockUseLocalSearchParams.mockReturnValue({
+      hash: TX_HASH,
+      amount: AMOUNT,
+      destination: DESTINATION,
+      date: 'invalid-date-string',
+    } as any);
+    const { getByText } = render(<PaymentSuccessScreen />);
+    expect(getByText('—')).toBeTruthy();
   });
 });

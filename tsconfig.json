@@ -4,15 +4,19 @@
     "target": "esnext",
     "module": "esnext",
     "jsx": "react-native",
-    "lib": ["esnext"],
-    "moduleResolution": "node",
+    "lib": [
+      "esnext"
+    ],
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": [
+        "src/*"
+      ]
     }
   },
   "exclude": [
@@ -22,5 +26,6 @@
     "jest.config.js",
     "tests",
     "__tests__"
-  ]
+  ],
+  "extends": "expo/tsconfig.base"
 }

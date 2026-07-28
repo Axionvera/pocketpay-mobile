@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,23 +6,33 @@ import {
   Modal,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { X, AlertTriangle } from 'lucide-react-native';
 
-interface ConfirmModalProps {
+export interface ConfirmModalProps {
   visible: boolean;
   title: string;
   message: string;
   confirmLabel: string;
   cancelLabel?: string;
   destructive?: boolean;
+  /**
+   * Forces the busy state. Optional: an async `onConfirm` is tracked automatically,
+   * so callers only need this when the pending state lives outside the modal.
+   */
   isLoading?: boolean;
   confirmDisabled?: boolean;
+  /** Explains to assistive tech why confirm is unavailable while `confirmDisabled` is set. */
+  confirmDisabledHint?: string;
   icon?: React.ReactNode;
   children?: React.ReactNode;
-  onConfirm: () => void;
+  /** May return a promise; the modal stays busy (and uncancellable) until it settles. */
+  onConfirm: () => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -35,6 +45,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   destructive = false,
   isLoading = false,
   confirmDisabled = false,
+  confirmDisabledHint,
   icon,
   children,
   onConfirm,
@@ -43,7 +54,41 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const canConfirm = !confirmDisabled && !isLoading;
+  // Tracks an async `onConfirm` so every caller gets the same spinner/disabled
+  // treatment without re-implementing the pending state at each call site.
+  const [isConfirming, setIsConfirming] = useState(false);
+  const isConfirmingRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const busy = isLoading || isConfirming;
+  const canConfirm = !confirmDisabled && !busy;
+
+  const handleConfirm = useCallback(async () => {
+    // The ref guard closes the window between two taps landing before React
+    // re-renders the button as disabled.
+    if (confirmDisabled || isLoading || isConfirmingRef.current) return;
+
+    isConfirmingRef.current = true;
+    setIsConfirming(true);
+    try {
+      await onConfirm();
+    } finally {
+      isConfirmingRef.current = false;
+      if (isMountedRef.current) setIsConfirming(false);
+    }
+  }, [confirmDisabled, isLoading, onConfirm]);
+
+  const handleCancel = useCallback(() => {
+    if (busy) return;
+    onCancel();
+  }, [busy, onCancel]);
 
   return (
     <Modal
@@ -51,9 +96,12 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
       transparent
       animationType="fade"
       statusBarTranslucent
-      onRequestClose={onCancel}
+      onRequestClose={handleCancel}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <View style={styles.card}>
           <View style={styles.header}>
             {icon ? (
@@ -65,25 +113,38 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             ) : null}
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={onCancel}
-              disabled={isLoading}
+              onPress={handleCancel}
+              disabled={busy}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Close, ${cancelLabel}`}
+              accessibilityState={{ disabled: busy }}
             >
               <X color={colors.textMuted} size={22} />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.message}>{message}</Text>
+          <ScrollView
+            style={styles.scrollBody}
+            contentContainerStyle={styles.scrollBodyContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.message}>{message}</Text>
 
-          {children ? <View style={styles.customContent}>{children}</View> : null}
+            {children ? <View style={styles.customContent}>{children}</View> : null}
+          </ScrollView>
 
           <View style={styles.actions}>
             <TouchableOpacity
               style={[styles.actionButton, styles.cancelButton]}
-              onPress={onCancel}
-              disabled={isLoading}
+              onPress={handleCancel}
+              disabled={busy}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={cancelLabel}
+              accessibilityState={{ disabled: busy }}
             >
               <Text style={styles.cancelButtonText}>{cancelLabel}</Text>
             </TouchableOpacity>
@@ -96,11 +157,20 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
                   ? { backgroundColor: canConfirm ? colors.error : colors.surfaceLight }
                   : { backgroundColor: canConfirm ? colors.primary : colors.surfaceLight },
               ]}
-              onPress={onConfirm}
+              onPress={handleConfirm}
               disabled={!canConfirm}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={confirmLabel}
+              accessibilityState={{ disabled: !canConfirm, busy }}
+              accessibilityHint={
+                confirmDisabled
+                  ? confirmDisabledHint ??
+                    'Disabled until the confirmation requirement below is met'
+                  : undefined
+              }
             >
-              {isLoading ? (
+              {busy ? (
                 <ActivityIndicator
                   color={canConfirm ? colors.background : colors.textMuted}
                   size="small"
@@ -118,7 +188,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -135,9 +205,12 @@ const createStyles = (colors: ThemeColors) =>
     card: {
       width: '100%',
       maxWidth: 400,
+      maxHeight: '90%',
       backgroundColor: colors.surface,
       borderRadius: RADIUS.xl,
-      padding: SIZES.xl,
+      paddingTop: SIZES.xl,
+      paddingHorizontal: SIZES.xl,
+      paddingBottom: SIZES.lg,
       borderWidth: 1,
       borderColor: colors.border,
     },
@@ -184,11 +257,18 @@ const createStyles = (colors: ThemeColors) =>
       marginBottom: SIZES.lg,
     },
     customContent: {
-      marginBottom: SIZES.lg,
+      marginBottom: SIZES.xs,
+    },
+    scrollBody: {
+      flexShrink: 1,
+    },
+    scrollBodyContent: {
+      flexGrow: 1,
     },
     actions: {
       flexDirection: 'row',
       gap: SIZES.sm,
+      marginTop: SIZES.lg,
     },
     actionButton: {
       flex: 1,

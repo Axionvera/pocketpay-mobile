@@ -1,26 +1,18 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useWalletStore } from '../../src/store/walletStore';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Button } from '../../src/components/Button';
-import { FundButton } from '../../src/components/FundButton';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
-import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
-import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
-import { Clock, RefreshCw } from 'lucide-react-native';
-import { formatAmount } from '../../src/utils/amount';
-
-function formatRelativeTime(timestamp: number): string {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
+import { NetworkStateBanner } from '../../src/components/NetworkStateBanner';
+import { WalletEmptyState } from '../../src/components/WalletEmptyState';
+import { BalanceDisplay } from '../../src/components/BalanceDisplay';
+import { FundingStatusBanner } from '../../src/components/FundingStatusBanner';
+import { useNetworkState } from '../../src/hooks/useNetworkState';
+import { Clock } from 'lucide-react-native';
+import { BackupReminderModal } from '../../src/components/BackupReminderModal';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -35,102 +27,127 @@ export default function HomeScreen() {
     isFunding,
     fundError,
     error,
+    balanceState,
+    fundingStatus,
     refreshWalletData,
     fundWallet,
+    checkFundingStatus,
+    showBackupReminder,
+    acknowledgeBackupReminder,
   } = useWalletStore();
 
-  const { networkErrorType, message } = useNetworkStatus(error);
+  const { state: networkState, disableWriteActions, retry } = useNetworkState({ error });
 
   useEffect(() => {
     refreshWalletData();
+    checkFundingStatus();
   }, []);
 
-  const isFunded = balance !== '0.0000000';
+  const handleRetry = useCallback(() => {
+    if (publicKey) {
+      refreshWalletData();
+      checkFundingStatus();
+    }
+  }, [publicKey, refreshWalletData, checkFundingStatus]);
+
   const recentTransactions = transactions.slice(0, 3); // Preview
 
+  if (!publicKey) {
+    return (
+      <View style={styles.container}>
+        <WalletEmptyState
+          variant="missing"
+          onCreate={() => router.replace('/(auth)/create')}
+          onImport={() => router.replace('/(auth)/import')}
+        />
+      </View>
+    );
+  }
+
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl
-          refreshing={isLoading}
-          onRefresh={refreshWalletData}
-          tintColor={colors.primary}
-        />
-      }
-    >
-      <NetworkStatusBanner
-        networkErrorType={networkErrorType}
-        message={message}
-        onRetry={refreshWalletData}
-        isRetrying={isLoading}
-      />
-
-      <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Total Balance (Testnet)</Text>
-        <Text style={styles.balanceValue}>{formatAmount(balance)} XLM</Text>
-        <Text style={styles.publicKey} numberOfLines={1} ellipsizeMode="middle">
-          {publicKey}
-        </Text>
-        {lastRefreshed !== null && (
-          <View style={styles.lastRefreshed}>
-            <RefreshCw color={colors.textMuted} size={12} />
-            <Text style={styles.lastRefreshedText}>
-              Updated {formatRelativeTime(lastRefreshed)}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      <FundButton
-        isFunding={isFunding}
-        fundError={fundError}
-        onFund={fundWallet}
-        isFunded={isFunded}
-      />
-
-      <View style={styles.actionsContainer}>
-        <Button
-          title="Send"
-          onPress={() => router.push('/send')}
-          style={styles.actionButton}
-        />
-        <Button
-          title="Receive"
-          variant="secondary"
-          onPress={() => router.push('/receive')}
-          style={styles.actionButton}
-        />
-      </View>
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
-        <Text
-          style={styles.seeAll}
-          onPress={() => router.push('/(tabs)/history')}
-        >
-          See All
-        </Text>
-      </View>
-
-      <View style={styles.transactionsList}>
-        {recentTransactions.length === 0 && !isLoading && (
-          <View style={styles.emptyState}>
-            <Clock color={colors.textMuted} size={48} style={{ marginBottom: SIZES.md }} />
-            <Text style={styles.emptyText}>No recent transactions</Text>
-          </View>
-        )}
-        {recentTransactions.map((tx, index) => (
-          <TransactionListItem
-            key={tx.id || index}
-            transaction={tx}
-            currentPublicKey={publicKey}
-            variant="inline"
-            onPress={() => router.push(`/transaction/${tx.id}`)}
+    <>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={handleRetry}
+            tintColor={colors.primary}
           />
-        ))}
-      </View>
-    </ScrollView>
+        }
+      >
+        <NetworkStateBanner
+          state={networkState}
+          onRetry={handleRetry}
+          isRetrying={isLoading}
+        />
+
+        {/* Issue #329: Balance display with all states */}
+        <BalanceDisplay
+          state={balanceState}
+          balance={balance}
+          publicKey={publicKey}
+          onRetry={handleRetry}
+          isRetrying={isLoading}
+          lastRefreshed={lastRefreshed}
+        />
+
+        {/* Issue #330: Funding status banner */}
+        <FundingStatusBanner
+          status={fundingStatus}
+          onFund={fundWallet}
+          isFunding={isFunding}
+          fundError={fundError}
+        />
+
+        <View style={styles.actionsContainer}>
+          <Button
+            title="Send"
+            onPress={() => router.push('/send')}
+            disabled={disableWriteActions}
+            style={styles.actionButton}
+          />
+          <Button
+            title="Receive"
+            variant="secondary"
+            onPress={() => router.push('/receive')}
+            style={styles.actionButton}
+          />
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text
+            style={styles.seeAll}
+            onPress={() => router.push('/(tabs)/history')}
+          >
+            See All
+          </Text>
+        </View>
+
+        <View style={styles.transactionsList}>
+          {recentTransactions.length === 0 && !isLoading && (
+            <View style={styles.emptyState}>
+              <Clock color={colors.textMuted} size={48} style={{ marginBottom: SIZES.md }} />
+              <Text style={styles.emptyText}>No recent transactions</Text>
+            </View>
+          )}
+          {recentTransactions.map((tx, index) => (
+            <TransactionListItem
+              key={tx.id || index}
+              transaction={tx}
+              currentPublicKey={publicKey}
+              variant="inline"
+              onPress={() => router.push(`/transaction/${tx.id}`)}
+            />
+          ))}
+        </View>
+      </ScrollView>
+      <BackupReminderModal
+        visible={showBackupReminder}
+        onAcknowledge={() => acknowledgeBackupReminder()}
+      />
+    </>
   );
 }
 
@@ -139,44 +156,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     padding: SIZES.lg,
-  },
-  balanceCard: {
-    backgroundColor: colors.surface,
-    padding: SIZES.xl,
-    borderRadius: RADIUS.lg,
-    alignItems: 'center',
-    marginBottom: SIZES.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  balanceLabel: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    marginBottom: SIZES.xs,
-  },
-  balanceValue: {
-    color: colors.textPrimary,
-    fontSize: 36,
-    fontWeight: 'bold',
-    marginBottom: SIZES.sm,
-  },
-  publicKey: {
-    color: colors.textMuted,
-    fontSize: 12,
-    backgroundColor: colors.background,
-    paddingHorizontal: SIZES.md,
-    paddingVertical: SIZES.xs,
-    borderRadius: RADIUS.round,
-  },
-  lastRefreshed: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: SIZES.sm,
-  },
-  lastRefreshedText: {
-    color: colors.textMuted,
-    fontSize: 11,
   },
   actionsContainer: {
     flexDirection: 'row',

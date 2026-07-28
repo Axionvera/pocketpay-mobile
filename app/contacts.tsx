@@ -22,6 +22,7 @@ import { useAppStore, Contact } from "../src/store/appStore";
 import { validateAddress } from "../src/utils/validation";
 import { Trash2, User } from "lucide-react-native";
 import { EmptyState } from "../src/components/EmptyState";
+import { useConfirm } from "../src/hooks/useConfirm";
 
 // ── View modes ───────────────────────────────────────────────────────────────
 type Mode =
@@ -35,6 +36,7 @@ export default function ContactsScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { contacts, addContactIfUnique, removeContact, findDuplicateContact } =
     useAppStore();
+  const { confirm, confirmationDialog } = useConfirm();
 
   // ── Form state ──────────────────────────────────────────────────────────────
   const [mode, setMode] = useState<Mode>("list");
@@ -164,18 +166,13 @@ export default function ContactsScreen() {
   // ── Remove handler ──────────────────────────────────────────────────────────
 
   const handleRemove = (id: string) => {
-    Alert.alert(
-      "Delete Contact",
-      "Are you sure you want to remove this contact?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => removeContact(id),
-        },
-      ],
-    );
+    void confirm({
+      title: "Delete Contact",
+      message: "Are you sure you want to remove this contact?",
+      confirmLabel: "Delete",
+      destructive: true,
+      onConfirm: () => removeContact(id),
+    });
   };
 
   // ── Render: full-screen QR scanner ─────────────────────────────────────────
@@ -331,6 +328,8 @@ export default function ContactsScreen() {
           />
         </>
       )}
+
+      {confirmationDialog}
     </View>
   );
 }
