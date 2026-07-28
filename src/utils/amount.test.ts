@@ -1,4 +1,38 @@
-import { formatAmount } from './amount';
+import { formatAmount, getMaxSendableAmount } from './amount';
+
+describe('getMaxSendableAmount', () => {
+  it('returns 0 for null/undefined/empty balance', () => {
+    expect(getMaxSendableAmount(null)).toBe('0');
+    expect(getMaxSendableAmount(undefined)).toBe('0');
+    expect(getMaxSendableAmount('')).toBe('0');
+  });
+
+  it('returns 0 for zero or negative balance', () => {
+    expect(getMaxSendableAmount('0')).toBe('0');
+    expect(getMaxSendableAmount('-10')).toBe('0');
+  });
+
+  it('subtracts the default MIN_XLM_RESERVE (1) from the balance', () => {
+    expect(getMaxSendableAmount('100')).toBe('99');
+    expect(getMaxSendableAmount('1.5')).toBe('0.5');
+    expect(getMaxSendableAmount('1')).toBe('0');
+  });
+
+  it('returns 0 when balance is less than reserve', () => {
+    expect(getMaxSendableAmount('0.5')).toBe('0');
+    expect(getMaxSendableAmount('0.0000001')).toBe('0');
+  });
+
+  it('accepts a custom reserve parameter', () => {
+    expect(getMaxSendableAmount('100', 2)).toBe('98');
+    expect(getMaxSendableAmount('1', 0.5)).toBe('0.5');
+  });
+
+  it('handles number inputs', () => {
+    expect(getMaxSendableAmount(100)).toBe('99');
+    expect(getMaxSendableAmount(0.5)).toBe('0');
+  });
+});
 
 describe('formatAmount', () => {
   it('formats integers correctly', () => {

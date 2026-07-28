@@ -27,7 +27,7 @@ import {
   validateMemo,
 } from "../src/utils/validation";
 import { resolveAddressLabel } from "../src/utils/contacts";
-import { formatAmount } from "../src/utils/amount";
+import { formatAmount, getMaxSendableAmount } from "../src/utils/amount";
 import { WALLET_SECRET_ACCESS_MESSAGE } from "../src/utils/walletStorageErrors";
 import {
   Send as SendIcon,
@@ -140,6 +140,16 @@ export default function SendScreen() {
   const handleScanClose = () => {
     setIsScanning(false);
   };
+
+  const handleSetMaxAmount = () => {
+    const maxAmount = getMaxSendableAmount(balance);
+    setAmount(maxAmount);
+    setErrors((prev) => ({
+      ...prev,
+      amount: validateAmount(maxAmount, balance) ?? undefined,
+    }));
+  };
+
   const handleSend = () => {
     const fieldErrors: FieldErrors = {
       destination: validateAddress(destination, publicKey) ?? undefined,
@@ -245,6 +255,18 @@ export default function SendScreen() {
             error={errors.amount}
             keyboardType="decimal-pad"
             helperText={`Available balance: ${formatAmount(balance)} XLM`}
+            rightIcon={
+              <TouchableOpacity
+                onPress={handleSetMaxAmount}
+                accessibilityLabel="Send maximum amount"
+                accessibilityRole="button"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={{ color: colors.primary, fontWeight: "600", fontSize: 13 }}>
+                  Send Max
+                </Text>
+              </TouchableOpacity>
+            }
           />
 
           <FormField
