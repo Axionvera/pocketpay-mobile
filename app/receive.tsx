@@ -44,6 +44,7 @@ export default function ReceiveScreen() {
     }
   };
 
+  // Share the receive payload (address or payment request) via OS share sheet
   const handleShare = async () => {
     if (!payload) return;
     try {
