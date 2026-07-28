@@ -7,6 +7,7 @@ import { useWalletStore } from '../../src/store/walletStore';
 import { useVaultStore } from '../../src/store/vaultStore';
 import { validateAmount } from '../../src/utils/validation';
 import { PiggyBank, ShieldCheck, AlertTriangle } from 'lucide-react-native';
+import { DepositPreview } from '../../src/features/vault/DepositPreview';
 
 export default function VaultScreen() {
   const { publicKey, getSecretKey, balance: walletBalance } = useWalletStore();
@@ -24,6 +25,8 @@ export default function VaultScreen() {
 
   const [amount, setAmount] = useState('');
   const [amountError, setAmountError] = useState<string | undefined>();
+  const [showDepositPreview, setShowDepositPreview] = useState(false);
+  const [depositError, setDepositError] = useState<string | null>(null);
 
   useEffect(() => {
     if (publicKey) {
@@ -34,6 +37,27 @@ export default function VaultScreen() {
   const handleAmountChange = (value: string) => {
     setAmount(value);
     setAmountError(value.trim() ? validateAmount(value) ?? undefined : undefined);
+  };
+
+  const handleDepositPress = () => {
+    if (!amount.trim()) {
+      setAmountError('Please enter an amount');
+      return;
+    }
+    const error = validateAmount(amount, walletBalance);
+    setAmountError(error);
+    if (error) return;
+
+    setDepositError(null);
+    setShowDepositPreview(true);
+  };
+
+  const handleDepositConfirm = () => {
+    setShowDepositPreview(false);
+    handleAction('deposit').catch((e: any) => {
+      setDepositError(e.message || 'Deposit failed');
+      setShowDepositPreview(true);
+    });
   };
 
   const handleAction = async (action: 'deposit' | 'withdraw') => {
@@ -131,7 +155,7 @@ export default function VaultScreen() {
         <View style={styles.actions}>
           <Button
             title="Deposit"
-            onPress={() => handleAction('deposit')}
+            onPress={handleDepositPress}
             isLoading={isSubmitting}
             disabled={isLoadingBalance}
             style={styles.actionButton}
@@ -147,6 +171,24 @@ export default function VaultScreen() {
         </View>
       </View>
     </ScrollView>
+
+    <DepositPreview
+      visible={showDepositPreview}
+      params={{
+        amount,
+        asset: 'XLM',
+        walletBalance,
+        vaultContractId: contractId,
+        isConfigured,
+        isSubmitting,
+        error: depositError,
+      }}
+      onConfirm={handleDepositConfirm}
+      onCancel={() => {
+        setShowDepositPreview(false);
+        setDepositError(null);
+      }}
+    />
   );
 }
 
