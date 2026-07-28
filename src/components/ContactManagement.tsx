@@ -25,11 +25,16 @@ export const ContactManagement: React.FC = () => {
     setShowForm(true);
   };
 
-  const handleDelete = (contact: { id: string; name: string }) => {
+  const handleDelete = (contact: { id: string; name: string; address: string }) => {
+    // Truncate address for readability if needed, but prefer the name
+    const displayName = contact.name ||
+        (contact.address ? `${contact.address.slice(0, 8)}...${contact.address.slice(-6)}` : 'this contact');
+
     void confirm({
       title: 'Delete Contact',
-      message: `Are you sure you want to delete "${contact.name}"?`,
+      message: `Are you sure you want to delete "${displayName}"? This action cannot be undone.`,
       confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
       destructive: true,
       onConfirm: () => deleteContact(contact.id),
     });
@@ -51,65 +56,65 @@ export const ContactManagement: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Contacts</Text>
-        <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
-          <Plus size={24} color="#0066cc" />
-        </TouchableOpacity>
-      </View>
-
-      {contacts.length === 0 ? (
-        <View style={styles.emptyState}>
-          <User size={64} color="#ccc" />
-          <Text style={styles.emptyTitle}>No contacts yet</Text>
-          <Text style={styles.emptyText}>
-            Add contacts to quickly send payments to your friends and family.
-          </Text>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Contacts</Text>
+          <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
+            <Plus size={24} color="#0066cc" />
+          </TouchableOpacity>
         </View>
-      ) : (
-        <ScrollView style={styles.list}>
-          {contacts.map((contact) => (
-            <View key={contact.id} style={styles.contactCard}>
-              <View style={styles.contactHeader}>
-                <View style={styles.icon}>
-                  <User size={24} color="#666" />
-                </View>
-                <View style={styles.contactInfo}>
-                  <Text style={styles.contactName}>{contact.name}</Text>
-                  <Text style={styles.contactAddress} numberOfLines={1}>
-                    {contact.address}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.actions}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => handleEdit(contact)}
-                >
-                  <Edit2 size={20} color="#0066cc" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => handleDelete(contact)}
-                >
-                  <Trash2 size={20} color="#dc2626" />
-                </TouchableOpacity>
-              </View>
+
+        {contacts.length === 0 ? (
+            <View style={styles.emptyState}>
+              <User size={64} color="#ccc" />
+              <Text style={styles.emptyTitle}>No contacts yet</Text>
+              <Text style={styles.emptyText}>
+                Add contacts to quickly send payments to your friends and family.
+              </Text>
             </View>
-          ))}
-        </ScrollView>
-      )}
+        ) : (
+            <ScrollView style={styles.list}>
+              {contacts.map((contact) => (
+                  <View key={contact.id} style={styles.contactCard}>
+                    <View style={styles.contactHeader}>
+                      <View style={styles.icon}>
+                        <User size={24} color="#666" />
+                      </View>
+                      <View style={styles.contactInfo}>
+                        <Text style={styles.contactName}>{contact.name}</Text>
+                        <Text style={styles.contactAddress} numberOfLines={1}>
+                          {contact.address}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.actions}>
+                      <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={() => handleEdit(contact)}
+                      >
+                        <Edit2 size={20} color="#0066cc" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={() => handleDelete(contact)}
+                      >
+                        <Trash2 size={20} color="#dc2626" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+              ))}
+            </ScrollView>
+        )}
 
-      <ContactForm
-        visible={showForm}
-        contact={editingContact}
-        onSave={handleSave}
-        onCancel={handleCancel}
-      />
+        <ContactForm
+            visible={showForm}
+            contact={editingContact}
+            onSave={handleSave}
+            onCancel={handleCancel}
+        />
 
-      {confirmationDialog}
-    </View>
+        {confirmationDialog}
+      </View>
   );
 };
 
