@@ -1,21 +1,24 @@
 import { Stack } from 'expo-router';
-import { COLORS } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 
 export default function AuthLayout() {
+  const { colors } = useTheme();
+
   return (
     <Stack screenOptions={{
       headerStyle: {
-        backgroundColor: COLORS.background,
+        backgroundColor: colors.background,
       },
-      headerTintColor: COLORS.textPrimary,
+      headerTintColor: colors.textPrimary,
       headerShadowVisible: false,
       contentStyle: {
-        backgroundColor: COLORS.background,
+        backgroundColor: colors.background,
       }
     }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="create" options={{ title: 'Create Wallet' }} />
       <Stack.Screen name="import" options={{ title: 'Import Wallet' }} />
+      <Stack.Screen name="wallet-creation-success" options={{ title: 'Wallet Created', headerBackVisible: false }} />
     </Stack>
   );
 }
