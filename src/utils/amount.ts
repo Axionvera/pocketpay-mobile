@@ -1,4 +1,36 @@
 /**
+ * Minimum XLM reserve that must stay in the wallet.
+ * Accounts must keep this balance to remain active on the network.
+ */
+export const MIN_XLM_RESERVE = 1;
+
+/**
+ * Calculate the maximum amount that can be sent from a wallet,
+ * accounting for the minimum XLM reserve requirement.
+ *
+ * @param balance The current wallet balance as a string or number
+ * @param reserve Optional reserve override (defaults to MIN_XLM_RESERVE)
+ * @returns The max sendable amount as a string, or '0' if balance is insufficient
+ */
+export function getMaxSendableAmount(
+  balance: string | number | null | undefined,
+  reserve: number = MIN_XLM_RESERVE,
+): string {
+  if (balance === null || balance === undefined || balance === '') {
+    return '0';
+  }
+
+  const num = typeof balance === 'number' ? balance : parseFloat(balance);
+  if (isNaN(num) || num <= 0) {
+    return '0';
+  }
+
+  const maxSendable = Math.max(0, num - reserve);
+  // Return with up to 7 decimal places, stripping trailing zeros
+  return maxSendable.toFixed(7).replace(/\.?0+$/, '');
+}
+
+/**
  * Formats a numeric amount for display.
  * Standardises displaying XLM and other asset amounts.
  *
