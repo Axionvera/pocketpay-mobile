@@ -36,10 +36,16 @@ export default function SettingsScreen() {
 
   const handleExportKey = async () => {
     if (!showSecret) {
-      const secret = await getSecretKey();
-      if (secret) {
-        setSecretKey(secret);
-        setShowSecret(true);
+      try {
+        const secret = await getSecretKey();
+        if (secret) {
+          setSecretKey(secret);
+          setShowSecret(true);
+        }
+      } catch (e: any) {
+        if (e.message !== 'USER_CANCELLED') {
+          Alert.alert('Error', 'Failed to reveal secret key');
+        }
       }
     } else {
       setShowSecret(false);

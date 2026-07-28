@@ -201,8 +201,15 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   getSecretKey: async () => {
     try {
       return await SecureStore.getItemAsync(WALLET_KEY);
-    } catch {
-      console.error('Failed to read wallet securely');
+    } catch (error: any) {
+      if (
+        error?.message?.toLowerCase().includes('cancel') ||
+        error?.code === 'ERR_SECURESTORE_AUTH_CANCELLED' ||
+        error?.message?.includes('User canceled')
+      ) {
+        throw new Error('USER_CANCELLED');
+      }
+      console.error('Failed to read wallet securely', error);
       return null;
     }
   },

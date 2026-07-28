@@ -65,8 +65,10 @@ export function useVaultDepositForm(): UseVaultDepositFormReturn {
       setAmountError(undefined);
       return hash;
     } catch (err: any) {
-      const errMsg = err.message || 'Deposit failed';
-      setSubmitError(errMsg);
+      if (err.message !== 'USER_CANCELLED') {
+        const errMsg = err.message || 'Deposit failed';
+        setSubmitError(errMsg);
+      }
       throw err;
     } finally {
       setIsSubmitting(false);

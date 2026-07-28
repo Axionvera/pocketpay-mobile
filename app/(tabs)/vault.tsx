@@ -136,6 +136,9 @@ export default function VaultScreen() {
       );
     } catch (e: any) {
       setConfirmVisible(false);
+      if (e.message === 'USER_CANCELLED') {
+        return;
+      }
       Alert.alert(
         `${pendingAction === 'deposit' ? 'Deposit' : 'Withdrawal'} failed`,
         e.message

@@ -152,6 +152,9 @@ export default function SendScreen() {
       });
     } catch (error: any) {
       setIsConfirming(false);
+      if (error.message === 'USER_CANCELLED') {
+        return;
+      }
       Alert.alert(
         "Transaction Failed",
         error.message || "An error occurred while sending.",
