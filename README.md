@@ -78,6 +78,7 @@ PocketPay Mobile is part of a broader PocketPay stack:
 
 React Native, Expo Router, Zustand, PocketPay SDK, SecureStore, AsyncStorage
 
+// To Start
 ## Quick Start
 
 ```bash
