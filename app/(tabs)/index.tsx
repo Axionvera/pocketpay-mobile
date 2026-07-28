@@ -1,127 +1,161 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useWalletStore } from '../../src/store/walletStore';
-import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
+import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
 import { Button } from '../../src/components/Button';
-import { ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react-native';
+import { TransactionListItem } from '../../src/components/TransactionListItem';
+import { NetworkStateBanner } from '../../src/components/NetworkStateBanner';
+import { WalletEmptyState } from '../../src/components/WalletEmptyState';
+import { BalanceDisplay } from '../../src/components/BalanceDisplay';
+import { FundingStatusBanner } from '../../src/components/FundingStatusBanner';
+import { useNetworkState } from '../../src/hooks/useNetworkState';
+import { Clock } from 'lucide-react-native';
+import { BackupReminderModal } from '../../src/components/BackupReminderModal';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { publicKey, balance, transactions, isLoading, refreshWalletData } = useWalletStore();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const {
+    publicKey,
+    balance,
+    transactions,
+    lastRefreshed,
+    isLoading,
+    isFunding,
+    fundError,
+    error,
+    balanceState,
+    fundingStatus,
+    refreshWalletData,
+    fundWallet,
+    checkFundingStatus,
+    showBackupReminder,
+    acknowledgeBackupReminder,
+  } = useWalletStore();
+
+  const { state: networkState, disableWriteActions, retry } = useNetworkState({ error });
 
   useEffect(() => {
     refreshWalletData();
+    checkFundingStatus();
   }, []);
+
+  const handleRetry = useCallback(() => {
+    if (publicKey) {
+      refreshWalletData();
+      checkFundingStatus();
+    }
+  }, [publicKey, refreshWalletData, checkFundingStatus]);
 
   const recentTransactions = transactions.slice(0, 3); // Preview
 
+  if (!publicKey) {
+    return (
+      <View style={styles.container}>
+        <WalletEmptyState
+          variant="missing"
+          onCreate={() => router.replace('/(auth)/create')}
+          onImport={() => router.replace('/(auth)/import')}
+        />
+      </View>
+    );
+  }
+
   return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={
-        <RefreshControl 
-          refreshing={isLoading} 
-          onRefresh={refreshWalletData} 
-          tintColor={COLORS.primary}
+    <>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={handleRetry}
+            tintColor={colors.primary}
+          />
+        }
+      >
+        <NetworkStateBanner
+          state={networkState}
+          onRetry={handleRetry}
+          isRetrying={isLoading}
         />
-      }
-    >
-      <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Total Balance (Testnet)</Text>
-        <Text style={styles.balanceValue}>{balance} XLM</Text>
-        <Text style={styles.publicKey} numberOfLines={1} ellipsizeMode="middle">
-          {publicKey}
-        </Text>
-      </View>
 
-      <View style={styles.actionsContainer}>
-        <Button 
-          title="Send" 
-          onPress={() => router.push('/send')} 
-          style={styles.actionButton}
+        {/* Issue #329: Balance display with all states */}
+        <BalanceDisplay
+          state={balanceState}
+          balance={balance}
+          publicKey={publicKey}
+          onRetry={handleRetry}
+          isRetrying={isLoading}
+          lastRefreshed={lastRefreshed}
         />
-        <Button 
-          title="Receive" 
-          variant="secondary"
-          onPress={() => router.push('/receive')} 
-          style={styles.actionButton}
+
+        {/* Issue #330: Funding status banner */}
+        <FundingStatusBanner
+          status={fundingStatus}
+          onFund={fundWallet}
+          isFunding={isFunding}
+          fundError={fundError}
         />
-      </View>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
-        <Text 
-          style={styles.seeAll} 
-          onPress={() => router.push('/(tabs)/history')}
-        >
-          See All
-        </Text>
-      </View>
+        <View style={styles.actionsContainer}>
+          <Button
+            title="Send"
+            onPress={() => router.push('/send')}
+            disabled={disableWriteActions}
+            style={styles.actionButton}
+          />
+          <Button
+            title="Receive"
+            variant="secondary"
+            onPress={() => router.push('/receive')}
+            style={styles.actionButton}
+          />
+        </View>
 
-      <View style={styles.transactionsList}>
-        {recentTransactions.length === 0 && !isLoading && (
-          <View style={styles.emptyState}>
-            <Clock color={COLORS.textMuted} size={48} style={{ marginBottom: SIZES.md }} />
-            <Text style={styles.emptyText}>No recent transactions</Text>
-          </View>
-        )}
-        
-        {recentTransactions.map((tx, index) => {
-          const isSent = tx.source_account === publicKey || tx.from === publicKey;
-          return (
-            <View key={tx.id || index} style={styles.txItem}>
-              <View style={[styles.txIcon, { backgroundColor: isSent ? 'rgba(255, 61, 0, 0.1)' : 'rgba(0, 230, 118, 0.1)' }]}>
-                {isSent ? <ArrowUpRight color={COLORS.error} /> : <ArrowDownLeft color={COLORS.success} />}
-              </View>
-              <View style={styles.txInfo}>
-                <Text style={styles.txType}>{isSent ? 'Sent XLM' : 'Received XLM'}</Text>
-                <Text style={styles.txDate}>{new Date(tx.created_at).toLocaleDateString()}</Text>
-              </View>
-              <Text style={[styles.txAmount, { color: isSent ? COLORS.textPrimary : COLORS.success }]}>
-                {isSent ? '-' : '+'}{tx.amount || '0'}
-              </Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text
+            style={styles.seeAll}
+            onPress={() => router.push('/(tabs)/history')}
+          >
+            See All
+          </Text>
+        </View>
+
+        <View style={styles.transactionsList}>
+          {recentTransactions.length === 0 && !isLoading && (
+            <View style={styles.emptyState}>
+              <Clock color={colors.textMuted} size={48} style={{ marginBottom: SIZES.md }} />
+              <Text style={styles.emptyText}>No recent transactions</Text>
             </View>
-          );
-        })}
-      </View>
-    </ScrollView>
+          )}
+          {recentTransactions.map((tx, index) => (
+            <TransactionListItem
+              key={tx.id || index}
+              transaction={tx}
+              currentPublicKey={publicKey}
+              variant="inline"
+              onPress={() => router.push(`/transaction/${tx.id}`)}
+            />
+          ))}
+        </View>
+      </ScrollView>
+      <BackupReminderModal
+        visible={showBackupReminder}
+        onAcknowledge={() => acknowledgeBackupReminder()}
+      />
+    </>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     padding: SIZES.lg,
-  },
-  balanceCard: {
-    backgroundColor: COLORS.surface,
-    padding: SIZES.xl,
-    borderRadius: RADIUS.lg,
-    alignItems: 'center',
-    marginBottom: SIZES.xl,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  balanceLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    marginBottom: SIZES.xs,
-  },
-  balanceValue: {
-    color: COLORS.textPrimary,
-    fontSize: 36,
-    fontWeight: 'bold',
-    marginBottom: SIZES.sm,
-  },
-  publicKey: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    backgroundColor: COLORS.background,
-    paddingHorizontal: SIZES.md,
-    paddingVertical: SIZES.xs,
-    borderRadius: RADIUS.round,
   },
   actionsContainer: {
     flexDirection: 'row',
@@ -139,17 +173,17 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.md,
   },
   sectionTitle: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 18,
     fontWeight: '600',
   },
   seeAll: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 14,
     fontWeight: '500',
   },
   transactionsList: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: RADIUS.lg,
     padding: SIZES.md,
     marginBottom: SIZES.xxl,
@@ -159,39 +193,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 14,
-  },
-  txItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SIZES.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  txIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SIZES.md,
-  },
-  txInfo: {
-    flex: 1,
-  },
-  txType: {
-    color: COLORS.textPrimary,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  txDate: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  txAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });
