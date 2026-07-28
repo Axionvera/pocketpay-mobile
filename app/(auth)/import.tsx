@@ -41,6 +41,12 @@ export default function ImportWalletScreen() {
       return;
     }
 
+    const base32Regex = /^[A-Z2-7]+$/;
+    if (!base32Regex.test(trimmedKey)) {
+      setError('Secret key contains invalid characters. Only uppercase letters A-Z and digits 2-7 are allowed.');
+      return;
+    }
+
     try {
       setIsLoading(true);
       const { publicKey } = await importWallet(trimmedKey);
@@ -54,8 +60,15 @@ export default function ImportWalletScreen() {
 
       setIsLoading(false);
       setIsSuccess(true);
-    } catch {
-      setError('Invalid secret key. It may be malformed or from the wrong network.');
+    } catch (err: any) {
+      const errorMessage = err?.message?.toLowerCase() || '';
+      if (errorMessage.includes('network')) {
+        setError('Invalid secret key. It appears to be for a different network.');
+      } else if (errorMessage.includes('checksum')) {
+        setError('Invalid secret key. The checksum is incorrect.');
+      } else {
+        setError('Invalid secret key. It may be malformed or invalid.');
+      }
       setIsLoading(false);
     }
   };
