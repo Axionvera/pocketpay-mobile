@@ -130,6 +130,19 @@ npm run test:watch
 - Mock external dependencies (Stellar SDK, SecureStore, AsyncStorage) — see the existing mocks in `__mocks__/` and `src/services/__mocks__/` for patterns to follow.
 - Tests should pass before you open a PR. CI will run the suite automatically on every push.
 
+### SDK API Compatibility
+
+If your change touches `src/types/pocketpay-sdk.d.ts` or `src/sdk-stub/`, run:
+
+```bash
+npm run api:check
+```
+
+This detects accidental changes to the `pocketpay-sdk` public contract. If the
+change is intentional, run `npm run api:update`, commit the regenerated
+`api-reports/pocketpay-sdk.api.md`, and note the change in `CHANGELOG.md`. See
+[docs/sdk-api-compatibility.md](docs/sdk-api-compatibility.md) for details.
+
 ---
 
 ## UI & Design Guidelines
@@ -140,6 +153,7 @@ Before adding new screens or components, read the [Design System Guide](docs/des
 - The app uses a **dark-only palette** — there is no light mode.
 - Use `COLORS.primary` (`#00E5FF`) for the primary action on a screen and `COLORS.secondary` (`#7B61FF`) for a competing secondary action.
 - Follow the card, button, and input patterns documented in the design system.
+- Review every changed screen and reusable component against the [UI State Catalogue](docs/ui-states.md), including loading, empty, error, success, disabled, and pending behavior.
 
 ---
 
@@ -159,6 +173,7 @@ We strive to build a wallet that is accessible to everyone. Before submitting a 
 - **Never commit secret keys, `.env` files, or credentials** to version control.
 - All key storage must go through `expo-secure-store` as documented in the [Storage Guide](docs/storage.md).
 - Read the full [Security Guide](docs/security.md) before touching key management, storage, or any authentication flow.
+- Unexpected crashes are handled by the root ErrorBoundary and redacted reporting funnel — see [Global Error Handling](docs/error-handling.md).
 - If you discover a security vulnerability, please report it privately rather than opening a public issue.
 
 ---

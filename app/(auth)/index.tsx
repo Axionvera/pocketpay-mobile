@@ -1,78 +1,35 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, SafeAreaView } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, StyleSheet, SafeAreaView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button } from '../../src/components/Button';
-import { COLORS, SIZES, FONTS } from '../../src/constants/theme';
-import { Rocket } from 'lucide-react-native';
+import { SIZES, ThemeColors } from '../../src/constants/theme';
+import { useTheme } from '../../src/hooks/useTheme';
+import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Rocket color={COLORS.primary} size={80} />
-        </View>
-        <Text style={styles.title}>Stellar PocketPay</Text>
-        <Text style={styles.subtitle}>
-          Your gateway to the Stellar Network. Fast, secure, and easy to use.
-        </Text>
-      </View>
-      
-      <View style={styles.footer}>
-        <Button 
-          title="Create New Wallet" 
-          onPress={() => router.push('/(auth)/create')} 
-          style={{ marginBottom: SIZES.md }}
-        />
-        <Button 
-          title="Import Existing Wallet" 
-          variant="outline"
-          onPress={() => router.push('/(auth)/import')} 
+        <WalletEmptyState
+          variant="empty"
+          onCreate={() => router.push('/(auth)/create')}
+          onImport={() => router.push('/(auth)/import')}
         />
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: SIZES.xl,
-  },
-  iconContainer: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: COLORS.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SIZES.xxl,
-    borderWidth: 2,
-    borderColor: COLORS.primaryDark,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: COLORS.textPrimary,
-    marginBottom: SIZES.md,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  footer: {
-    padding: SIZES.xl,
-    paddingBottom: SIZES.xxl,
+    paddingBottom: SIZES.sm,
   },
 });

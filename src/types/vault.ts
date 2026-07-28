@@ -1,23 +1,52 @@
-/**
- * Vault lock types for the multi-lock feature.
- *
- * A "lock" represents a time-locked deposit in the Soroban vault contract.
- * Locks mature after their unlock date and can then be withdrawn.
- */
+export type VaultActionState =
+  | 'idle'
+  | 'review'
+  | 'signing'
+  | 'submission'
+  | 'pending'
+  | 'confirmed'
+  | 'failed';
 
-/** Status lifecycle of a vault lock. */
-export type LockStatus = 'locked' | 'matured' | 'withdrawn';
-
-/** A single time-locked deposit in the vault. */
-export interface VaultLock {
-  /** Unique identifier for this lock (on-chain lock index or generated id). */
-  id: string;
-  /** Amount locked, denominated in XLM as a 7-decimal string (e.g. "100.0000000"). */
-  amount: string;
-  /** ISO-8601 date string when the lock matures and becomes withdrawable. */
-  unlockDate: string;
-  /** Current status of the lock. */
-  status: LockStatus;
-  /** Optional transaction hash that created this lock. */
+export interface VaultActionStatus {
+  state: VaultActionState;
+  error?: string;
   txHash?: string;
 }
+
+export const VAULT_ACTION_LABELS: Record<VaultActionState, string> = {
+  idle: '',
+  review: 'Review',
+  signing: 'Signing…',
+  submission: 'Submitting…',
+  pending: 'Pending confirmation…',
+  confirmed: 'Confirmed',
+  failed: 'Failed',
+};
+
+/**
+ * Represents whether a specific vault action is currently supported.
+ *
+ * Each vault action (deposit, withdraw, lock, unlock) can be:
+ *  - `'supported'`: The action is fully available.
+ *  - `'unsupported'`: The action is not available (no contract, disabled
+ *     feature, etc.). A `reason` explains why.
+ *  - `'loading'`: The capability check is still in progress.
+ */
+export type VaultActionCapability =
+  | { status: 'supported' }
+  | { status: 'unsupported'; reason: string; detail?: string }
+  | { status: 'loading' };
+
+/**
+ * Map of all vault actions to their capability state.
+ */
+export interface VaultCapabilities {
+  deposit: VaultActionCapability;
+  withdraw: VaultActionCapability;
+  lock: VaultActionCapability;
+  unlock: VaultActionCapability;
+}
+
+export type VaultAction = 'deposit' | 'withdraw' | 'lock' | 'unlock';
+
+
