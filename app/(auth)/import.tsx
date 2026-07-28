@@ -28,7 +28,15 @@ export default function ImportWalletScreen() {
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
-<<<<<<< HEAD
+  // Recovery states
+  const [onboardingError, setOnboardingError] = useState<OnboardingError | null>(null);
+  const [storageError, setStorageError] = useState<StorageError | null>(null);
+
+  const resetErrors = () => {
+    setOnboardingError(null);
+    setStorageError(null);
+  };
+
   /**
    * Validate the trimmed secret key and return a user-friendly error,
    * or null if it passes all checks.
@@ -50,6 +58,13 @@ export default function ImportWalletScreen() {
       return `Your secret key is too long. Stellar secret keys are exactly ${SECRET_KEY_LENGTH} characters.`;
     }
 
+    // Quick invalid-character check so users see a specific message before
+    // the SDK's generic checksum error.
+    const base32Regex = /^[A-Z2-7]+$/;
+    if (!base32Regex.test(trimmedKey)) {
+      return 'Secret key contains invalid characters. Only uppercase letters A-Z and digits 2-7 are allowed.';
+    }
+
     // Use the Stellar SDK's built-in validation which verifies the base32
     // encoding, version byte, and CRC16 checksum.
     if (!StrKey.isValidEd25519SecretSeed(trimmedKey)) {
@@ -58,16 +73,6 @@ export default function ImportWalletScreen() {
 
     return null;
   }
-=======
-  // Recovery states
-  const [onboardingError, setOnboardingError] = useState<OnboardingError | null>(null);
-  const [storageError, setStorageError] = useState<StorageError | null>(null);
-
-  const resetErrors = () => {
-    setOnboardingError(null);
-    setStorageError(null);
-  };
->>>>>>> upstream/main
 
   const handleImport = async () => {
     setError('');
@@ -82,12 +87,6 @@ export default function ImportWalletScreen() {
       return;
     }
 
-    const base32Regex = /^[A-Z2-7]+$/;
-    if (!base32Regex.test(trimmedKey)) {
-      setError('Secret key contains invalid characters. Only uppercase letters A-Z and digits 2-7 are allowed.');
-      return;
-    }
-
     try {
       const { publicKey } = await importWallet(trimmedKey);
 
@@ -99,14 +98,9 @@ export default function ImportWalletScreen() {
       }
 
       setIsSuccess(true);
-<<<<<<< HEAD
-    } catch {
-      setError('Could not import wallet. Please make sure the key is correct and try again.');
-=======
     } catch (err: any) {
       const errorMsg = err?.message || String(err);
       setOnboardingError(classifyOnboardingError(errorMsg));
->>>>>>> upstream/main
     }
   };
 
