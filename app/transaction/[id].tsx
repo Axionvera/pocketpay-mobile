@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert, TouchableOpacity, ScrollView, Platform, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import * as Clipboard from 'expo-clipboard';
 import { Copy, Check, ArrowLeft, ArrowUpRight, ArrowDownLeft, ExternalLink, AlertCircle, Clock, CheckCircle, XCircle } from 'lucide-react-native';
 import { useWalletStore } from '../../src/store/walletStore';
 import { useAppStore } from '../../src/store/appStore';
@@ -10,13 +9,14 @@ import { Button } from '../../src/components/Button';
 import { resolveAddressLabel } from '../../src/utils/contacts';
 import { formatAmount } from '../../src/utils/amount';
 import { getExplorerTxUrl } from '../../src/services/stellar';
+import { useCopyToClipboard } from '../../src/utils/clipboard';
 
 export default function TransactionDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { transactions, publicKey } = useWalletStore();
   const contacts = useAppStore((state) => state.contacts);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const { copy, copiedField } = useCopyToClipboard();
 
   interface TransactionDetail {
     id: string;
@@ -80,14 +80,8 @@ export default function TransactionDetailScreen() {
 
   const handleCopy = async (text: string, fieldName: string) => {
     if (!text) return;
-    try {
-      await Clipboard.setStringAsync(text);
-      setCopiedField(fieldName);
-      setTimeout(() => {
-        setCopiedField(null);
-      }, 2000);
-    } catch (error: any) {
-      console.error('Clipboard copy failed:', error);
+    const result = await copy(text, fieldName);
+    if (!result.ok) {
       Alert.alert('Copy Failed', 'Failed to copy to clipboard. Please try again.');
     }
   };

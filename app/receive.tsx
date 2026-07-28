@@ -6,16 +6,17 @@ import { SIZES, RADIUS, ThemeColors } from "../src/constants/theme";
 import { useTheme } from "../src/hooks/useTheme";
 import { useWalletStore } from "../src/store/walletStore";
 import QRCode from "react-native-qrcode-svg";
-import * as Clipboard from "expo-clipboard";
+import { useCopyToClipboard } from "../src/utils/clipboard";
 
 export default function ReceiveScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { publicKey } = useWalletStore();
+  const { copy } = useCopyToClipboard();
 
   const handleCopy = async () => {
     if (publicKey) {
-      await Clipboard.setStringAsync(publicKey);
+      await copy(publicKey, 'address');
     }
   };
 
