@@ -6,11 +6,11 @@ import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Button } from '../../src/components/Button';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
-import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
+import { NetworkStateBanner } from '../../src/components/NetworkStateBanner';
 import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { BalanceDisplay } from '../../src/components/BalanceDisplay';
 import { FundingStatusBanner } from '../../src/components/FundingStatusBanner';
-import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
+import { useNetworkState } from '../../src/hooks/useNetworkState';
 import { Clock } from 'lucide-react-native';
 import { BackupReminderModal } from '../../src/components/BackupReminderModal';
 
@@ -36,7 +36,7 @@ export default function HomeScreen() {
     acknowledgeBackupReminder,
   } = useWalletStore();
 
-  const { networkErrorType, message } = useNetworkStatus(error);
+  const { state: networkState, disableWriteActions, retry } = useNetworkState({ error });
 
   useEffect(() => {
     refreshWalletData();
@@ -76,10 +76,9 @@ export default function HomeScreen() {
           />
         }
       >
-        <NetworkStatusBanner
-          networkErrorType={networkErrorType}
-          message={message}
-          onRetry={refreshWalletData}
+        <NetworkStateBanner
+          state={networkState}
+          onRetry={handleRetry}
           isRetrying={isLoading}
         />
 
@@ -105,6 +104,7 @@ export default function HomeScreen() {
           <Button
             title="Send"
             onPress={() => router.push('/send')}
+            disabled={disableWriteActions}
             style={styles.actionButton}
           />
           <Button

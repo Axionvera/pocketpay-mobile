@@ -26,6 +26,8 @@ import { PiggyBank, Info, Lock, HelpCircle, ShieldCheck, AlertTriangle, Ban } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VaultReceiptModal } from "../../src/components/VaultReceiptModal";
 import { isActionSupported, getActionUnsupportedReason, getActionUnsupportedDetail } from '../../src/utils/vaultCapabilities';
+import { useNetworkState } from '../../src/hooks/useNetworkState';
+import { NetworkStateBanner } from '../../src/components/NetworkStateBanner';
 
 const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const VAULT_INTRO_SEEN_KEY = '@pocketpay_vault_intro_seen';
@@ -36,8 +38,9 @@ export default function VaultScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Wallet & Vault stores
-  const { publicKey, getSecretKey, balance: walletBalance } = useWalletStore();
+  const { publicKey, getSecretKey, balance: walletBalance, error: walletError } = useWalletStore();
   const { isAvailable, reasons, isContractConfigured } = useVaultAvailability();
+  const { state: networkState, disableWriteActions: networkDisabled, retry: retryNetwork } = useNetworkState({ error: walletError });
   const {
     balance,
     locks,
@@ -243,6 +246,17 @@ export default function VaultScreen() {
         onClose={() => setReceiptVisible(false)}
       />
 
+      <NetworkStateBanner
+        state={networkState}
+        onRetry={() => {
+          retryNetwork();
+          if (publicKey) {
+            loadBalance(publicKey);
+            loadLocks();
+          }
+        }}
+      />
+
       <View style={styles.card}>
         <TouchableOpacity
           style={styles.infoButton}
@@ -364,7 +378,7 @@ export default function VaultScreen() {
               onPress={() => handleAction('deposit')}
               isLoading={depositForm.isSubmitting || (isSubmitting && pendingAction === 'deposit')}
               loadingText="Depositing…"
-              disabled={!canDeposit || isLoadingBalance}
+              disabled={!canDeposit || isLoadingBalance || networkDisabled}
               style={styles.actionButton}
             />
             <AsyncActionButton
@@ -373,7 +387,7 @@ export default function VaultScreen() {
               onPress={() => handleAction('withdraw')}
               isLoading={isSubmitting && pendingAction === 'withdraw'}
               loadingText="Withdrawing…"
-              disabled={!canWithdraw || isLoadingBalance || depositForm.isSubmitting}
+              disabled={!canWithdraw || isLoadingBalance || depositForm.isSubmitting || networkDisabled}
               style={styles.actionButton}
             />
           </View>
@@ -383,7 +397,7 @@ export default function VaultScreen() {
             onPress={() => handleAction('lock')}
             isLoading={isSubmitting && pendingAction === 'lock'}
             loadingText="Locking…"
-            disabled={!canLock || isSubmitting || depositForm.isSubmitting}
+            disabled={!canLock || isSubmitting || depositForm.isSubmitting || networkDisabled}
             style={styles.lockButton}
           />
           {locks.length === 0 ? (

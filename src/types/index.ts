@@ -9,3 +9,5 @@ export type {
   SigningResult,
   Signer,
 } from './signer';
+export type { NetworkState, NetworkStateCopy } from './network';
+export { describeNetworkState } from './network';

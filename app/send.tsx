@@ -37,6 +37,8 @@ import {
   Info,
 } from "lucide-react-native";
 import { ScreenHeader } from "@/components";
+import { useNetworkState } from "../src/hooks/useNetworkState";
+import { NetworkStateBanner } from "../src/components/NetworkStateBanner";
 
 interface FieldErrors {
   destination?: string;
@@ -54,14 +56,14 @@ export default function SendScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { publicKey, getSecretKey, refreshWalletData, balance, fundingStatus } =
+  const { publicKey, getSecretKey, refreshWalletData, balance, fundingStatus, error } =
     useWalletStore();
   const contacts = useAppStore((state) => state.contacts);
   const { getContactByAddress, addRecentRecipient } = useContactStore();
+  const { state: networkState, disableWriteActions, retry } = useNetworkState({ error });
 
-  // Issue #330: Disable send when account is unfunded
   const isUnfunded = fundingStatus === 'unfunded';
-  const sendDisabled = isUnfunded || !publicKey;
+  const sendDisabled = isUnfunded || !publicKey || disableWriteActions;
 
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("");
@@ -179,6 +181,11 @@ export default function SendScreen() {
         />
 
         {/* Issue #330: Show unfunded account warning */}
+        <NetworkStateBanner
+          state={networkState}
+          onRetry={() => { refreshWalletData(); retry(); }}
+        />
+
         {isUnfunded && (
           <View style={styles.unfundedWarning}>
             <Info color={colors.warning} size={18} style={{ marginRight: SIZES.sm }} />
@@ -250,7 +257,7 @@ export default function SendScreen() {
         </View>
 
         <AsyncActionButton
-          title={sendDisabled ? 'Funding Required' : 'Send Payment'}
+          title={disableWriteActions ? 'Network Unavailable' : isUnfunded ? 'Funding Required' : 'Send Payment'}
           onPress={handleSend}
           isLoading={isLoading}
           loadingText="Sending…"
