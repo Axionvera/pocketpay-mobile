@@ -1,41 +1,50 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, TouchableOpacityProps } from 'react-native';
-import { COLORS, RADIUS, SIZES } from '../constants/theme';
+import { RADIUS, SIZES, ThemeColors } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 interface ButtonProps extends TouchableOpacityProps {
   title: string;
-  variant?: 'primary' | 'secondary' | 'outline' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'destructive' | 'muted';
   isLoading?: boolean;
+  loadingText?: string;
 }
 
-export const Button: React.FC<ButtonProps> = ({ 
-  title, 
-  variant = 'primary', 
-  isLoading = false, 
-  style, 
-  disabled, 
-  ...props 
+export const Button: React.FC<ButtonProps> = ({
+  title,
+  variant = 'primary',
+  isLoading = false,
+  loadingText = 'Processing…',
+  style,
+  disabled,
+  ...props
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const getBackgroundColor = () => {
-    if (disabled) return COLORS.surfaceLight;
+    if (disabled) return colors.surfaceLight;
     switch (variant) {
-      case 'primary': return COLORS.primary;
-      case 'secondary': return COLORS.secondary;
-      case 'danger': return COLORS.error;
+      case 'primary': return colors.primary;
+      case 'secondary': return colors.secondary;
+      case 'danger':
+      case 'destructive': return colors.error;
       case 'outline': return 'transparent';
-      default: return COLORS.primary;
+      case 'muted': return colors.surfaceLight;
+      default: return colors.primary;
     }
   };
 
   const getTextColor = () => {
-    if (disabled) return COLORS.textMuted;
-    if (variant === 'outline') return COLORS.primary;
-    return COLORS.background; // Dark text on bright primary/secondary buttons looks premium
+    if (disabled) return colors.textMuted;
+    if (variant === 'outline') return colors.primary;
+    if (variant === 'muted') return colors.textPrimary;
+    return colors.background; // Dark text on bright primary/secondary buttons looks premium
   };
 
   const getBorderColor = () => {
-    if (disabled) return COLORS.surfaceLight;
-    if (variant === 'outline') return COLORS.primary;
+    if (disabled) return colors.surfaceLight;
+    if (variant === 'outline') return colors.primary;
     return 'transparent';
   };
 
@@ -43,7 +52,7 @@ export const Button: React.FC<ButtonProps> = ({
     <TouchableOpacity
       style={[
         styles.container,
-        { 
+        {
           backgroundColor: getBackgroundColor(),
           borderColor: getBorderColor(),
           borderWidth: variant === 'outline' ? 1 : 0,
@@ -55,7 +64,12 @@ export const Button: React.FC<ButtonProps> = ({
       {...props}
     >
       {isLoading ? (
-        <ActivityIndicator color={getTextColor()} />
+        <>
+          <ActivityIndicator color={getTextColor()} style={{ marginRight: 8 }} />
+          <Text style={[styles.text, { color: getTextColor() }]}>
+            {loadingText}
+          </Text>
+        </>
       ) : (
         <Text style={[styles.text, { color: getTextColor() }]}>
           {title}
@@ -65,7 +79,7 @@ export const Button: React.FC<ButtonProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     height: 56,
     borderRadius: RADIUS.lg,

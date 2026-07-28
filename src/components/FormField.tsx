@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   TextInput,
@@ -8,7 +8,8 @@ import {
   TextInputProps,
 } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
-import { COLORS, RADIUS, SIZES } from '../constants/theme';
+import { RADIUS, SIZES, ThemeColors } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 interface FormFieldProps extends TextInputProps {
   /** Label displayed above the input */
@@ -34,6 +35,8 @@ export const FormField: React.FC<FormFieldProps> = ({
   style,
   ...props
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [isSecureVisible, setIsSecureVisible] = useState(false);
   const isSecureField = initialSecure;
 
@@ -65,7 +68,7 @@ export const FormField: React.FC<FormFieldProps> = ({
             isDisabled && styles.inputTextDisabled,
             style,
           ]}
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={colors.textMuted}
           editable={!isDisabled}
           secureTextEntry={resolvedSecureTextEntry}
           {...props}
@@ -79,9 +82,9 @@ export const FormField: React.FC<FormFieldProps> = ({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             {isSecureVisible ? (
-              <EyeOff size={20} color={COLORS.textSecondary} />
+              <EyeOff size={20} color={colors.textSecondary} />
             ) : (
-              <Eye size={20} color={COLORS.textSecondary} />
+              <Eye size={20} color={colors.textSecondary} />
             )}
           </TouchableOpacity>
         )}
@@ -102,45 +105,45 @@ export const FormField: React.FC<FormFieldProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginBottom: SIZES.md,
   },
   label: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 14,
     marginBottom: SIZES.sm,
     fontWeight: '500',
   },
   labelDisabled: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     height: 56,
   },
   inputError: {
-    borderColor: COLORS.error,
+    borderColor: colors.error,
   },
   inputDisabled: {
-    backgroundColor: COLORS.surfaceLight,
-    borderColor: COLORS.border,
+    backgroundColor: colors.surfaceLight,
+    borderColor: colors.border,
     opacity: 0.6,
   },
   input: {
     flex: 1,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontSize: 16,
     paddingHorizontal: SIZES.md,
     height: '100%',
   },
   inputTextDisabled: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
   },
   leftIcon: {
     paddingLeft: SIZES.md,
@@ -152,13 +155,13 @@ const styles = StyleSheet.create({
     paddingRight: SIZES.md,
   },
   errorText: {
-    color: COLORS.error,
+    color: colors.error,
     fontSize: 12,
     marginTop: SIZES.xs,
     marginLeft: SIZES.xs,
   },
   helperText: {
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontSize: 12,
     marginTop: SIZES.xs,
     marginLeft: SIZES.xs,
