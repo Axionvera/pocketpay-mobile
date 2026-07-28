@@ -47,6 +47,7 @@ PocketPay Mobile is part of a broader PocketPay stack:
 - [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
 - [Mobile Onboarding Checklist](docs/mobile-onboarding-checklist.md) - Quick-reference setup checklist for new contributors
 - [UI State Catalogue](docs/ui-states.md) - The canonical reference for loading, empty, error, success, disabled, and pending states across the main screens
+- [QR Receive Payload Format](docs/qr-payment-requests.md) - The address-only and SEP-0007-based payment-request formats the Receive screen encodes into its QR code
 
 ## Screenshots
 
