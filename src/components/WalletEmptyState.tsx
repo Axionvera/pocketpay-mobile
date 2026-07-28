@@ -9,40 +9,70 @@ import {
   Sparkles,
   Info,
   Loader2,
+  AlertTriangle,
+  RefreshCw,
+  XCircle,
+  HardDrive,
 } from 'lucide-react-native';
 import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { AsyncActionButton } from './AsyncActionButton';
+import type { OnboardingError, StorageError } from '../types/onboarding';
+import {
+  ONBOARDING_ERROR_MESSAGES,
+  STORAGE_ERROR_MESSAGES,
+} from '../types/onboarding';
 
-export type WalletEmptyStateVariant = 'empty' | 'missing' | 'loading';
+export type WalletEmptyStateVariant =
+  | 'empty'
+  | 'missing'
+  | 'loading'
+  | 'failed_creation'
+  | 'failed_import'
+  | 'storage_error'
+  | 'cancelled';
 
 export interface WalletEmptyStateProps {
   /**
-   * - 'empty':   New user, no wallet yet. Show education copy + Create/Import CTAs.
-   * - 'missing': Defensive. Wallet cleared during app lifetime or auth guard race.
-   *              Short actionable copy, primary CTA is Create/Import again.
-   * - 'loading': Boot-time (walletChecked=false, SecureStore async read in progress).
-   *              Spinner + "Reading your wallet" — no CTAs.
+   * - 'empty':           New user, no wallet yet. Show education copy + Create/Import CTAs.
+   * - 'missing':         Defensive. Wallet cleared during app lifetime or auth guard race.
+   *                      Short actionable copy, primary CTA is Create/Import again.
+   * - 'loading':         Boot-time (walletChecked=false, SecureStore async read in progress).
+   *                      Spinner + "Reading your wallet" — no CTAs.
+   * - 'failed_creation': Wallet creation failed. Shows error + retry CTA.
+   * - 'failed_import':   Wallet import failed. Shows error + retry CTA.
+   * - 'storage_error':   Storage error during onboarding. Shows error + retry/reset CTAs.
+   * - 'cancelled':       User cancelled setup. Shows safe state message + start over CTA.
    */
   variant?: WalletEmptyStateVariant;
   onCreate?: () => void;
   onImport?: () => void;
+  onRetry?: () => void;
+  onStartOver?: () => void;
   isCreating?: boolean;
   isImporting?: boolean;
   /** When true, shows the strong "Stellar Testnet / No real funds" honesty banner. */
   showTestnetNotice?: boolean;
   /** Optional secondary message (1 line) under the title. */
   subtitle?: string;
+  /** Error type for failed_creation or failed_import variants. */
+  onboardingError?: OnboardingError;
+  /** Error type for storage_error variant. */
+  storageError?: StorageError;
 }
 
 export const WalletEmptyState: React.FC<WalletEmptyStateProps> = ({
   variant = 'empty',
   onCreate,
   onImport,
+  onRetry,
+  onStartOver,
   isCreating = false,
   isImporting = false,
   showTestnetNotice = true,
   subtitle,
+  onboardingError,
+  storageError,
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -58,6 +88,178 @@ export const WalletEmptyState: React.FC<WalletEmptyStateProps> = ({
           This should only take a moment. If this screen persists for more than a few seconds,
           close and reopen the app.
         </Text>
+      </View>
+    );
+  }
+
+  // ── Failed Creation State ─────────────────────────────────
+  if (variant === 'failed_creation' && onboardingError) {
+    const errorInfo = ONBOARDING_ERROR_MESSAGES[onboardingError];
+    return (
+      <View style={styles.container}>
+        <View style={styles.iconWrapperOuter}>
+          <View style={[styles.iconRing, styles.ringError]}>
+            <AlertTriangle color={colors.error} size={40} />
+          </View>
+          <View style={[styles.badge, styles.badgeError]}>
+            <XCircle color={colors.error} size={14} />
+          </View>
+        </View>
+
+        <Text style={styles.title}>{errorInfo.title}</Text>
+        <Text style={styles.message}>{errorInfo.message}</Text>
+
+        <View style={styles.guidanceCard}>
+          <Text style={styles.guidanceTitle}>What to try:</Text>
+          <Text style={styles.guidanceText}>{errorInfo.guidance}</Text>
+        </View>
+
+        <View style={styles.actions}>
+          <AsyncActionButton
+            title="Try Again"
+            onPress={onRetry ?? (() => {})}
+            style={styles.primaryButton}
+          />
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+          <AsyncActionButton
+            title="Start Over"
+            variant="outline"
+            onPress={onStartOver ?? (() => {})}
+            style={styles.secondaryButton}
+          />
+        </View>
+      </View>
+    );
+  }
+
+  // ── Failed Import State ───────────────────────────────────
+  if (variant === 'failed_import' && onboardingError) {
+    const errorInfo = ONBOARDING_ERROR_MESSAGES[onboardingError];
+    return (
+      <View style={styles.container}>
+        <View style={styles.iconWrapperOuter}>
+          <View style={[styles.iconRing, styles.ringWarning]}>
+            <AlertTriangle color={colors.warning} size={40} />
+          </View>
+          <View style={[styles.badge, styles.badgeWarning]}>
+            <Info color={colors.warning} size={14} />
+          </View>
+        </View>
+
+        <Text style={styles.title}>{errorInfo.title}</Text>
+        <Text style={styles.message}>{errorInfo.message}</Text>
+
+        <View style={styles.guidanceCard}>
+          <Text style={styles.guidanceTitle}>What to try:</Text>
+          <Text style={styles.guidanceText}>{errorInfo.guidance}</Text>
+        </View>
+
+        <View style={styles.actions}>
+          <AsyncActionButton
+            title="Try Import Again"
+            onPress={onRetry ?? (() => {})}
+            style={styles.primaryButton}
+          />
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+          <AsyncActionButton
+            title="Create New Wallet"
+            variant="outline"
+            onPress={onCreate ?? (() => {})}
+            style={styles.secondaryButton}
+          />
+        </View>
+      </View>
+    );
+  }
+
+  // ── Storage Error State ───────────────────────────────────
+  if (variant === 'storage_error' && storageError) {
+    const errorInfo = STORAGE_ERROR_MESSAGES[storageError];
+    return (
+      <View style={styles.container}>
+        <View style={styles.iconWrapperOuter}>
+          <View style={[styles.iconRing, styles.ringError]}>
+            <HardDrive color={colors.error} size={40} />
+          </View>
+          <View style={[styles.badge, styles.badgeError]}>
+            <XCircle color={colors.error} size={14} />
+          </View>
+        </View>
+
+        <Text style={styles.title}>{errorInfo.title}</Text>
+        <Text style={styles.message}>{errorInfo.message}</Text>
+
+        <View style={styles.guidanceCard}>
+          <Text style={styles.guidanceTitle}>Troubleshooting:</Text>
+          <Text style={styles.guidanceText}>{errorInfo.guidance}</Text>
+        </View>
+
+        <View style={styles.actions}>
+          <AsyncActionButton
+            title="Retry"
+            onPress={onRetry ?? (() => {})}
+            style={styles.primaryButton}
+          />
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+          <AsyncActionButton
+            title="Start Over"
+            variant="outline"
+            onPress={onStartOver ?? (() => {})}
+            style={styles.secondaryButton}
+          />
+        </View>
+      </View>
+    );
+  }
+
+  // ── Cancelled State ───────────────────────────────────────
+  if (variant === 'cancelled') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.iconWrapperOuter}>
+          <View style={[styles.iconRing, styles.ringMissing]}>
+            <Info color={colors.warning} size={40} />
+          </View>
+          <View style={[styles.badge, styles.badgeMissing]}>
+            <Info color={colors.warning} size={14} />
+          </View>
+        </View>
+
+        <Text style={styles.title}>Setup Cancelled</Text>
+        <Text style={styles.message}>
+          {subtitle ?? 'Your wallet setup was cancelled. No changes were made to your device. You can start again whenever you\'re ready.'}
+        </Text>
+
+        <View style={styles.actions}>
+          <AsyncActionButton
+            title="Create New Wallet"
+            onPress={onCreate ?? (() => {})}
+            style={styles.primaryButton}
+          />
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+          <AsyncActionButton
+            title="Import Existing Wallet"
+            variant="outline"
+            onPress={onImport ?? (() => {})}
+            style={styles.secondaryButton}
+          />
+        </View>
       </View>
     );
   }
@@ -209,6 +411,14 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: 'rgba(0, 229, 255, 0.06)',
       borderColor: 'rgba(0, 229, 255, 0.18)',
     },
+    ringError: {
+      backgroundColor: 'rgba(255, 61, 0, 0.10)',
+      borderColor: 'rgba(255, 61, 0, 0.28)',
+    },
+    ringWarning: {
+      backgroundColor: 'rgba(255, 196, 0, 0.10)',
+      borderColor: 'rgba(255, 196, 0, 0.28)',
+    },
     badge: {
       position: 'absolute',
       right: -4,
@@ -225,6 +435,12 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: 'rgba(0, 230, 118, 0.15)',
     },
     badgeMissing: {
+      backgroundColor: 'rgba(255, 196, 0, 0.18)',
+    },
+    badgeError: {
+      backgroundColor: 'rgba(255, 61, 0, 0.18)',
+    },
+    badgeWarning: {
       backgroundColor: 'rgba(255, 196, 0, 0.18)',
     },
     title: {
@@ -298,6 +514,26 @@ const createStyles = (colors: ThemeColors) =>
     actions: {
       width: '100%',
       marginTop: 'auto',
+    },
+    guidanceCard: {
+      width: '100%',
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      padding: SIZES.md,
+      borderRadius: RADIUS.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: SIZES.lg,
+    },
+    guidanceTitle: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      fontWeight: '600',
+      marginBottom: SIZES.xs,
+    },
+    guidanceText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      lineHeight: 18,
     },
     primaryButton: {
       width: '100%',

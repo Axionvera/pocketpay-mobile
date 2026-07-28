@@ -83,6 +83,49 @@ See also [Development Diagnostics Export](./diagnostics.md).
 
 ---
 
+## Onboarding Recovery States
+
+Wallet onboarding (create/import) has its own recovery model defined in `src/types/onboarding.ts`. This covers failures that occur *during* setup, before the user has a wallet.
+
+### State Model
+
+| Variant | When shown | CTA(s) |
+|---------|-----------|--------|
+| `empty` | New user, no wallet | Create, Import |
+| `missing` | Wallet cleared mid-session | Create, Import |
+| `loading` | Boot-time SecureStore read | None (spinner) |
+| `failed_creation` | Keypair generation or save failed | Try Again, Start Over |
+| `failed_import` | Secret key validation or save failed | Try Import Again, Create New |
+| `storage_error` | SecureStore/keystore error during save | Retry, Start Over |
+| `cancelled` | User navigated back during setup | Create, Import |
+
+### Error Classification
+
+Raw error messages are classified into typed errors via helper functions:
+
+- `classifyOnboardingError(message)` → `OnboardingError` (keypair_generation_failed, invalid_secret_key, etc.)
+- `classifyStorageError(message)` → `StorageError` (persist_failed, device_locked, etc.)
+- `mapWalletErrorToStorageError(constant)` → `StorageError` (maps walletStorageErrors constants)
+
+Each typed error maps to user-friendly `title`, `message`, and `guidance` strings via `ONBOARDING_ERROR_MESSAGES` and `STORAGE_ERROR_MESSAGES`.
+
+### Recovery Flow
+
+```
+User taps Create/Import
+  ├─ Success → WalletEmptyState "success" → Go to Wallet
+  ├─ Onboarding error → WalletEmptyState "failed_creation"/"failed_import"
+  │     ├─ Try Again → resets error, retries operation
+  │     └─ Start Over → resets to initial empty state
+  └─ Storage error → WalletEmptyState "storage_error"
+        ├─ Retry → resets error, retries operation
+        └─ Start Over → resets to initial empty state
+```
+
+Cancelled setup (user presses Back during create/import flow) leaves the user on the `(auth)` index screen with no wallet state changes — the safe default state.
+
+---
+
 ## Contributor Checklist
 
 - [ ] Unexpected render failures are left to the root boundary (do not swallow with empty `catch` that leaves a blank screen).
