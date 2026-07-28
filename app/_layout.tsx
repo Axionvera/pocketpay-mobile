@@ -1,6 +1,7 @@
 import '../shim'; // MUST BE FIRST (See docs/polyfills.md for details)
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { installGlobalErrorHandlers } from '../src/utils/globalErrorHandler';
 import { StatusBar } from 'expo-status-bar';
 import { useWalletStore } from '../src/store/walletStore';
@@ -39,6 +40,11 @@ function RootContent() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
+  // Deep link URL preservation: when a logged-out user arrives via a deep link,
+  // we store the URL and replay it after authentication completes.
+  const initialUrl = Linking.useURL();
+  const pendingDeepLink = useRef<string | null>(null);
+
   useEffect(() => {
     initializeApp();
     loadWalletFromStorage();
@@ -57,14 +63,24 @@ function RootContent() {
 
     if (publicKey && inAuthGroup) {
       // User is signed in and trying to access auth screens, redirect to main
-      router.replace('/(tabs)');
+      // If there's a pending deep link, replay it now that the user is authenticated.
+      if (pendingDeepLink.current) {
+        const url = pendingDeepLink.current;
+        pendingDeepLink.current = null;
+        // Use Linking.openURL to let Expo Router resolve the path from the full URL
+        Linking.openURL(url);
+      } else {
+        router.replace('/(tabs)');
+      }
     } else if (!publicKey && !inAuthGroup && segments[0] !== 'send' && segments[0] !== 'receive' && segments[0] !== 'review-transaction') {
       // User is NOT signed in and trying to access main screens, redirect to auth.
-      // This also covers a wallet reset that happens while sitting on a (tabs)
-      // screen (e.g. Settings) — publicKey going null must redirect from there too.
+      // Preserve the deep link URL so we can replay it after authentication.
+      if (initialUrl && !pendingDeepLink.current) {
+        pendingDeepLink.current = initialUrl;
+      }
       router.replace('/(auth)');
     }
-  }, [publicKey, isInitialized, walletChecked, segments, error]);
+  }, [publicKey, isInitialized, walletChecked, segments, error, initialUrl]);
 
   if (!isInitialized || !walletChecked) {
     return (

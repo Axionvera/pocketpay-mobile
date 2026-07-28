@@ -117,8 +117,18 @@ Configured in `app.json` → `scheme: "stellar-pocketpay"`. Currently 5 deep-lin
 | `stellar-pocketpay:///`             | Home (if wallet) or auth (if not)  | —                                     |
 | `stellar-pocketpay:///send?destination=G…` | Prefilled Send form          | `destination` must be valid strkey    |
 | `stellar-pocketpay:///receive`      | Receive screen                     | wallet loaded                         |
-| `stellar-pocketpay:///transaction/tx-123` | Transaction detail          | wallet loaded; tx-123 must exist in store |
+| `stellar-pocketpay:///transaction/tx-123` | Transaction detail          | wallet loaded **or** network fetch succeeds; tx ID validated |
 | `stellar-pocketpay:///vault-lock/4` | Single lock detail view           | wallet loaded + id 4 in vaultStore.locks |
+
+#### Transaction Deep Link Behavior
+
+The transaction detail route (`/transaction/[id]`) supports full deep link resolution:
+
+1. **In-memory lookup first** — if the transaction is already in the wallet store (e.g. user just sent it), it renders instantly.
+2. **Network fetch fallback** — if not in the store, the app fetches the operation from Horizon via `fetchOperationById()`. Shows a loading spinner during fetch.
+3. **Validation** — the `id` param is validated (non-empty, reasonable length, no control characters) before any network request. Invalid IDs show a clear error state.
+4. **Not found / error states** — if the transaction doesn't exist on the network or the fetch fails, the user sees a descriptive error with Retry and Go Back actions.
+5. **Auth gating** — if a logged-out user arrives via deep link, the URL is preserved and replayed after authentication completes (via `pendingDeepLink` in `app/_layout.tsx`).
 
 ---
 

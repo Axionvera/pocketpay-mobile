@@ -92,6 +92,37 @@ See also [Development Diagnostics Export](./diagnostics.md).
 
 ---
 
+## Transaction Deep Link Error States
+
+When a user arrives at the transaction detail screen via deep link (`stellar-pocketpay:///transaction/{id}`), the screen handles several error states beyond the standard in-memory lookup.
+
+### State Model
+
+| State | When shown | User-facing UI | Actions |
+|-------|-----------|----------------|---------|
+| `invalid` | ID fails validation (empty, too long, control chars) | "Invalid Transaction Link" + error reason | Go Back |
+| `loading` | ID valid but not in store; network fetch in progress | Spinner + "Loading transaction…" | None (auto) |
+| `not_found` | ID valid but operation not found on Horizon | "Transaction Not Found" + explanation | Try Again, Go Back |
+| `error` | Network failure during fetch | "Connection Error" + guidance | Retry, Go Back |
+| `loaded` | Transaction found (in store or via network) | Full transaction detail UI | All existing actions |
+
+### Validation Rules
+
+Transaction IDs are validated by `validateTransactionId()` in `src/utils/validation.ts`:
+- Must be non-empty after trimming
+- Maximum 128 characters
+- No control characters (`\x00-\x1f`, `\x7f`)
+
+### Network Fetch
+
+`fetchOperationById()` in `src/services/stellar.ts` calls `server.operations().operation(id).call()`. Returns `null` on 404 (not found) and throws on other errors. The transaction detail screen shows appropriate UI for each case.
+
+### Auth Gate Deep Link Preservation
+
+The root layout (`app/_layout.tsx`) preserves deep link URLs when a logged-out user arrives. The URL is stored in a `useRef` and replayed via `Linking.openURL()` after authentication completes. This ensures deep links from notifications, receipts, or external sources work end-to-end.
+
+---
+
 ## References
 
 - [Mobile Security Checklist](./mobile-security-checklist.md) — Error & Recovery Flows
