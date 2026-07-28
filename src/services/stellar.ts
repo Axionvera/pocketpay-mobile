@@ -140,6 +140,23 @@ export const mockDepositToVault = async (secretKey: string, amount: string): Pro
   return true;
 };
 
+export const mockFetchVaultMaturedLocks = async (publicKey: string): Promise<{ id: string; amount: string; unlockedAt: string }[]> => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  // Return mock matured locks for preview purposes
+  return [
+    {
+      id: 'lock_a1b2c3d4e5f6',
+      amount: '50.0000000',
+      unlockedAt: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
+    },
+    {
+      id: 'lock_f6e5d4c3b2a1',
+      amount: '25.5000000',
+      unlockedAt: new Date(Date.now() - 86400000 * 7).toISOString(), // 7 days ago
+    },
+  ];
+};
+
 export const mockWithdrawFromVault = async (secretKey: string, amount: string): Promise<boolean> => {
   await new Promise(resolve => setTimeout(resolve, 1500));
   return true;

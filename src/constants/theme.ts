@@ -19,7 +19,7 @@ export const COLORS = {
   textSecondary: '#A0AABF',
   textMuted: '#637087',
   
-  // Borders
+  // Bordersee
   border: '#2A314A',
 };
 

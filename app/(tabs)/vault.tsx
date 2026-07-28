@@ -1,33 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { Button } from '../../src/components/Button';
 import { Input } from '../../src/components/Input';
 import { COLORS, SIZES, RADIUS } from '../../src/constants/theme';
 import { useWalletStore } from '../../src/store/walletStore';
-import { mockFetchVaultBalance, mockDepositToVault, mockWithdrawFromVault } from '../../src/services/stellar';
+import { mockDepositToVault } from '../../src/services/stellar';
+import { useVaultStore } from '../../src/features/vault/vaultStore';
+import { WithdrawalPreview } from '../../src/features/vault/WithdrawalPreview';
 import { PiggyBank, ShieldCheck } from 'lucide-react-native';
 
 export default function VaultScreen() {
   const { publicKey, getSecretKey } = useWalletStore();
-  const [vaultBalance, setVaultBalance] = useState('0.0000000');
+  const { vaultBalance, fetchVaultDetails } = useVaultStore();
   const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showWithdrawalPreview, setShowWithdrawalPreview] = useState(false);
 
-  useEffect(() => {
-    if (publicKey) {
-      loadVaultBalance();
-    }
-  }, [publicKey]);
-
-  const loadVaultBalance = async () => {
-    if (!publicKey) return;
-    try {
-      const balance = await mockFetchVaultBalance(publicKey);
-      setVaultBalance(balance);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  useFocusEffect(
+    useCallback(() => {
+      if (publicKey) {
+        fetchVaultDetails(publicKey);
+      }
+    }, [publicKey])
+  );
 
   const handleDeposit = async () => {
     if (!amount) return;
@@ -41,12 +37,16 @@ export default function VaultScreen() {
       
       Alert.alert('Success', 'Funds deposited into Soroban Vault (Mock)');
       setAmount('');
-      loadVaultBalance();
+      if (publicKey) fetchVaultDetails(publicKey);
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleWithdrawPress = () => {
+    setShowWithdrawalPreview(true);
   };
 
   return (
@@ -69,7 +69,7 @@ export default function VaultScreen() {
 
       <View style={styles.form}>
         <Input
-          label="Amount to Deposit/Withdraw (XLM)"
+          label="Amount to Deposit (XLM)"
           placeholder="0.00"
           value={amount}
           onChangeText={setAmount}
@@ -85,12 +85,17 @@ export default function VaultScreen() {
           <Button 
             title="Withdraw" 
             variant="secondary"
-            onPress={() => Alert.alert('Notice', 'Withdrawal mock action triggered')} 
+            onPress={handleWithdrawPress} 
             disabled={isLoading}
             style={styles.actionButton}
           />
         </View>
       </View>
+
+      <WithdrawalPreview
+        visible={showWithdrawalPreview}
+        onDismiss={() => setShowWithdrawalPreview(false)}
+      />
     </View>
   );
 }
