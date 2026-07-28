@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { StrKey } from '@stellar/stellar-sdk';
 import { AsyncActionButton } from '../../src/components/AsyncActionButton';
 import { FormField } from '../../src/components/FormField';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
@@ -21,23 +22,45 @@ export default function ImportWalletScreen() {
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
+  /**
+   * Validate the trimmed secret key and return a user-friendly error,
+   * or null if it passes all checks.
+   */
+  function validateSecretKey(trimmedKey: string): string | null {
+    if (!trimmedKey) {
+      return 'Please enter your secret key.';
+    }
+
+    if (!trimmedKey.startsWith('S')) {
+      return 'Stellar secret keys start with "S". Check your key and try again.';
+    }
+
+    if (trimmedKey.length < SECRET_KEY_LENGTH) {
+      return `Your secret key is too short. Stellar secret keys are exactly ${SECRET_KEY_LENGTH} characters.`;
+    }
+
+    if (trimmedKey.length > SECRET_KEY_LENGTH) {
+      return `Your secret key is too long. Stellar secret keys are exactly ${SECRET_KEY_LENGTH} characters.`;
+    }
+
+    // Use the Stellar SDK's built-in validation which verifies the base32
+    // encoding, version byte, and CRC16 checksum.
+    if (!StrKey.isValidEd25519SecretSeed(trimmedKey)) {
+      return "This doesn't look like a valid Stellar secret key. Double-check that you've copied the complete key correctly.";
+    }
+
+    return null;
+  }
+
   const handleImport = async () => {
     setError('');
 
     const trimmedKey = secretKey.trim();
 
-    if (!trimmedKey) {
-      setError('Please enter your secret key.');
-      return;
-    }
-
-    if (!trimmedKey.startsWith('S')) {
-      setError('Secret keys start with "S". Please check and try again.');
-      return;
-    }
-
-    if (trimmedKey.length !== SECRET_KEY_LENGTH) {
-      setError(`Secret keys are ${SECRET_KEY_LENGTH} characters. Yours is ${trimmedKey.length}.`);
+    // Client-side validation first
+    const validationError = validateSecretKey(trimmedKey);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -52,7 +75,7 @@ export default function ImportWalletScreen() {
 
       setIsSuccess(true);
     } catch {
-      setError('Invalid secret key. It may be malformed or from the wrong network.');
+      setError('Could not import wallet. Please make sure the key is correct and try again.');
     }
   };
 
