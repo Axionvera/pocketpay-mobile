@@ -18,7 +18,6 @@ export const DARK_COLORS = {
   textPrimary: '#FFFFFF',
   textSecondary: '#A0AABF',
   textMuted: '#637087',
-
   // Borders
   border: '#2A314A',
 };

@@ -28,6 +28,7 @@ import { VaultReceiptModal } from "../../src/components/VaultReceiptModal";
 import { isActionSupported, getActionUnsupportedReason, getActionUnsupportedDetail } from '../../src/utils/vaultCapabilities';
 import { useNetworkState } from '../../src/hooks/useNetworkState';
 import { NetworkStateBanner } from '../../src/components/NetworkStateBanner';
+import { WithdrawalPreview } from '../../src/features/vault/WithdrawalPreview';
 
 const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const VAULT_INTRO_SEEN_KEY = '@pocketpay_vault_intro_seen';
@@ -77,6 +78,7 @@ export default function VaultScreen() {
   const [pendingAction, setPendingAction] = useState<'deposit' | 'withdraw' | 'lock' | null>(null);
   const [pendingUnlockDate, setPendingUnlockDate] = useState<string>('');
   const [receiptVisible, setReceiptVisible] = useState(false);
+  const [showWithdrawalPreview, setShowWithdrawalPreview] = useState(false);
 
   const [receiptData, setReceiptData] = useState({
     actionType: "deposit" as "deposit" | "withdraw" | "lock",
@@ -216,6 +218,10 @@ export default function VaultScreen() {
     } catch (e: any) {
       Alert.alert('Unlock failed', e.message);
     }
+  };
+
+  const handleWithdrawPress = () => {
+    setShowWithdrawalPreview(true);
   };
 
   return (
@@ -384,7 +390,7 @@ export default function VaultScreen() {
             <AsyncActionButton
               title={canWithdraw ? 'Withdraw' : 'Withdraw Unavailable'}
               variant="secondary"
-              onPress={() => handleAction('withdraw')}
+              onPress={handleWithdrawPress}
               isLoading={isSubmitting && pendingAction === 'withdraw'}
               loadingText="Withdrawing…"
               disabled={!canWithdraw || isLoadingBalance || depositForm.isSubmitting || networkDisabled}
@@ -410,6 +416,11 @@ export default function VaultScreen() {
           ) : null}
         </View>
       )}
+
+      <WithdrawalPreview
+        visible={showWithdrawalPreview}
+        onDismiss={() => setShowWithdrawalPreview(false)}
+      />
     </ScrollView>
   );
 }
