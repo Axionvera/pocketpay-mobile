@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Alert, TouchableOpacity } from 'react-native';
 import { Button } from '../src/components/Button';
 import { Input } from '../src/components/Input';
 import { COLORS, SIZES, RADIUS } from '../src/constants/theme';
 import { useAppStore, Contact } from '../src/store/appStore';
 import { validateAddress } from '../src/utils/validation';
-import { Trash2, User } from 'lucide-react-native';
+import { findDuplicate, duplicateMessage, normalizeAddress } from '../src/utils/address';
+import { Trash2, User, AlertTriangle, Pencil } from 'lucide-react-native';
 
 export default function ContactsScreen() {
-  const { contacts, addContact, removeContact, findContactByPublicKey } = useAppStore();
+  const { contacts, addContact, removeContact, updateContact } = useAppStore();
   const [name, setName] = useState('');
   const [publicKey, setPublicKey] = useState('');
   const [nameError, setNameError] = useState<string | undefined>();
   const [keyError, setKeyError] = useState<string | undefined>();
   const [duplicateError, setDuplicateError] = useState<string | undefined>();
+  const [foundDuplicate, setFoundDuplicate] = useState<Contact | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
   const handleNameChange = (value: string) => {
@@ -25,6 +27,7 @@ export default function ContactsScreen() {
     setPublicKey(value);
     setKeyError(value.trim() ? validateAddress(value) ?? undefined : undefined);
     if (duplicateError) setDuplicateError(undefined);
+    if (foundDuplicate) setFoundDuplicate(null);
   };
 
   const handleAdd = async () => {
@@ -33,32 +36,60 @@ export default function ContactsScreen() {
     setNameError(currentNameError);
     setKeyError(currentKeyError);
     setDuplicateError(undefined);
+    setFoundDuplicate(null);
 
     if (currentNameError || currentKeyError) {
       return;
     }
 
-    const existing = findContactByPublicKey(publicKey);
+    // Duplicate detection via utility (consistent normalization)
+    const existing = findDuplicate(publicKey, contacts);
     if (existing) {
-      setDuplicateError(
-        `This address is already saved as "${existing.name}". You cannot add duplicate addresses.`,
-      );
+      setFoundDuplicate(existing);
+      setDuplicateError(duplicateMessage(existing.name));
       return;
     }
 
     const newContact: Contact = {
       id: Date.now().toString(),
       name: name.trim(),
-      publicKey: publicKey.trim(),
+      publicKey: normalizeAddress(publicKey),
     };
 
-    await addContact(newContact);
+    // Store-level duplicate check (defense in depth)
+    const result = await addContact(newContact);
+    if (!result.success) {
+      setDuplicateError(duplicateMessage(result.duplicateName ?? ''));
+      return;
+    }
+
+    resetForm();
+    setIsAdding(false);
+  };
+
+  const handleUpdateExisting = async () => {
+    if (!foundDuplicate) return;
+    const newName = name.trim() || foundDuplicate.name;
+    try {
+      await updateContact(foundDuplicate.id, newName);
+      Alert.alert(
+        'Updated',
+        `Contact "${foundDuplicate.name}" has been updated to "${newName}".`,
+      );
+      resetForm();
+      setIsAdding(false);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to update contact.');
+    }
+  };
+
+  const resetForm = () => {
     setName('');
     setPublicKey('');
     setNameError(undefined);
     setKeyError(undefined);
     setDuplicateError(undefined);
-    setIsAdding(false);
+    setFoundDuplicate(null);
   };
 
   const handleRemove = (id: string) => {
@@ -82,12 +113,33 @@ export default function ContactsScreen() {
             error={keyError}
             autoCapitalize="none"
           />
-          {duplicateError && (
+          {foundDuplicate && (
+            <View style={styles.duplicateBanner}>
+              <View style={styles.duplicateBannerHeader}>
+                <AlertTriangle color={COLORS.warning} size={18} />
+                <Text style={styles.duplicateBannerTitle}>Duplicate Address</Text>
+              </View>
+              <Text style={styles.duplicateBannerText}>
+                This address is already saved as "{foundDuplicate.name}".
+              </Text>
+              <Text style={styles.duplicateBannerHint}>
+                You can update the existing entry's name below, or cancel to keep it unchanged.
+              </Text>
+              <TouchableOpacity style={styles.updateButton} onPress={handleUpdateExisting}>
+                <Pencil color={COLORS.primary} size={16} />
+                <Text style={styles.updateButtonText}>
+                  Update "{foundDuplicate.name}" to "{name.trim() || foundDuplicate.name}"
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {duplicateError && !foundDuplicate && (
             <Text style={styles.duplicateWarning}>{duplicateError}</Text>
           )}
           <View style={styles.actions}>
             <Button title="Save Contact" onPress={handleAdd} style={styles.actionBtn} />
-            <Button title="Cancel" variant="outline" onPress={() => setIsAdding(false)} style={styles.actionBtn} />
+            <Button title="Cancel" variant="outline" onPress={() => { resetForm(); setIsAdding(false); }} style={styles.actionBtn} />
           </View>
         </View>
       ) : (
@@ -193,5 +245,53 @@ const styles = StyleSheet.create({
     marginTop: SIZES.xs,
     marginLeft: SIZES.xs,
     marginBottom: SIZES.sm,
-  }
+  },
+  duplicateBanner: {
+    backgroundColor: 'rgba(255, 196, 0, 0.08)',
+    borderRadius: RADIUS.md,
+    padding: SIZES.md,
+    marginTop: SIZES.sm,
+    marginBottom: SIZES.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 196, 0, 0.25)',
+  },
+  duplicateBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SIZES.sm,
+    marginBottom: SIZES.xs,
+  },
+  duplicateBannerTitle: {
+    color: COLORS.warning,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  duplicateBannerText: {
+    color: COLORS.warning,
+    fontSize: 13,
+    marginBottom: SIZES.xs,
+    lineHeight: 18,
+  },
+  duplicateBannerHint: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    marginBottom: SIZES.md,
+    lineHeight: 17,
+  },
+  updateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+    borderRadius: RADIUS.sm,
+    padding: SIZES.sm + 2,
+    gap: SIZES.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
+  },
+  updateButtonText: {
+    color: COLORS.primary,
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+  },
 });
