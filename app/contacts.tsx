@@ -27,10 +27,10 @@ import { useConfirm } from "../src/hooks/useConfirm";
 
 // ── View modes ───────────────────────────────────────────────────────────────
 type Mode =
-  | "list" // Default: show contact list
-  | "manual" // Manual add form (name + address)
-  | "scanning" // Full-screen QR scanner
-  | "confirm-scan"; // Post-scan form: address pre-filled, enter name
+    | "list" // Default: show contact list
+    | "manual" // Manual add form (name + address)
+    | "scanning" // Full-screen QR scanner
+    | "confirm-scan"; // Post-scan form: address pre-filled, enter name
 
 export default function ContactsScreen() {
   const { colors } = useTheme();
@@ -171,19 +171,19 @@ export default function ContactsScreen() {
   // ── QR scanner callbacks ────────────────────────────────────────────────────
 
   const handleScanSuccess = useCallback(
-    (address: string) => {
-      // Check for duplicates using the store's centralized logic.
-      const result = findDuplicateContact("", address);
-      if (result.type === "address") {
-        Alert.alert("Already saved", result.message);
-        setMode("list");
-        return;
-      }
-      // Pre-fill the address and switch to the confirm form.
-      setPublicKey(address);
-      setMode("confirm-scan");
-    },
-    [findDuplicateContact],
+      (address: string) => {
+        // Check for duplicates using the store's centralized logic.
+        const result = findDuplicateContact("", address);
+        if (result.type === "address") {
+          Alert.alert("Already saved", result.message);
+          setMode("list");
+          return;
+        }
+        // Pre-fill the address and switch to the confirm form.
+        setPublicKey(address);
+        setMode("confirm-scan");
+      },
+      [findDuplicateContact],
   );
 
   const handleScanError = useCallback((message: string) => {
@@ -196,33 +196,38 @@ export default function ContactsScreen() {
     resetForm();
   }, [resetForm]);
 
-  // ── Remove handler ──────────────────────────────────────────────────────────
+  // ── Remove handler with confirmation ──────────────────────────────────────────
 
-  const handleRemove = (id: string) => {
+  const handleRemove = (contact: Contact) => {
+    // Safely identify the contact with name or truncated address
+    const displayName = contact.name ||
+        (contact.publicKey ? `${contact.publicKey.slice(0, 8)}...${contact.publicKey.slice(-6)}` : 'this contact');
+
     void confirm({
       title: "Delete Contact",
-      message: "Are you sure you want to remove this contact?",
+      message: `Are you sure you want to delete "${displayName}"? This action cannot be undone.`,
       confirmLabel: "Delete",
+      cancelLabel: "Cancel",
       destructive: true,
-      onConfirm: () => removeContact(id),
+      onConfirm: () => removeContact(contact.id),
     });
   };
 
   // ── Render: full-screen QR scanner ─────────────────────────────────────────
   if (mode === "scanning") {
     return (
-      <Modal
-        visible
-        animationType="slide"
-        onRequestClose={handleScanClose}
-        accessibilityViewIsModal
-      >
-        <QrScanner
-          onScan={handleScanSuccess}
-          onError={handleScanError}
-          onClose={handleScanClose}
-        />
-      </Modal>
+        <Modal
+            visible
+            animationType="slide"
+            onRequestClose={handleScanClose}
+            accessibilityViewIsModal
+        >
+          <QrScanner
+              onScan={handleScanSuccess}
+              onError={handleScanError}
+              onClose={handleScanClose}
+          />
+        </Modal>
     );
   }
 
@@ -357,34 +362,127 @@ export default function ContactsScreen() {
                 title="No contacts yet"
                 message="Add a contact manually or scan a QR code."
               />
-            }
-            renderItem={({ item }) => (
-              <View style={styles.contactItem}>
-                <View style={styles.contactInfo}>
-                  <Text style={styles.contactName}>{item.name}</Text>
-                  <Text
-                    style={styles.contactKey}
-                    numberOfLines={1}
-                    ellipsizeMode="middle"
-                  >
-                    {item.publicKey}
-                  </Text>
-                </View>
-                <Trash2
-                  color={colors.error}
-                  size={20}
-                  onPress={() => handleRemove(item.id)}
-                  accessibilityLabel={`Remove ${item.name}`}
-                  accessibilityRole="button"
+
+              {/* Duplicate address update banner */}
+              {foundDuplicate && (
+                  <View style={styles.duplicateBanner}>
+                    <View style={styles.duplicateBannerHeader}>
+                      <AlertTriangle color={colors.warning} size={18} />
+                      <Text style={styles.duplicateBannerTitle}>Duplicate Address</Text>
+                    </View>
+                    <Text style={styles.duplicateBannerText}>
+                      This address is already saved as "{foundDuplicate.name}".
+                    </Text>
+                    <Text style={styles.duplicateBannerHint}>
+                      You can update the existing entry's name below, or cancel to keep it unchanged.
+                    </Text>
+                    <TouchableOpacity style={styles.updateButton} onPress={handleUpdateExisting}>
+                      <Pencil color={colors.primary} size={16} />
+                      <Text style={styles.updateButtonText}>
+                        Update "{foundDuplicate.name}" to "{name.trim() || foundDuplicate.name}"
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+              )}
+
+              {/* Scan button (only in manual mode – lets the user switch to scanner) */}
+              {mode === "manual" && (
+                  <Button
+                      title="Scan QR Instead"
+                      variant="outline"
+                      onPress={() => {
+                        resetForm();
+                        setMode("scanning");
+                      }}
+                      style={styles.scanInsteadBtn}
+                      accessibilityLabel="Open QR scanner"
+                  />
+              )}
+
+              <View style={styles.actions}>
+                <Button
+                    title="Save Contact"
+                    onPress={handleSave}
+                    isLoading={isSaving}
+                    style={styles.actionBtn}
+                    accessibilityLabel="Save contact"
+                />
+                <Button
+                    title="Cancel"
+                    variant="outline"
+                    onPress={() => {
+                      resetForm();
+                      setMode("list");
+                    }}
+                    style={styles.actionBtn}
+                    accessibilityLabel="Cancel"
                 />
               </View>
-            )}
-          />
-        </>
-      )}
+            </View>
+        ) : (
+            <>
+              {/* ── List header: two action buttons ────────────────────────────── */}
+              <View style={styles.headerActions}>
+                <Button
+                    title="+ Add Manually"
+                    onPress={() => {
+                      resetForm();
+                      setMode("manual");
+                    }}
+                    style={styles.headerBtn}
+                    accessibilityLabel="Add contact manually"
+                />
+                <Button
+                    title="Scan QR"
+                    variant="secondary"
+                    onPress={() => {
+                      resetForm();
+                      setMode("scanning");
+                    }}
+                    style={styles.headerBtn}
+                    accessibilityLabel="Scan QR code to add contact"
+                />
+              </View>
 
-      {confirmationDialog}
-    </View>
+              {/* ── Contact list ─────────────────────────────────────────────────── */}
+              <FlatList
+                  data={contacts}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={styles.listContent}
+                  ListEmptyComponent={
+                    <EmptyState
+                        icon={<User color={colors.textMuted} size={48} />}
+                        title="No contacts yet"
+                        message="Add a contact manually or scan a QR code."
+                    />
+                  }
+                  renderItem={({ item }) => (
+                      <View style={styles.contactItem}>
+                        <View style={styles.contactInfo}>
+                          <Text style={styles.contactName}>{item.name}</Text>
+                          <Text
+                              style={styles.contactKey}
+                              numberOfLines={1}
+                              ellipsizeMode="middle"
+                          >
+                            {item.publicKey}
+                          </Text>
+                        </View>
+                        <Trash2
+                            color={colors.error}
+                            size={20}
+                            onPress={() => handleRemove(item)}
+                            accessibilityLabel={`Remove ${item.name}`}
+                            accessibilityRole="button"
+                        />
+                      </View>
+                  )}
+              />
+            </>
+        )}
+
+        {confirmationDialog}
+      </View>
   );
 }
 
