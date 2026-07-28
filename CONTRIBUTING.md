@@ -196,6 +196,11 @@ We strive to build a wallet that is accessible to everyone. Before submitting a 
    npm test
    ```
 
+   Also run `npm run typecheck` and `npm run lint` — all three, plus your
+   tests, are expected to pass before you open a PR. If any of them fail and
+   you're not sure why, see the
+   [CI Troubleshooting Guide](docs/ci-troubleshooting.md).
+
 4. **Commit** with a clear, descriptive message:
 
    ```bash

@@ -68,6 +68,13 @@ full details on any step, see [CONTRIBUTING.md](../CONTRIBUTING.md).
   computer are on the same network, and no VPN is interfering with the LAN
   connection
 
+## Common CI Failures
+
+If your PR's checks fail once you're up and running, don't guess — the
+[CI Troubleshooting Guide](ci-troubleshooting.md) covers the TypeScript,
+lint, test, and Expo-specific failures contributors hit most often, with the
+exact local command to reproduce each one.
+
 ## You're Ready When
 
 - [ ] The app runs locally with no red error overlay
