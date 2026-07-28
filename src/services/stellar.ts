@@ -148,6 +148,29 @@ export const fetchTransactionsPage = async (
 };
 
 /**
+ * Fetch a single operation by its Horizon ID.  Used by the transaction detail
+ * screen when arriving via deep link — the operation may not be in the local
+ * store yet.
+ *
+ * @param operationId  – Horizon operation ID (numeric string or paging token).
+ * @returns The operation record, or `null` if not found on the network.
+ */
+export const fetchOperationById = async (
+  operationId: string
+): Promise<PaymentRecord | null> => {
+  try {
+    const record = await server.operations().operation(operationId).call();
+    return record as PaymentRecord;
+  } catch (error: any) {
+    if (isNotFoundError(error)) {
+      return null;
+    }
+    console.error('Error fetching operation by ID:', error);
+    throw error;
+  }
+};
+
+/**
  * Send XLM to a destination address.
  */
 export const sendXlmTransaction = async (

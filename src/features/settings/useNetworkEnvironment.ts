@@ -119,38 +119,50 @@ function buildWarnings(
 }
 
 /**
+ * Derives a user-safe summary of the currently configured network and vault
+ * environment. No raw secrets or full URLs are exposed — hostnames and
+ * truncated identifiers only.
+ *
+ * Plain function (not a hook) so it can be called from non-component code,
+ * e.g. the diagnostics export builder. `useNetworkEnvironment` below wraps
+ * it in `useMemo` for component use; the underlying computation is
+ * identical either way.
+ */
+export function computeNetworkEnvironment(): NetworkEnvironment {
+  const rawNetwork = process.env.EXPO_PUBLIC_STELLAR_NETWORK ?? 'TESTNET';
+  const networkName = rawNetwork.trim() || 'TESTNET';
+  const networkTier = classifyNetworkTier(networkName);
+
+  const horizonUrl = process.env.EXPO_PUBLIC_STELLAR_HORIZON_URL;
+  const sorobanUrl = process.env.EXPO_PUBLIC_SOROBAN_RPC_URL;
+
+  const vaultConfigured = isVaultConfigured();
+  const vaultContractId = getVaultContractId();
+
+  const vaultMode: VaultMode = vaultConfigured ? 'configured' : 'mock';
+  const vaultContractLabel = vaultConfigured
+    ? maskContractId(vaultContractId)
+    : 'Mock (no contract)';
+
+  const warnings = buildWarnings(networkTier, vaultConfigured, vaultContractId);
+
+  return {
+    networkName,
+    networkTier,
+    networkLabel: prettyNetworkLabel(networkTier, networkName),
+    horizonHost: extractHost(horizonUrl),
+    sorobanHost: extractHost(sorobanUrl),
+    vaultMode,
+    vaultContractLabel,
+    warnings,
+  };
+}
+
+/**
  * Hook that derives a user-safe summary of the currently configured network
  * and vault environment. No raw secrets or full URLs are exposed — hostnames
  * and truncated identifiers only.
  */
 export function useNetworkEnvironment(): NetworkEnvironment {
-  return useMemo(() => {
-    const rawNetwork = process.env.EXPO_PUBLIC_STELLAR_NETWORK ?? 'TESTNET';
-    const networkName = rawNetwork.trim() || 'TESTNET';
-    const networkTier = classifyNetworkTier(networkName);
-
-    const horizonUrl = process.env.EXPO_PUBLIC_STELLAR_HORIZON_URL;
-    const sorobanUrl = process.env.EXPO_PUBLIC_SOROBAN_RPC_URL;
-
-    const vaultConfigured = isVaultConfigured();
-    const vaultContractId = getVaultContractId();
-
-    const vaultMode: VaultMode = vaultConfigured ? 'configured' : 'mock';
-    const vaultContractLabel = vaultConfigured
-      ? maskContractId(vaultContractId)
-      : 'Mock (no contract)';
-
-    const warnings = buildWarnings(networkTier, vaultConfigured, vaultContractId);
-
-    return {
-      networkName,
-      networkTier,
-      networkLabel: prettyNetworkLabel(networkTier, networkName),
-      horizonHost: extractHost(horizonUrl),
-      sorobanHost: extractHost(sorobanUrl),
-      vaultMode,
-      vaultContractLabel,
-      warnings,
-    };
-  }, []);
+  return useMemo(() => computeNetworkEnvironment(), []);
 }

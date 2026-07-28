@@ -12,6 +12,7 @@ export function useVault() {
     isLoadingLocks,
     isSubmitting,
     balanceError,
+    vaultError,
     loadBalance,
     loadLocks,
     addLock,
@@ -19,6 +20,7 @@ export function useVault() {
     deposit,
     withdraw,
     withdrawMaturedLock,
+    clearVaultError,
   } = useVaultStore();
 
   const findLock = (id: string) => locks.find(lock => lock.id === id);
@@ -32,6 +34,7 @@ export function useVault() {
     isLoadingLocks,
     isSubmitting,
     balanceError,
+    vaultError,
     loadBalance,
     loadLocks,
     addLock,
@@ -39,6 +42,7 @@ export function useVault() {
     deposit,
     withdraw,
     withdrawMaturedLock,
+    clearVaultError,
     findLock,
   };
 }

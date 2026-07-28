@@ -3,12 +3,18 @@ import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-na
 import { useRouter } from 'expo-router';
 import { AsyncActionButton } from '../../src/components/AsyncActionButton';
 import { FormField } from '../../src/components/FormField';
+import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
 import { WALLET_SAVE_FAILURE_MESSAGE } from '../../src/utils/walletStorageErrors';
 import { importWallet } from 'pocketpay-sdk';
 import { Info, Shield, CheckCircle } from 'lucide-react-native';
+import type { OnboardingError, StorageError } from '../../src/types/onboarding';
+import {
+  classifyOnboardingError,
+  mapWalletErrorToStorageError,
+} from '../../src/types/onboarding';
 
 const SECRET_KEY_LENGTH = 56;
 
@@ -21,8 +27,18 @@ export default function ImportWalletScreen() {
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Recovery states
+  const [onboardingError, setOnboardingError] = useState<OnboardingError | null>(null);
+  const [storageError, setStorageError] = useState<StorageError | null>(null);
+
+  const resetErrors = () => {
+    setOnboardingError(null);
+    setStorageError(null);
+  };
+
   const handleImport = async () => {
     setError('');
+    resetErrors();
 
     const trimmedKey = secretKey.trim();
 
@@ -46,19 +62,60 @@ export default function ImportWalletScreen() {
 
       const saved = await setWallet(publicKey, trimmedKey);
       if (!saved) {
-        setError(WALLET_SAVE_FAILURE_MESSAGE);
+        // Classify the storage error
+        setStorageError(mapWalletErrorToStorageError(WALLET_SAVE_FAILURE_MESSAGE));
         return;
       }
 
       setIsSuccess(true);
-    } catch {
-      setError('Invalid secret key. It may be malformed or from the wrong network.');
+    } catch (err: any) {
+      const errorMsg = err?.message || String(err);
+      setOnboardingError(classifyOnboardingError(errorMsg));
     }
   };
 
   const handleGoToWallet = () => {
     router.replace('/(tabs)');
   };
+
+  const handleRetry = () => {
+    resetErrors();
+    setError('');
+  };
+
+  const handleStartOver = () => {
+    resetErrors();
+    setError('');
+    setSecretKey('');
+  };
+
+  // ── Storage Error State ────────────────────────────────────
+  if (storageError) {
+    return (
+      <View style={styles.container}>
+        <WalletEmptyState
+          variant="storage_error"
+          storageError={storageError}
+          onRetry={handleRetry}
+          onStartOver={handleStartOver}
+        />
+      </View>
+    );
+  }
+
+  // ── Onboarding Error State ─────────────────────────────────
+  if (onboardingError) {
+    return (
+      <View style={styles.container}>
+        <WalletEmptyState
+          variant="failed_import"
+          onboardingError={onboardingError}
+          onRetry={handleRetry}
+          onCreate={handleStartOver}
+        />
+      </View>
+    );
+  }
 
   // ── Success State ──────────────────────────────────────────
   if (isSuccess) {

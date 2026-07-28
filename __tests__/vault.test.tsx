@@ -35,6 +35,8 @@ jest.mock('lucide-react-native', () => ({
   X: () => null,
   ShieldAlert: () => null,
   Network: () => null,
+  WifiOff: () => null,
+  Ban: () => null,
 }));
 
 process.env.EXPO_PUBLIC_SOROBAN_RPC_URL = 'https://soroban-testnet.stellar.org';
@@ -86,6 +88,7 @@ function setupStores(overrides: Record<string, unknown> = {}) {
     isLoadingLocks: false,
     isSubmitting: false,
     balanceError: null,
+    vaultError: null,
     loadBalance: mockLoadBalance,
     loadLocks: mockLoadLocks,
     addLock: mockAddLock,
@@ -93,6 +96,7 @@ function setupStores(overrides: Record<string, unknown> = {}) {
     deposit: mockDeposit,
     withdraw: mockWithdraw,
     withdrawMaturedLock: jest.fn(),
+    clearVaultError: jest.fn(),
     ...overrides,
   };
 

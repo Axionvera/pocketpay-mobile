@@ -1,65 +1,65 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Contact } from '@/types/contacts';
 
-interface ContactStore {
+export interface Contact {
+  id: string;
+  name: string;
+  address: string;
+}
+
+interface ContactState {
   contacts: Contact[];
-  recentRecipients: string[];
-  addContact: (name: string, address: string) => Contact;
+  recentRecipients: string[]; // Array of addresses
+  addContact: (name: string, address: string) => void;
   updateContact: (id: string, name: string, address: string) => void;
   deleteContact: (id: string) => void;
   addRecentRecipient: (address: string) => void;
   getContactByAddress: (address: string) => Contact | undefined;
 }
 
-export const useContactStore = create<ContactStore>()(
+export const useContactStore = create<ContactState>()(
   persist(
     (set, get) => ({
       contacts: [],
       recentRecipients: [],
 
-      addContact: (name: string, address: string) => {
-        const newContact: Contact = {
-          id: Date.now().toString(),
-          name: name.trim(),
-          address: address.trim(),
-          createdAt: Date.now(),
+      addContact: (name, address) => {
+        const normalizedAddress = address.trim();
+        // DUPLICATE PREVENTION
+        const exists = get().contacts.some(
+          (c) => c.address.toLowerCase() === normalizedAddress.toLowerCase()
+        );
+        if (exists) return;
+
+        const newContact = {
+          id: Math.random().toString(36).substring(7),
+          name,
+          address: normalizedAddress,
         };
-        set((state) => ({
-          contacts: [...state.contacts, newContact],
-        }));
-        return newContact;
+        set({ contacts: [newContact, ...get().contacts] });
       },
 
-      updateContact: (id: string, name: string, address: string) => {
-        set((state) => ({
-          contacts: state.contacts.map((c) =>
-            c.id === id ? { ...c, name: name.trim(), address: address.trim() } : c
-          ),
-        }));
+      updateContact: (id, name, address) => set({
+        contacts: get().contacts.map(c => c.id === id ? { ...c, name, address } : c)
+      }),
+
+      deleteContact: (id) => set({
+        contacts: get().contacts.filter(c => c.id !== id)
+      }),
+
+      addRecentRecipient: (address) => {
+        const current = get().recentRecipients;
+        // Move to front if exists, otherwise add to front and slice to 5
+        const filtered = current.filter(a => a !== address);
+        set({ recentRecipients: [address, ...filtered].slice(0, 5) });
       },
 
-      deleteContact: (id: string) => {
-        set((state) => ({
-          contacts: state.contacts.filter((c) => c.id !== id),
-        }));
-      },
-
-      addRecentRecipient: (address: string) => {
-        set((state) => {
-          const filtered = state.recentRecipients.filter((a) => a !== address);
-          const updated = [address, ...filtered].slice(0, 10);
-          return { recentRecipients: updated };
-        });
-      },
-
-      getContactByAddress: (address: string) => {
-        return get().contacts.find((c) => c.address === address);
-      },
+      getContactByAddress: (address) => 
+        get().contacts.find(c => c.address.toLowerCase() === address.toLowerCase()),
     }),
     {
-      name: 'contact-storage',
+      name: 'pocketpay-contacts',
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

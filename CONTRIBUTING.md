@@ -153,6 +153,7 @@ Before adding new screens or components, read the [Design System Guide](docs/des
 - The app uses a **dark-only palette** — there is no light mode.
 - Use `COLORS.primary` (`#00E5FF`) for the primary action on a screen and `COLORS.secondary` (`#7B61FF`) for a competing secondary action.
 - Follow the card, button, and input patterns documented in the design system.
+- Review every changed screen and reusable component against the [UI State Catalogue](docs/ui-states.md), including loading, empty, error, success, disabled, and pending behavior.
 
 ---
 

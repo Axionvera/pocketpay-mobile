@@ -35,6 +35,8 @@ jest.mock('lucide-react-native', () => ({
   Clock: () => null,
   ArrowUpRight: () => null,
   ArrowDownLeft: () => null,
+  CheckCircle: () => null,
+  RefreshCw: () => null,
 }));
 
 import { useWalletStore } from '../src/store/walletStore';
@@ -61,6 +63,7 @@ const baseStore: any = {
   publicKey: 'GPUBLIC123',
   balance: '100.0000000',
   transactions: [],
+  pendingTransactions: {},
   isLoading: false,
   isLoadingMore: false,
   hasMoreTransactions: false,

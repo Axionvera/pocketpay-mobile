@@ -1,4 +1,4 @@
-export { useNetworkEnvironment } from './useNetworkEnvironment';
+export { useNetworkEnvironment, computeNetworkEnvironment } from './useNetworkEnvironment';
 export type {
   NetworkTier,
   VaultMode,

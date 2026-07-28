@@ -56,6 +56,7 @@ jest.mock('../src/services/stellar', () => ({
     if (!hash) return null;
     return `https://stellar.expert/explorer/testnet/tx/${hash}`;
   }),
+  fetchOperationById: jest.fn().mockResolvedValue(null),
 }));
 
 const mockUseWalletStore = useWalletStore as jest.MockedFunction<typeof useWalletStore>;
@@ -103,12 +104,14 @@ describe('Transaction Detail Screen', () => {
     expect(getByText('abc123def456abc123def456abc123def456abc123def456abc123def456abcd')).toBeTruthy();
   });
 
-  it('renders error state when transaction is not found', () => {
+  it('renders error state when transaction is not found', async () => {
     mockUseLocalSearchParams.mockReturnValue({ id: 'nonexistent' });
     const { getByTestId, getByText } = render(<TransactionDetailScreen />);
 
-    expect(getByTestId('error-container')).toBeTruthy();
-    expect(getByText('Transaction not found')).toBeTruthy();
+    await waitFor(() => {
+      expect(getByTestId('error-container')).toBeTruthy();
+    });
+    expect(getByText('Transaction Not Found')).toBeTruthy();
 
     const goBackBtn = getByText('Go Back');
     fireEvent.press(goBackBtn);
@@ -183,8 +186,8 @@ describe('Transaction Detail Screen', () => {
       }],
     });
 
-    const { getByText } = render(<TransactionDetailScreen />);
-    expect(getByText('Successful')).toBeTruthy();
+    const { getAllByText } = render(<TransactionDetailScreen />);
+    expect(getAllByText('Successful').length).toBeGreaterThanOrEqual(1);
   });
 
   it('displays pending transaction status', () => {
@@ -195,8 +198,8 @@ describe('Transaction Detail Screen', () => {
       }],
     });
 
-    const { getByText } = render(<TransactionDetailScreen />);
-    expect(getByText('Pending')).toBeTruthy();
+    const { getAllByText } = render(<TransactionDetailScreen />);
+    expect(getAllByText('Pending').length).toBeGreaterThanOrEqual(1);
   });
 
   it('displays failed transaction status', () => {
@@ -208,8 +211,8 @@ describe('Transaction Detail Screen', () => {
       }],
     });
 
-    const { getByText } = render(<TransactionDetailScreen />);
-    expect(getByText('Failed')).toBeTruthy();
+    const { getAllByText } = render(<TransactionDetailScreen />);
+    expect(getAllByText('Failed').length).toBeGreaterThanOrEqual(1);
   });
 
   it('displays and copies memo when present', async () => {
