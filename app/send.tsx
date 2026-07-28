@@ -31,7 +31,7 @@ import {
   ChevronDown,
   User,
 } from "lucide-react-native";
-import { ScreenHeader } from "@/components";
+import { ScreenHeader, SigningConfirmationModal } from "@/components";
 
 interface FieldErrors {
   destination?: string;
@@ -54,6 +54,7 @@ export default function SendScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const destinationContact =
     destination.trim() && !errors.destination
@@ -123,6 +124,10 @@ export default function SendScreen() {
       return;
     }
 
+    setIsConfirming(true);
+  };
+
+  const executeSend = async () => {
     try {
       setIsLoading(true);
       const secretKey = await getSecretKey();
@@ -136,6 +141,7 @@ export default function SendScreen() {
       );
 
       refreshWalletData();
+      setIsConfirming(false);
       router.replace({
         pathname: "/payment-success",
         params: {
@@ -145,6 +151,7 @@ export default function SendScreen() {
         },
       });
     } catch (error: any) {
+      setIsConfirming(false);
       Alert.alert(
         "Transaction Failed",
         error.message || "An error occurred while sending.",
@@ -276,6 +283,16 @@ export default function SendScreen() {
           onClose={handleScanClose}
         />
       </Modal>
+
+      <SigningConfirmationModal
+        visible={isConfirming}
+        onCancel={() => setIsConfirming(false)}
+        onConfirm={executeSend}
+        recipient={destinationContact?.label || destination.trim()}
+        amount={amount.trim()}
+        memo={memo.trim()}
+        isSubmitting={isLoading}
+      />
     </>
   );
 }

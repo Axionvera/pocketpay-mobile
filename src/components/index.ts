@@ -4,3 +4,4 @@ export { ScreenHeader } from "./ScreenHeader";
 export { OfflineBanner } from "./OfflineBanner";
 export { AsyncActionButton } from "./AsyncActionButton";
 export { Button } from "./Button";
+export { SigningConfirmationModal } from "./SigningConfirmationModal";
