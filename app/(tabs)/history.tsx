@@ -15,11 +15,11 @@ import { useWalletStore, TransactionRecord } from '../../src/store/walletStore';
 import { RADIUS, SIZES, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
-import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
+import { NetworkStateBanner } from '../../src/components/NetworkStateBanner';
 import { EmptyState } from '../../src/components/EmptyState';
 import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { LoadingState } from '../../src/components/LoadingState';
-import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
+import { useNetworkState } from '../../src/hooks/useNetworkState';
 import { groupTransactionsByDate } from '../../src/utils/transactions';
 
 const FILTERS = [
@@ -107,7 +107,7 @@ export default function HistoryScreen() {
     loadMoreTransactions,
   } = useWalletStore();
 
-  const { networkErrorType, message } = useNetworkStatus(error);
+  const { state: networkState, retry } = useNetworkState({ error });
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -232,10 +232,9 @@ export default function HistoryScreen() {
         onEndReachedThreshold={0.2}
         ListHeaderComponent={
           <>
-            <NetworkStatusBanner
-              networkErrorType={networkErrorType}
-              message={message}
-              onRetry={refreshWalletData}
+            <NetworkStateBanner
+              state={networkState}
+              onRetry={() => { refreshWalletData(); retry(); }}
               isRetrying={isLoading}
             />
             <View style={styles.filterContainer}>
