@@ -23,7 +23,6 @@ export default function CreateWalletScreen() {
   const { setWallet, markBackupPending } = useWalletStore();
   const [keypair, setKeypair] = useState<{ publicKey: string; secretKey: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
 
   // Recovery states
   const [onboardingError, setOnboardingError] = useState<OnboardingError | null>(null);
@@ -67,16 +66,13 @@ export default function CreateWalletScreen() {
               return;
             }
             await markBackupPending();
-            setIsSuccess(true);
+            router.replace('/(auth)/wallet-creation-success');
           }
         }
       ]
     );
   };
 
-  const handleGoToWallet = () => {
-    router.replace('/(tabs)');
-  };
 
   const handleRetry = () => {
     resetErrors();
