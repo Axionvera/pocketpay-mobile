@@ -5,6 +5,7 @@ import { useWalletStore } from '../../src/store/walletStore';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { Button } from '../../src/components/Button';
+import { FundButton } from '../../src/components/FundButton';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
 import { NetworkStateBanner } from '../../src/components/NetworkStateBanner';
 import { WalletEmptyState } from '../../src/components/WalletEmptyState';

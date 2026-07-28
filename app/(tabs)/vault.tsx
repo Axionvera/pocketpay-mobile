@@ -102,6 +102,11 @@ export default function VaultScreen() {
     checkIntro();
   }, []);
 
+  // ---- Multi-lock state (placeholder data until contract integration) ----
+  const [locks, setLocks] = useState<VaultLock[]>([]);
+  const [isLoadingLocks, setIsLoadingLocks] = useState(true);
+  const [locksError, setLocksError] = useState<string | null>(null);
+
   useEffect(() => {
     if (isAvailable && publicKey) {
       loadBalance(publicKey);
