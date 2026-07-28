@@ -25,10 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reusable `Button` and `Input` component library
 - Global state management with Zustand
 - React Native polyfills for Stellar SDK compatibility
+- Local public API compatibility check for `pocketpay-sdk` exports (`npm run api:check` / `api:update`), with a committed baseline in `api-reports/pocketpay-sdk.api.md`
 
 ### Changed
 
 ### Fixed
+- QR scanner no longer processes duplicate `onBarcodeScanned` events for the same code, preventing duplicate navigation/field updates on rapid-fire camera callbacks (#104)
 
 ### Security
 
