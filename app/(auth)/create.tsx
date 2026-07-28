@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AsyncActionButton } from '../../src/components/AsyncActionButton';
+import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { generateKeypair } from '../../src/services/stellar';
@@ -9,6 +10,11 @@ import { useWalletStore } from '../../src/store/walletStore';
 import { WALLET_SAVE_FAILURE_MESSAGE } from '../../src/utils/walletStorageErrors';
 import { AlertTriangle, Info, Shield, CheckCircle } from 'lucide-react-native';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
+import type { OnboardingError, StorageError } from '../../src/types/onboarding';
+import {
+  classifyOnboardingError,
+  mapWalletErrorToStorageError,
+} from '../../src/types/onboarding';
 
 export default function CreateWalletScreen() {
   const router = useRouter();
@@ -19,12 +25,23 @@ export default function CreateWalletScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Recovery states
+  const [onboardingError, setOnboardingError] = useState<OnboardingError | null>(null);
+  const [storageError, setStorageError] = useState<StorageError | null>(null);
+
+  const resetErrors = () => {
+    setOnboardingError(null);
+    setStorageError(null);
+  };
+
   const handleGenerate = () => {
+    resetErrors();
     try {
       const keys = generateKeypair();
       setKeypair(keys);
     } catch (error: any) {
-      Alert.alert('Error', `Failed to generate keypair: ${error?.message || error}`);
+      const errorMsg = error?.message || String(error);
+      setOnboardingError(classifyOnboardingError(errorMsg));
     }
   };
 
@@ -40,11 +57,13 @@ export default function CreateWalletScreen() {
         {
           text: 'Yes, I Saved It',
           onPress: async () => {
+            resetErrors();
             setIsLoading(true);
             const saved = await setWallet(keypair.publicKey, keypair.secretKey);
             setIsLoading(false);
             if (!saved) {
-              Alert.alert('Wallet Not Saved', WALLET_SAVE_FAILURE_MESSAGE);
+              // Classify the storage error
+              setStorageError(mapWalletErrorToStorageError(WALLET_SAVE_FAILURE_MESSAGE));
               return;
             }
             await markBackupPending();
@@ -58,6 +77,50 @@ export default function CreateWalletScreen() {
   const handleGoToWallet = () => {
     router.replace('/(tabs)');
   };
+
+  const handleRetry = () => {
+    resetErrors();
+    if (keypair) {
+      // If we have a keypair, retry the save
+      handleContinue();
+    } else {
+      // Otherwise, retry keypair generation
+      handleGenerate();
+    }
+  };
+
+  const handleStartOver = () => {
+    resetErrors();
+    setKeypair(null);
+  };
+
+  // ── Storage Error State ────────────────────────────────────
+  if (storageError) {
+    return (
+      <View style={styles.container}>
+        <WalletEmptyState
+          variant="storage_error"
+          storageError={storageError}
+          onRetry={handleRetry}
+          onStartOver={handleStartOver}
+        />
+      </View>
+    );
+  }
+
+  // ── Onboarding Error State ─────────────────────────────────
+  if (onboardingError) {
+    return (
+      <View style={styles.container}>
+        <WalletEmptyState
+          variant="failed_creation"
+          onboardingError={onboardingError}
+          onRetry={handleRetry}
+          onStartOver={handleStartOver}
+        />
+      </View>
+    );
+  }
 
   // ── Success State ──────────────────────────────────────────
   if (isSuccess) {
