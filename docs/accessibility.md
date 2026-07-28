@@ -1,6 +1,14 @@
 # Mobile Accessibility Audit Checklist
 
-Use this checklist when reviewing any UI change to PocketPay Mobile. Every item must pass before a pull request that touches screens or components is merged. The checklist is grouped by concern so you can work through it systematically.
+Use this checklist when reviewing any UI change to PocketPay Mobile. Every applicable item must pass before a pull request that touches screens or reusable components is merged. Record not-applicable items with a reason. This checklist governs Wallet, Send, Receive, Transactions, Contacts, Vault, Settings, Diagnostics, and the shared components they use; pair it with the [UI State Catalogue](./ui-states.md).
+
+## Definition of done
+
+- [ ] Complete the changed flow with VoiceOver on iOS and TalkBack on Android, including loading, empty, error, success, disabled, and pending states that can occur.
+- [ ] Test at the largest supported text size, in portrait and landscape where the route supports both, without clipped controls or hidden error text.
+- [ ] Verify keyboard/switch navigation and focus return for changed forms, modals, sheets, and full-row actions.
+- [ ] Add focused React Native Testing Library coverage using roles, labels, hints, values, and accessibility state rather than test IDs alone.
+- [ ] Include manual device/simulator evidence in the pull request and document any item that cannot be exercised.
 
 ---
 
@@ -103,24 +111,69 @@ Use this checklist when reviewing any UI change to PocketPay Mobile. Every item 
 - [ ] Amount inputs use `keyboardType="decimal-pad"` and carry `accessibilityLabel` that includes the currency, e.g. `accessibilityLabel="Amount in XLM"`.
 - [ ] The "Receive" QR screen provides both the QR image (with label) and a copyable text address below so users with visual impairments or low-end camera scenarios are not blocked.
 
+### Transactions Screen
+
+- [ ] Each transaction row has one concise accessible summary containing direction, amount, asset, counterparty, time, and pending/confirmed/failed status.
+- [ ] Sent/received and transaction status are conveyed in text, not only by arrow direction or colour.
+- [ ] Filters expose their selected state, and changing a filter announces the updated result count or empty result.
+- [ ] Pagination and pull-to-refresh expose busy state without moving focus to the top or hiding the last successful list.
+
 ### Contacts Screen
 
 - [ ] Each contact row is wrapped in a single `accessible={true}` container labelled with the contact name and shortened address, e.g. `"Alice, G…XYZ"`.
 - [ ] Delete / edit actions on contacts (swipe or long-press) are also accessible via an explicit button or context menu — do not rely solely on gesture-only interactions.
+- [ ] QR scanning announces permission, ready, success, invalid-code, and closed states; manual address entry remains available as an equivalent path.
 
 ### Vault Screen
 
 - [ ] The vault balance and status (mock vs live) are announced as a single accessible unit.
 - [ ] Any "Coming soon" or disabled vault actions use `accessibilityState={{ disabled: true }}` and a hint that explains why the action is unavailable.
+- [ ] Each lock summary includes amount, unlock date, matured/locked status, and whether withdrawal is available.
+- [ ] Review, signing, submitting, and confirmation phases are announced without exposing raw contract or secret material.
 
 ### Settings and Theme Toggle
 
 - [ ] The Light / Dark / System theme selector uses `accessibilityRole="radio"` on each option and `accessibilityState={{ checked: true/false }}`.
 - [ ] The currently active theme is visually distinct **and** announced by its `accessibilityState`.
+- [ ] Switches have labels describing the setting, expose checked state, and announce authentication or persistence failures without prematurely announcing success.
+- [ ] Secret-key content is excluded from normal swipe order while masked and is revealed only after explicit action; reveal, hide, and copy controls have distinct labels.
+- [ ] Network, environment, and vault-mode warnings are grouped with their titles and do not rely on badge colour.
+
+### Diagnostics Screen
+
+- [ ] Loading and refresh announce **Loading diagnostics** while keeping the last successful redacted snapshot navigable.
+- [ ] Label/value rows are read as a single pair in logical section order; long host names and error messages remain available at large text sizes.
+- [ ] **Export Diagnostics Log** is disabled until a valid redacted snapshot exists and its hint makes clear that the OS share sheet opens.
+- [ ] Empty values such as no last reported failure are announced explicitly, and collection/parsing errors expose a nearby labelled retry action.
+- [ ] Development-only destructive test actions identify their consequence in both label and hint and are absent from production builds.
 
 ---
 
-## 8. General Best Practices
+## 8. Reusable component accessibility review
+
+Shared components are responsible for baseline semantics so every caller receives the same behavior. Callers remain responsible for context-specific labels and hints.
+
+| Component or pattern | Accessibility contract |
+|---|---|
+| `Button` / `AsyncActionButton` | Default to `button`, derive label from visible copy when possible, expose `disabled` and `busy`, keep loading copy stable, and prevent duplicate activation. |
+| `Input` / `FormField` | Associate visible label, value, required/invalid/read-only state, hint, and inline error; do not use placeholder as the only label. |
+| `LoadingState` / `EmptyState` | Use a descriptive announcement, distinguish busy from empty, and expose retry/next actions in logical focus order. Decorative icons stay hidden. |
+| Error/status banners and `StatusBadge` | Pair tone with text/icon, expose alerts or live regions at an appropriate urgency, and avoid repeatedly announcing unchanged content. |
+| Interactive list rows | Make the whole row a 44 dp target, compose one meaningful summary, expose `button` only when actionable, and keep nested actions separately reachable without duplicate announcements. |
+| `ConfirmModal` / review-confirm patterns | Move focus into the modal, constrain navigation, label close/cancel/confirm, communicate destructive intent and disabled prerequisites, and restore focus to the trigger. |
+| `QrScanner` / QR display | Label the camera/QR purpose, announce permission and scan status, provide a labelled close control, and offer typed/copyable content as an equivalent alternative. |
+
+For every reusable-component change:
+
+- [ ] Forward supported accessibility props instead of replacing caller-provided values silently.
+- [ ] Keep visual `disabled`/loading/error state synchronized with `accessibilityState` and live announcements.
+- [ ] Verify both text children and custom icon/child content receive a meaningful accessible name.
+- [ ] Test at least one default state and every state transition owned by the component (for example enabled → busy → success/error → enabled).
+- [ ] Test a representative screen integration so grouping does not hide nested controls or create duplicate announcements.
+
+---
+
+## 9. General Best Practices
 
 - [ ] **Scalable text:** no `numberOfLines` limit is placed on user-facing labels unless there is explicit overflow handling. Avoid fixed heights on text containers — let content grow.
 - [ ] **Reduced motion:** if animations are added (transitions, loaders), check `useReducedMotion()` (Reanimated) or `AccessibilityInfo.isReduceMotionEnabled()` and reduce or skip the animation when the user has enabled "Reduce Motion" in system settings.
