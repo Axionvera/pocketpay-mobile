@@ -20,7 +20,7 @@ export default function TransactionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { transactions, publicKey } = useWalletStore();
   const contacts = useAppStore((state) => state.contacts);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const { copy, copiedField } = useCopyToClipboard();
 
   // Deep link state: for fetching from network when not in local store
   const [deepLinkState, setDeepLinkState] = useState<DeepLinkLoadState>('idle');
@@ -190,14 +190,8 @@ export default function TransactionDetailScreen() {
 
   const handleCopy = async (text: string, fieldName: string) => {
     if (!text) return;
-    try {
-      await Clipboard.setStringAsync(text);
-      setCopiedField(fieldName);
-      setTimeout(() => {
-        setCopiedField(null);
-      }, 2000);
-    } catch (error: any) {
-      console.error('Clipboard copy failed:', error);
+    const result = await copy(text, fieldName);
+    if (!result.ok) {
       Alert.alert('Copy Failed', 'Failed to copy to clipboard. Please try again.');
     }
   };

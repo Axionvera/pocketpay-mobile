@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as Clipboard from 'expo-clipboard';
 import { CheckCircle, Copy, Check, ExternalLink } from 'lucide-react-native';
 import { Button } from '../src/components/Button';
 import { COLORS, SIZES, RADIUS } from '../src/constants/theme';
@@ -9,6 +8,7 @@ import { getExplorerTxUrl } from '../src/services/stellar';
 import { useAppStore } from '../src/store/appStore';
 import { resolveAddressLabel } from '../src/utils/contacts';
 import { formatAmount } from '../src/utils/amount';
+import { useCopyToClipboard } from '../src/utils/clipboard';
 
 /**
  * Payment receipt shown after a successful send. Never render the wallet's
@@ -23,7 +23,7 @@ export default function PaymentSuccessScreen() {
     date?: string;
   }>();
   const contacts = useAppStore((state) => state.contacts);
-  const [hashCopied, setHashCopied] = useState(false);
+  const { copy, copiedField } = useCopyToClipboard();
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -54,10 +54,7 @@ export default function PaymentSuccessScreen() {
 
   const handleCopyHash = async () => {
     if (!hash) return;
-    await Clipboard.setStringAsync(hash);
-    setHashCopied(true);
-    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-    copyTimeoutRef.current = setTimeout(() => setHashCopied(false), 2000);
+    await copy(hash, 'hash');
   };
 
   const handleOpenExplorer = () => {
@@ -114,7 +111,7 @@ export default function PaymentSuccessScreen() {
               accessibilityRole="button"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              {hashCopied ? (
+              {copiedField === 'hash' ? (
                 <Check color={COLORS.success} size={20} />
               ) : (
                 <Copy color={COLORS.textSecondary} size={20} />

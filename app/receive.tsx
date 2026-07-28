@@ -9,12 +9,13 @@ import { useWalletStore } from "../src/store/walletStore";
 import { validateAmount, validateMemo } from "../src/utils/validation";
 import { buildReceivePayload, isPaymentRequestPayload } from "../src/features/receive";
 import QRCode from "react-native-qrcode-svg";
-import * as Clipboard from "expo-clipboard";
+import { useCopyToClipboard } from "../src/utils/clipboard";
 
 export default function ReceiveScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { publicKey } = useWalletStore();
+  const { copy } = useCopyToClipboard();
 
   const [showRequestFields, setShowRequestFields] = useState(false);
   const [amount, setAmount] = useState("");
@@ -39,7 +40,7 @@ export default function ReceiveScreen() {
 
   const handleCopyAddress = async () => {
     if (publicKey) {
-      await Clipboard.setStringAsync(publicKey);
+      await copy(publicKey, 'address');
     }
   };
 
