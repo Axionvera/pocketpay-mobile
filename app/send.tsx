@@ -30,6 +30,7 @@ import {
   ScanLine,
   ChevronDown,
   User,
+  Info,
 } from "lucide-react-native";
 import { ScreenHeader } from "@/components";
 
@@ -255,6 +256,13 @@ export default function SendScreen() {
           />
         </View>
 
+        <View style={styles.warningContainer}>
+          <Info size={16} color={colors.textSecondary} style={styles.warningIcon} />
+          <Text style={styles.warningText}>
+            Please ensure the recipient address is correct. Blockchain payments cannot be reversed.
+          </Text>
+        </View>
+
         <AsyncActionButton
           title="Send Payment"
           onPress={handleSend}
@@ -346,5 +354,24 @@ const createStyles = (colors: ThemeColors) =>
     },
     sendButton: {
       marginBottom: SIZES.xxl,
+    },
+    warningContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      padding: SIZES.md,
+      borderRadius: RADIUS.lg,
+      marginBottom: SIZES.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    warningIcon: {
+      marginRight: SIZES.sm,
+    },
+    warningText: {
+      flex: 1,
+      color: colors.textSecondary,
+      fontSize: 13,
+      lineHeight: 18,
     },
   });
