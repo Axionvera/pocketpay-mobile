@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as Clipboard from 'expo-clipboard';
 import { CheckCircle, Copy, Check, ExternalLink } from 'lucide-react-native';
 import { Button } from '../src/components/Button';
 import { COLORS, SIZES, RADIUS } from '../src/constants/theme';
@@ -9,6 +8,7 @@ import { getExplorerTxUrl } from '../src/services/stellar';
 import { useAppStore } from '../src/store/appStore';
 import { resolveAddressLabel } from '../src/utils/contacts';
 import { formatAmount } from '../src/utils/amount';
+import { useCopyToClipboard } from '../src/utils/clipboard';
 
 /**
  * Payment receipt shown after a successful send. Never render the wallet's
@@ -16,13 +16,14 @@ import { formatAmount } from '../src/utils/amount';
  */
 export default function PaymentSuccessScreen() {
   const router = useRouter();
-  const { hash, amount, destination } = useLocalSearchParams<{
+  const { hash, amount, destination, date } = useLocalSearchParams<{
     hash?: string;
     amount?: string;
     destination?: string;
+    date?: string;
   }>();
   const contacts = useAppStore((state) => state.contacts);
-  const [hashCopied, setHashCopied] = useState(false);
+  const { copy, copiedField } = useCopyToClipboard();
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -34,12 +35,26 @@ export default function PaymentSuccessScreen() {
   const explorerUrl = getExplorerTxUrl(hash);
   const destinationLabel = destination ? resolveAddressLabel(destination, contacts) : null;
 
+  let formattedDate = '—';
+  if (date) {
+    const parsedDate = new Date(date);
+    if (!isNaN(parsedDate.getTime())) {
+      formattedDate = parsedDate.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+  }
+
+  const rawFormattedAmount = formatAmount(amount);
+  const displayAmount = rawFormattedAmount && rawFormattedAmount !== '—' ? `${rawFormattedAmount} XLM` : '—';
+
   const handleCopyHash = async () => {
     if (!hash) return;
-    await Clipboard.setStringAsync(hash);
-    setHashCopied(true);
-    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-    copyTimeoutRef.current = setTimeout(() => setHashCopied(false), 2000);
+    await copy(hash, 'hash');
   };
 
   const handleOpenExplorer = () => {
@@ -51,14 +66,23 @@ export default function PaymentSuccessScreen() {
       <View style={styles.successIcon}>
         <CheckCircle color={COLORS.success} size={72} />
       </View>
-      <Text style={styles.title}>Payment Sent</Text>
-      <Text style={styles.subtitle}>Your transaction was submitted successfully.</Text>
+      <Text style={styles.title}>Payment Confirmed</Text>
+      <Text style={styles.subtitle}>Your transaction was confirmed on the network.</Text>
 
       <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Amount</Text>
-          <Text style={styles.amountValue}>{formatAmount(amount)} XLM</Text>
+          <Text style={styles.amountValue}>{displayAmount}</Text>
         </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Date</Text>
+        </View>
+        <Text style={styles.addressValue}>
+          {formattedDate}
+        </Text>
 
         <View style={styles.divider} />
 
@@ -87,7 +111,7 @@ export default function PaymentSuccessScreen() {
               accessibilityRole="button"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              {hashCopied ? (
+              {copiedField === 'hash' ? (
                 <Check color={COLORS.success} size={20} />
               ) : (
                 <Copy color={COLORS.textSecondary} size={20} />

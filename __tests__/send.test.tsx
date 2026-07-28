@@ -15,6 +15,7 @@
  */
 
 import React from 'react';
+import type { ReactElement } from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
@@ -40,6 +41,9 @@ jest.mock('lucide-react-native', () => ({
   Send: () => null,
   ScanLine: () => null,
   X: () => null,
+  ShieldCheck: () => null,
+  ArrowRight: () => null,
+  AlertTriangle: () => null,
 }));
 
 // expo-camera mock – controllable via module-level variables (same pattern as contacts.scan.test.tsx)
@@ -204,8 +208,8 @@ describe('AC3 – submit is blocked when the form is invalid', () => {
 // AC4 – Valid form calls sendXlmTransaction
 // ────────────────────────────────────────────────────────────────────────
 
-describe('AC4 – valid form calls sendXlmTransaction', () => {
-  it('calls sendXlmTransaction with correct arguments on a valid submission', async () => {
+describe('AC4 – valid form calls router.push to review-transaction', () => {
+  it('navigates to review-transaction with correct arguments on a valid submission', async () => {
     const { getByPlaceholderText, getByText } = render(<SendScreen />);
 
     fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
@@ -213,13 +217,18 @@ describe('AC4 – valid form calls sendXlmTransaction', () => {
     fireEvent.press(getByText('Send Payment'));
 
     await waitFor(() => {
-      expect(mockSendXlmTransaction).toHaveBeenCalledWith(
-        MOCK_SECRET, VALID_DESTINATION, VALID_AMOUNT, '',
-      );
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/review-transaction',
+        params: {
+          destination: VALID_DESTINATION,
+          amount: VALID_AMOUNT,
+          memo: '',
+        },
+      });
     });
   });
 
-  it('passes memo text to sendXlmTransaction when provided', async () => {
+  it('passes memo text to review-transaction params when provided', async () => {
     const { getByPlaceholderText, getByText } = render(<SendScreen />);
 
     fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
@@ -228,91 +237,18 @@ describe('AC4 – valid form calls sendXlmTransaction', () => {
     fireEvent.press(getByText('Send Payment'));
 
     await waitFor(() => {
-      expect(mockSendXlmTransaction).toHaveBeenCalledWith(
-        MOCK_SECRET, VALID_DESTINATION, VALID_AMOUNT, 'invoice-42',
-      );
-    });
-  });
-
-  it('navigates to the payment success receipt with the tx hash, amount, and destination', async () => {
-    const { getByPlaceholderText, getByText } = render(<SendScreen />);
-
-    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
-    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
-    fireEvent.press(getByText('Send Payment'));
-
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith({
-        pathname: '/payment-success',
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/review-transaction',
         params: {
-          hash: 'abc123',
-          amount: VALID_AMOUNT,
           destination: VALID_DESTINATION,
+          amount: VALID_AMOUNT,
+          memo: 'invoice-42',
         },
       });
     });
   });
-
-  it('refreshes wallet data after a successful send', async () => {
-    const refreshWalletData = jest.fn();
-    setupWalletStore({ refreshWalletData });
-    const { getByPlaceholderText, getByText } = render(<SendScreen />);
-
-    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
-    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
-    fireEvent.press(getByText('Send Payment'));
-
-    await waitFor(() => {
-      expect(refreshWalletData).toHaveBeenCalled();
-    });
-  });
 });
 
-// ────────────────────────────────────────────────────────────────────────
-// AC5 – Failure displays an error
-// ────────────────────────────────────────────────────────────────────────
-
-describe('AC5 – failure displays error', () => {
-  it('shows a "Transaction Failed" alert with the error message when sendXlmTransaction throws', async () => {
-    mockSendXlmTransaction.mockRejectedValueOnce(new Error('tx_bad_seq'));
-    const { getByPlaceholderText, getByText } = render(<SendScreen />);
-
-    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
-    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
-    fireEvent.press(getByText('Send Payment'));
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Transaction Failed', 'tx_bad_seq');
-    });
-  });
-
-  it('shows a generic error message when the error has no message', async () => {
-    mockSendXlmTransaction.mockRejectedValueOnce({});
-    const { getByPlaceholderText, getByText } = render(<SendScreen />);
-
-    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
-    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
-    fireEvent.press(getByText('Send Payment'));
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Transaction Failed', 'An error occurred while sending.',
-      );
-    });
-  });
-
-  it('does NOT call router.back after a failed send', async () => {
-    mockSendXlmTransaction.mockRejectedValueOnce(new Error('network error'));
-    const { getByPlaceholderText, getByText } = render(<SendScreen />);
-
-    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
-    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
-    fireEvent.press(getByText('Send Payment'));
-
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
-    expect(mockBack).not.toHaveBeenCalled();
-  });
-});
 
 // ────────────────────────────────────────────────────────────────────────
 // AC6 – Scan option exists
@@ -402,12 +338,18 @@ describe('AC8 – valid scan fills destination field', () => {
     fireEvent.press(getByText('Send Payment'));
 
     await waitFor(() => {
-      expect(mockSendXlmTransaction).toHaveBeenCalledWith(
-        MOCK_SECRET, SCANNED_ADDRESS, VALID_AMOUNT, '',
-      );
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/review-transaction',
+        params: {
+          destination: SCANNED_ADDRESS,
+          amount: VALID_AMOUNT,
+          memo: '',
+        },
+      });
     });
   });
 });
+
 
 // ────────────────────────────────────────────────────────────────────────
 // AC9 – Invalid QR shows an error
