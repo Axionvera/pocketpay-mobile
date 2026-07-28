@@ -21,6 +21,7 @@ import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { LoadingState } from '../../src/components/LoadingState';
 import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
 import { groupTransactionsByDate } from '../../src/utils/transactions';
+import { PendingTransactionQueue } from '../../src/components/PendingTransactionQueue';
 
 const FILTERS = [
   { label: 'All', value: 'all' },
@@ -140,7 +141,7 @@ export default function HistoryScreen() {
       const isSent = tx.from === publicKey;
       const isReceived = tx.to === publicKey || tx.into === publicKey;
       const isFailed = tx.transaction_successful === false;
-      const isPending = tx.is_pending === true; 
+      const isPending = tx.is_pending === true || tx.status === 'pending';
       const isVault = tx.type === 'invoke_host_function' || tx.is_vault === true;
 
       if (filter === 'sent') return isSent && !isVault;
@@ -260,6 +261,10 @@ export default function HistoryScreen() {
                 })}
               </ScrollView>
             </View>
+            <PendingTransactionQueue
+              onRefresh={refreshWalletData}
+              isRefreshing={isLoading}
+            />
           </>
         }
         ListFooterComponent={renderFooter}
