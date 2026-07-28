@@ -256,6 +256,13 @@ export default function SendScreen() {
           />
         </View>
 
+        <View style={styles.warningContainer}>
+          <Info size={16} color={colors.textSecondary} style={styles.warningIcon} />
+          <Text style={styles.warningText}>
+            Please ensure the recipient address is correct. Blockchain payments cannot be reversed.
+          </Text>
+        </View>
+
         <AsyncActionButton
           title={disableWriteActions ? 'Network Unavailable' : isUnfunded ? 'Funding Required' : 'Send Payment'}
           onPress={handleSend}
