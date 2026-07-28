@@ -57,6 +57,12 @@ export default function ImportWalletScreen() {
       return;
     }
 
+    const base32Regex = /^[A-Z2-7]+$/;
+    if (!base32Regex.test(trimmedKey)) {
+      setError('Secret key contains invalid characters. Only uppercase letters A-Z and digits 2-7 are allowed.');
+      return;
+    }
+
     try {
       const { publicKey } = await importWallet(trimmedKey);
 
