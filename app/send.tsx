@@ -13,11 +13,14 @@ import { useRouter } from "expo-router";
 import { AsyncActionButton } from "../src/components/AsyncActionButton";
 import { FormField } from "../src/components/FormField";
 import { QrScanner } from "../src/components/QrScanner";
+import { ContactPicker } from "../src/components/ContactPicker";
+import { ContactForm } from "../src/components/ContactForm";
 import { SIZES, RADIUS, ThemeColors } from "../src/constants/theme";
 import { useTheme } from "../src/hooks/useTheme";
 import { sendXlmTransaction } from "../src/services/stellar";
 import { useWalletStore } from "../src/store/walletStore";
 import { useAppStore } from "../src/store/appStore";
+import { useContactStore } from "../src/features/contacts/contactStore";
 import {
   validateAddress,
   validateAmount,
@@ -25,6 +28,7 @@ import {
 } from "../src/utils/validation";
 import { resolveAddressLabel } from "../src/utils/contacts";
 import { formatAmount } from "../src/utils/amount";
+import { WALLET_SECRET_ACCESS_MESSAGE } from "../src/utils/walletStorageErrors";
 import {
   Send as SendIcon,
   ScanLine,
@@ -33,6 +37,8 @@ import {
   Info,
 } from "lucide-react-native";
 import { ScreenHeader } from "@/components";
+import { useNetworkState } from "../src/hooks/useNetworkState";
+import { NetworkStateBanner } from "../src/components/NetworkStateBanner";
 
 interface FieldErrors {
   destination?: string;
@@ -40,13 +46,24 @@ interface FieldErrors {
   memo?: string;
 }
 
+const getNetworkLabel = (): string => {
+  const network = (process.env.EXPO_PUBLIC_STELLAR_NETWORK || "TESTNET").toUpperCase();
+  if (network === "PUBLIC" || network === "MAINNET") return "Public Network";
+  if (network === "TESTNET") return "Testnet";
+  return network;
+};
 export default function SendScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { publicKey, getSecretKey, refreshWalletData, balance } =
+  const { publicKey, getSecretKey, refreshWalletData, balance, fundingStatus, error } =
     useWalletStore();
   const contacts = useAppStore((state) => state.contacts);
+  const { getContactByAddress, addRecentRecipient } = useContactStore();
+  const { state: networkState, disableWriteActions, retry } = useNetworkState({ error });
+
+  const isUnfunded = fundingStatus === 'unfunded';
+  const sendDisabled = isUnfunded || !publicKey || disableWriteActions;
 
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("");
@@ -55,6 +72,8 @@ export default function SendScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [lastSendDestination, setLastSendDestination] = useState("");
 
   const destinationContact =
     destination.trim() && !errors.destination
@@ -98,6 +117,16 @@ export default function SendScreen() {
     setShowContactPicker(false);
   };
 
+  const handleAddNewContact = () => {
+    setShowContactPicker(false);
+    setShowContactForm(true);
+  };
+
+  const handleSaveContact = (name: string, address: string) => {
+    useContactStore.getState().addContact(name, address);
+    setShowContactForm(false);
+  };
+
   const handleScanSuccess = (address: string) => {
     setIsScanning(false);
     handleDestinationChange(address);
@@ -111,49 +140,33 @@ export default function SendScreen() {
   const handleScanClose = () => {
     setIsScanning(false);
   };
-
-  const handleSend = async () => {
+  const handleSend = () => {
     const fieldErrors: FieldErrors = {
       destination: validateAddress(destination, publicKey) ?? undefined,
       amount: validateAmount(amount, balance) ?? undefined,
       memo: validateMemo(memo) ?? undefined,
     };
     setErrors(fieldErrors);
-
     if (fieldErrors.destination || fieldErrors.amount || fieldErrors.memo) {
       return;
     }
 
-    try {
-      setIsLoading(true);
-      const secretKey = await getSecretKey();
-      if (!secretKey) throw new Error("Secret key not found.");
-
-      const result = await sendXlmTransaction(
-        secretKey,
-        destination.trim(),
-        amount.trim(),
-        memo.trim(),
-      );
-
-      refreshWalletData();
-      router.replace({
-        pathname: "/payment-success",
-        params: {
-          hash: result.hash,
-          amount: amount.trim(),
-          destination: destination.trim(),
-        },
-      });
-    } catch (error: any) {
-      Alert.alert(
-        "Transaction Failed",
-        error.message || "An error occurred while sending.",
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    // Navigate to the signing confirmation screen
+    router.push({
+      pathname: '/sign-confirmation',
+      params: {
+        source: publicKey || '',
+        destination: destination.trim(),
+        amount: amount.trim(),
+        assetCode: 'XLM',
+        memo: memo.trim(),
+        fee: '100',
+        network: getNetworkLabel(),
+      },
+    });
   };
+
+  
 
   return (
     <>
@@ -166,6 +179,21 @@ export default function SendScreen() {
           title="Send XLM"
           subtitle={`Available Balance: ${formatAmount(balance)} XLM`}
         />
+
+        {/* Issue #330: Show unfunded account warning */}
+        <NetworkStateBanner
+          state={networkState}
+          onRetry={() => { refreshWalletData(); retry(); }}
+        />
+
+        {isUnfunded && (
+          <View style={styles.unfundedWarning}>
+            <Info color={colors.warning} size={18} style={{ marginRight: SIZES.sm }} />
+            <Text style={styles.unfundedWarningText}>
+              Your account has not been funded yet. Fund it with Friendbot on the home screen before sending.
+            </Text>
+          </View>
+        )}
 
         <View style={styles.form}>
           <FormField
@@ -189,45 +217,17 @@ export default function SendScreen() {
             }
           />
 
-          {contacts.length > 0 && (
-            <View style={styles.contactPickerContainer}>
-              <TouchableOpacity
-                style={styles.contactPickerButton}
-                onPress={() => setShowContactPicker((prev) => !prev)}
-                accessibilityLabel="Choose from saved contacts"
-                accessibilityRole="button"
-              >
-                <User size={18} color={colors.primary} />
-                <Text style={styles.contactPickerText}>
-                  {showContactPicker
-                    ? "Hide contacts"
-                    : "Choose from saved contacts"}
-                </Text>
-                <ChevronDown size={16} color={colors.textSecondary} />
-              </TouchableOpacity>
-
-              {showContactPicker && (
-                <View style={styles.contactList}>
-                  {contacts.map((contact) => (
-                    <TouchableOpacity
-                      key={contact.id}
-                      style={styles.contactItem}
-                      onPress={() => handleSelectContact(contact.publicKey)}
-                    >
-                      <Text style={styles.contactName}>{contact.name}</Text>
-                      <Text
-                        style={styles.contactKey}
-                        numberOfLines={1}
-                        ellipsizeMode="middle"
-                      >
-                        {contact.publicKey}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
+          <TouchableOpacity
+            style={styles.contactPickerButton}
+            onPress={() => setShowContactPicker(true)}
+            accessibilityLabel="Choose from saved contacts"
+            accessibilityRole="button"
+          >
+            <User size={18} color={colors.primary} />
+            <Text style={styles.contactPickerText}>
+              Choose from saved contacts
+            </Text>
+          </TouchableOpacity>
 
           {destinationContact?.isContact ? (
             <View style={styles.contactMatch}>
@@ -264,10 +264,11 @@ export default function SendScreen() {
         </View>
 
         <AsyncActionButton
-          title="Send Payment"
+          title={disableWriteActions ? 'Network Unavailable' : isUnfunded ? 'Funding Required' : 'Send Payment'}
           onPress={handleSend}
           isLoading={isLoading}
           loadingText="Sending…"
+          disabled={sendDisabled}
           style={styles.sendButton}
         />
       </KeyboardAvoidingView>
@@ -284,6 +285,23 @@ export default function SendScreen() {
           onClose={handleScanClose}
         />
       </Modal>
+
+      <ContactPicker
+        visible={showContactPicker}
+        onCancel={() => setShowContactPicker(false)}
+        onSelect={handleSelectContact}
+        onAddNew={handleAddNewContact}
+      />
+
+      <ContactForm
+        visible={showContactForm}
+        contact={lastSendDestination ? { id: '', name: '', address: lastSendDestination } : null}
+        onCancel={() => {
+          setShowContactForm(false);
+          setLastSendDestination("");
+        }}
+        onSave={handleSaveContact}
+      />
     </>
   );
 }
@@ -352,26 +370,23 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 13,
       fontWeight: "500",
     },
-    sendButton: {
-      marginBottom: SIZES.xxl,
-    },
-    warningContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: colors.surface,
-      padding: SIZES.md,
-      borderRadius: RADIUS.lg,
-      marginBottom: SIZES.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    warningIcon: {
-      marginRight: SIZES.sm,
-    },
-    warningText: {
-      flex: 1,
-      color: colors.textSecondary,
-      fontSize: 13,
-      lineHeight: 18,
-    },
+  unfundedWarning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255, 196, 0, 0.1)',
+    padding: SIZES.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 196, 0, 0.25)',
+    marginBottom: SIZES.md,
+  },
+  unfundedWarningText: {
+    flex: 1,
+    color: colors.warning,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  sendButton: {
+    marginBottom: SIZES.xxl,
+  },
   });

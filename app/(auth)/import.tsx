@@ -1,13 +1,20 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button } from '../../src/components/Button';
+import { AsyncActionButton } from '../../src/components/AsyncActionButton';
 import { FormField } from '../../src/components/FormField';
+import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
+import { WALLET_SAVE_FAILURE_MESSAGE } from '../../src/utils/walletStorageErrors';
 import { importWallet } from 'pocketpay-sdk';
 import { Info, Shield, CheckCircle } from 'lucide-react-native';
+import type { OnboardingError, StorageError } from '../../src/types/onboarding';
+import {
+  classifyOnboardingError,
+  mapWalletErrorToStorageError,
+} from '../../src/types/onboarding';
 
 const SECRET_KEY_LENGTH = 56;
 
@@ -17,12 +24,21 @@ export default function ImportWalletScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { setWallet } = useWalletStore();
   const [secretKey, setSecretKey] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Recovery states
+  const [onboardingError, setOnboardingError] = useState<OnboardingError | null>(null);
+  const [storageError, setStorageError] = useState<StorageError | null>(null);
+
+  const resetErrors = () => {
+    setOnboardingError(null);
+    setStorageError(null);
+  };
+
   const handleImport = async () => {
     setError('');
+    resetErrors();
 
     const trimmedKey = secretKey.trim();
 
@@ -48,34 +64,64 @@ export default function ImportWalletScreen() {
     }
 
     try {
-      setIsLoading(true);
       const { publicKey } = await importWallet(trimmedKey);
 
       const saved = await setWallet(publicKey, trimmedKey);
       if (!saved) {
-        setError('Failed to persist wallet. Please try again.');
-        setIsLoading(false);
+        // Classify the storage error
+        setStorageError(mapWalletErrorToStorageError(WALLET_SAVE_FAILURE_MESSAGE));
         return;
       }
 
-      setIsLoading(false);
       setIsSuccess(true);
     } catch (err: any) {
-      const errorMessage = err?.message?.toLowerCase() || '';
-      if (errorMessage.includes('network')) {
-        setError('Invalid secret key. It appears to be for a different network.');
-      } else if (errorMessage.includes('checksum')) {
-        setError('Invalid secret key. The checksum is incorrect.');
-      } else {
-        setError('Invalid secret key. It may be malformed or invalid.');
-      }
-      setIsLoading(false);
+      const errorMsg = err?.message || String(err);
+      setOnboardingError(classifyOnboardingError(errorMsg));
     }
   };
 
   const handleGoToWallet = () => {
     router.replace('/(tabs)');
   };
+
+  const handleRetry = () => {
+    resetErrors();
+    setError('');
+  };
+
+  const handleStartOver = () => {
+    resetErrors();
+    setError('');
+    setSecretKey('');
+  };
+
+  // ── Storage Error State ────────────────────────────────────
+  if (storageError) {
+    return (
+      <View style={styles.container}>
+        <WalletEmptyState
+          variant="storage_error"
+          storageError={storageError}
+          onRetry={handleRetry}
+          onStartOver={handleStartOver}
+        />
+      </View>
+    );
+  }
+
+  // ── Onboarding Error State ─────────────────────────────────
+  if (onboardingError) {
+    return (
+      <View style={styles.container}>
+        <WalletEmptyState
+          variant="failed_import"
+          onboardingError={onboardingError}
+          onRetry={handleRetry}
+          onCreate={handleStartOver}
+        />
+      </View>
+    );
+  }
 
   // ── Success State ──────────────────────────────────────────
   if (isSuccess) {
@@ -90,7 +136,7 @@ export default function ImportWalletScreen() {
             Your Testnet wallet has been restored. You can now send and receive test XLM.
           </Text>
         </View>
-        <Button title="Go to Wallet" onPress={handleGoToWallet} />
+        <AsyncActionButton title="Go to Wallet" onPress={handleGoToWallet} />
       </View>
     );
   }
@@ -139,10 +185,10 @@ export default function ImportWalletScreen() {
         />
       </View>
 
-      <Button
+      <AsyncActionButton
         title="Import Wallet"
         onPress={handleImport}
-        isLoading={isLoading}
+        loadingText="Importing…"
       />
     </KeyboardAvoidingView>
   );

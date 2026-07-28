@@ -1,30 +1,58 @@
-import React, { useMemo } from "react";
-import { View, Text, StyleSheet, Share } from "react-native";
+import React, { useMemo, useState } from "react";
+import { View, Text, StyleSheet, Share, TouchableOpacity } from "react-native";
 import { Button } from "../src/components/Button";
+import { FormField } from "../src/components/FormField";
 import { ScreenHeader } from "../src/components/ScreenHeader";
 import { SIZES, RADIUS, ThemeColors } from "../src/constants/theme";
 import { useTheme } from "../src/hooks/useTheme";
 import { useWalletStore } from "../src/store/walletStore";
+import { validateAmount, validateMemo } from "../src/utils/validation";
+import { buildReceivePayload, isPaymentRequestPayload } from "../src/features/receive";
 import QRCode from "react-native-qrcode-svg";
-import * as Clipboard from "expo-clipboard";
+import { useCopyToClipboard } from "../src/utils/clipboard";
 
 export default function ReceiveScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { publicKey } = useWalletStore();
+  const { copy } = useCopyToClipboard();
 
-  const handleCopy = async () => {
+  const [showRequestFields, setShowRequestFields] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [memo, setMemo] = useState("");
+
+  // Requesting a specific amount has no sender balance to validate against
+  // (unlike send.tsx) - the requester isn't the one spending, so
+  // validateAmount is called with no balance argument.
+  const amountError = amount.trim() ? validateAmount(amount) ?? undefined : undefined;
+  const memoError = memo.trim() ? validateMemo(memo) ?? undefined : undefined;
+
+  const payload = useMemo(() => {
+    if (!publicKey) return "";
+    return buildReceivePayload({
+      destination: publicKey,
+      amount: amountError ? undefined : amount,
+      memo: memoError ? undefined : memo,
+    });
+  }, [publicKey, amount, amountError, memo, memoError]);
+
+  const isRequestPayload = isPaymentRequestPayload(payload);
+
+  const handleCopyAddress = async () => {
     if (publicKey) {
-      await Clipboard.setStringAsync(publicKey);
+      await copy(publicKey, 'address');
     }
   };
 
   const handleShare = async () => {
-    if (publicKey) {
+    if (!payload) return;
+    try {
       await Share.share({
-        message: publicKey,
-        title: "My Stellar Address",
+        message: payload,
+        title: isRequestPayload ? "Payment Request" : "My Stellar Address",
       });
+    } catch (error) {
+      console.error("Error sharing receive payload:", error);
     }
   };
 
@@ -38,7 +66,7 @@ export default function ReceiveScreen() {
       <View style={styles.qrContainer}>
         {publicKey ? (
           <QRCode
-            value={publicKey}
+            value={payload}
             size={250}
             color={colors.background}
             backgroundColor={colors.textPrimary}
@@ -47,6 +75,10 @@ export default function ReceiveScreen() {
           <Text style={{ color: colors.textMuted }}>No public key found</Text>
         )}
       </View>
+
+      {isRequestPayload && (
+        <Text style={styles.requestBadge}>Requesting a specific amount</Text>
+      )}
 
       <View style={styles.addressContainer}>
         <Text style={styles.addressLabel}>Your Public Key</Text>
@@ -57,10 +89,40 @@ export default function ReceiveScreen() {
         </View>
       </View>
 
+      <TouchableOpacity
+        onPress={() => setShowRequestFields((prev) => !prev)}
+        accessibilityRole="button"
+        style={styles.toggle}
+      >
+        <Text style={styles.toggleText}>
+          {showRequestFields ? "Hide payment request details" : "Request a specific amount"}
+        </Text>
+      </TouchableOpacity>
+
+      {showRequestFields && (
+        <View style={styles.requestFields}>
+          <FormField
+            label="Amount (XLM, optional)"
+            placeholder="0.00"
+            value={amount}
+            onChangeText={setAmount}
+            error={amountError}
+            keyboardType="decimal-pad"
+          />
+          <FormField
+            label="Memo (optional)"
+            placeholder="What's this payment for?"
+            value={memo}
+            onChangeText={setMemo}
+            error={memoError}
+          />
+        </View>
+      )}
+
       <View style={styles.actions}>
         <Button
           title="Copy Address"
-          onPress={handleCopy}
+          onPress={handleCopyAddress}
           style={styles.actionButton}
         />
         <Button
@@ -86,11 +148,17 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: colors.textPrimary,
       padding: SIZES.lg,
       borderRadius: RADIUS.lg,
-      marginBottom: SIZES.xl,
+      marginBottom: SIZES.md,
+    },
+    requestBadge: {
+      color: colors.primary,
+      fontSize: 13,
+      fontWeight: "600",
+      marginBottom: SIZES.md,
     },
     addressContainer: {
       width: "100%",
-      marginBottom: SIZES.xl,
+      marginBottom: SIZES.md,
     },
     addressLabel: {
       color: colors.textSecondary,
@@ -109,10 +177,23 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 14,
       textAlign: "center",
     },
+    toggle: {
+      marginBottom: SIZES.md,
+    },
+    toggleText: {
+      color: colors.primary,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    requestFields: {
+      width: "100%",
+      marginBottom: SIZES.md,
+    },
     actions: {
       width: "100%",
       flexDirection: "row",
       justifyContent: "space-between",
+      marginTop: SIZES.md,
     },
     actionButton: {
       flex: 1,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 
 interface UseDirtyFormOptions {
@@ -27,22 +27,6 @@ interface UseDirtyFormReturn {
 
 /**
  * Hook to handle dirty form protection
- * 
- * @param options - Configuration options
- * @returns Dirty state controls
- * 
- * @example
- * ```tsx
- * const { showConfirm, setShowConfirm, handleConfirmLeave, handleCancelLeave, resetDirty } = useDirtyForm({
- *   isDirty: formIsDirty,
- *   message: 'You have unsaved changes. Are you sure you want to leave?',
- *   onConfirmLeave: () => {
- *     // Clear form and navigate
- *     resetDirty();
- *     navigate('/somewhere');
- *   }
- * });
- * ```
  */
 export function useDirtyForm({
   isDirty,

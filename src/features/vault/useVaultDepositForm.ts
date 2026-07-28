@@ -1,5 +1,13 @@
+/**
+ * Vault deposit form hook.
+ *
+ * For integration risks, assumptions, and coordination notes,
+ * see docs/vault-integration-risks.md.
+ */
+
 import { useState } from 'react';
 import { validateAmount } from '../../utils/validation';
+import { WALLET_SECRET_ACCESS_MESSAGE } from '../../utils/walletStorageErrors';
 
 export interface UseVaultDepositFormReturn {
   amount: string;
@@ -56,7 +64,7 @@ export function useVaultDepositForm(): UseVaultDepositFormReturn {
     try {
       const secret = await getSecretKey();
       if (!secret) {
-        throw new Error('Secret key not found');
+        throw new Error(WALLET_SECRET_ACCESS_MESSAGE);
       }
 
       const hash = await depositFn(secret, publicKey, amount);
