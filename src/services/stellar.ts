@@ -148,6 +148,29 @@ export const fetchTransactionsPage = async (
 };
 
 /**
+ * Fetch a single operation by its Horizon ID.  Used by the transaction detail
+ * screen when arriving via deep link — the operation may not be in the local
+ * store yet.
+ *
+ * @param operationId  – Horizon operation ID (numeric string or paging token).
+ * @returns The operation record, or `null` if not found on the network.
+ */
+export const fetchOperationById = async (
+  operationId: string
+): Promise<PaymentRecord | null> => {
+  try {
+    const record = await server.operations().operation(operationId).call();
+    return record as PaymentRecord;
+  } catch (error: any) {
+    if (isNotFoundError(error)) {
+      return null;
+    }
+    console.error('Error fetching operation by ID:', error);
+    throw error;
+  }
+};
+
+/**
  * Send XLM to a destination address.
  */
 export const sendXlmTransaction = async (
@@ -236,6 +259,23 @@ export const mockFetchVaultBalance = async (publicKey: string): Promise<string> 
 export const mockDepositToVault = async (secretKey: string, amount: string): Promise<boolean> => {
   await new Promise(resolve => setTimeout(resolve, 1500));
   return true;
+};
+
+export const mockFetchVaultMaturedLocks = async (publicKey: string): Promise<{ id: string; amount: string; unlockedAt: string }[]> => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  // Return mock matured locks for preview purposes
+  return [
+    {
+      id: 'lock_a1b2c3d4e5f6',
+      amount: '50.0000000',
+      unlockedAt: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
+    },
+    {
+      id: 'lock_f6e5d4c3b2a1',
+      amount: '25.5000000',
+      unlockedAt: new Date(Date.now() - 86400000 * 7).toISOString(), // 7 days ago
+    },
+  ];
 };
 
 export const mockWithdrawFromVault = async (secretKey: string, amount: string): Promise<boolean> => {

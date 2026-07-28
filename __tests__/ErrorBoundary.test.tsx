@@ -81,8 +81,11 @@ describe('ErrorBoundary', () => {
       )
     ).toBeTruthy();
 
-    // Recovery action button should exist
+    // Recovery action buttons should exist
     expect(getByText('Try Again')).toBeTruthy();
+    expect(getByText('Go to Home')).toBeTruthy();
+    expect(getByText('Restart App')).toBeTruthy();
+    expect(getByText('Share Diagnostics')).toBeTruthy();
   });
 
   it('triggers recovery action and resets error state on "Reintentar" button press', () => {

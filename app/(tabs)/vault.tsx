@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { VaultLockList } from '../../src/components/VaultLockList';
 import { VaultConfirmModal } from '../../src/components/VaultConfirmModal';
 import { VaultIntroModal } from '../../src/components/VaultIntroModal';
 import { VaultLockEducationModal } from '../../src/components/VaultLockEducationModal';
 import { VaultUnavailableState } from '../../src/components/VaultUnavailableState';
+import { VaultErrorBanner } from '../../src/components/VaultErrorBanner';
+import { LoadingState } from '../../src/components/LoadingState';
 import { VaultActionProgress } from '../../src/components/VaultActionProgress';
 import { Input } from '../../src/components/Input';
 import { AsyncActionButton } from '../../src/components/AsyncActionButton';
@@ -24,6 +26,10 @@ import { PiggyBank, Info, Lock, HelpCircle, ShieldCheck, AlertTriangle, Ban } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VaultReceiptModal } from "../../src/components/VaultReceiptModal";
 import { isActionSupported, getActionUnsupportedReason, getActionUnsupportedDetail } from '../../src/utils/vaultCapabilities';
+import { useNetworkState } from '../../src/hooks/useNetworkState';
+import { NetworkStateBanner } from '../../src/components/NetworkStateBanner';
+import { WithdrawalPreview } from '../../src/features/vault/WithdrawalPreview';
+import { DepositPreview } from '../../src/features/vault/DepositPreview';
 
 const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const VAULT_INTRO_SEEN_KEY = '@pocketpay_vault_intro_seen';
@@ -34,8 +40,9 @@ export default function VaultScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Wallet & Vault stores
-  const { publicKey, getSecretKey, balance: walletBalance } = useWalletStore();
+  const { publicKey, getSecretKey, balance: walletBalance, error: walletError } = useWalletStore();
   const { isAvailable, reasons, isContractConfigured } = useVaultAvailability();
+  const { state: networkState, disableWriteActions: networkDisabled, retry: retryNetwork } = useNetworkState({ error: walletError });
   const {
     balance,
     locks,
@@ -45,12 +52,14 @@ export default function VaultScreen() {
     isLoadingLocks,
     isSubmitting,
     balanceError,
+    vaultError,
     loadBalance,
     loadLocks,
     addLock,
     unlockLock,
     deposit,
     withdraw,
+    clearVaultError,
   } = useVault();
 
   // Issue #331: Vault capability gates
@@ -70,6 +79,9 @@ export default function VaultScreen() {
   const [pendingAction, setPendingAction] = useState<'deposit' | 'withdraw' | 'lock' | null>(null);
   const [pendingUnlockDate, setPendingUnlockDate] = useState<string>('');
   const [receiptVisible, setReceiptVisible] = useState(false);
+  const [showWithdrawalPreview, setShowWithdrawalPreview] = useState(false);
+  const [showDepositPreview, setShowDepositPreview] = useState(false);
+  const [depositError, setDepositError] = useState<string | null>(null);
 
   const [receiptData, setReceiptData] = useState({
     actionType: "deposit" as "deposit" | "withdraw" | "lock",
@@ -90,6 +102,11 @@ export default function VaultScreen() {
     checkIntro();
   }, []);
 
+  // ---- Multi-lock state (placeholder data until contract integration) ----
+  const [locks, setLocks] = useState<VaultLock[]>([]);
+  const [isLoadingLocks, setIsLoadingLocks] = useState(true);
+  const [locksError, setLocksError] = useState<string | null>(null);
+
   useEffect(() => {
     if (isAvailable && publicKey) {
       loadBalance(publicKey);
@@ -107,6 +124,22 @@ export default function VaultScreen() {
   const handleAmountChange = (value: string) => {
     depositForm.setAmount(value);
     depositForm.setAmountError(undefined);
+  };
+
+  const handleDepositPress = () => {
+    const isValid = depositForm.validate(walletBalance);
+    if (!isValid) return;
+
+    setDepositError(null);
+    setShowDepositPreview(true);
+  };
+
+  const handleDepositConfirm = () => {
+    setShowDepositPreview(false);
+    // Set pending action and execute the deposit flow directly —
+    // the DepositPreview itself serves as the confirmation step.
+    setPendingAction('deposit');
+    handleConfirmAction();
   };
 
   const vaultAction = useVaultAction();
@@ -211,6 +244,10 @@ export default function VaultScreen() {
     }
   };
 
+  const handleWithdrawPress = () => {
+    setShowWithdrawalPreview(true);
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <VaultIntroModal visible={introVisible} onContinue={dismissIntro} />
@@ -239,6 +276,17 @@ export default function VaultScreen() {
         onClose={() => setReceiptVisible(false)}
       />
 
+      <NetworkStateBanner
+        state={networkState}
+        onRetry={() => {
+          retryNetwork();
+          if (publicKey) {
+            loadBalance(publicKey);
+            loadLocks();
+          }
+        }}
+      />
+
       <View style={styles.card}>
         <TouchableOpacity
           style={styles.infoButton}
@@ -252,7 +300,11 @@ export default function VaultScreen() {
         </View>
         <Text style={styles.cardTitle}>Soroban Savings Vault</Text>
         {isLoadingBalance ? (
-          <ActivityIndicator size="large" color={colors.primary} style={styles.balanceLoader} />
+          <LoadingState
+            message=""
+            style={styles.balanceLoader}
+            accessibilityLabel="Loading vault balance"
+          />
         ) : (
           <Text style={styles.balanceValue}>{balance} XLM</Text>
         )}
@@ -316,6 +368,16 @@ export default function VaultScreen() {
         <View style={styles.form}>
           <VaultActionProgress state={vaultAction.state} errorMessage={vaultAction.status.error} />
 
+          {vaultError && (
+            <VaultErrorBanner
+              guidance={vaultError}
+              onRetry={() => {
+                clearVaultError();
+              }}
+              onDismiss={clearVaultError}
+            />
+          )}
+
           {/* Issue #331: Capability gate explanations */}
           {(!canDeposit || !canWithdraw || !canLock) && (
             <View style={styles.capabilityNotice}>
@@ -343,19 +405,19 @@ export default function VaultScreen() {
           <View style={styles.actions}>
             <AsyncActionButton
               title={canDeposit ? 'Deposit' : 'Deposit Unavailable'}
-              onPress={() => handleAction('deposit')}
+              onPress={handleDepositPress}
               isLoading={depositForm.isSubmitting || (isSubmitting && pendingAction === 'deposit')}
               loadingText="Depositing…"
-              disabled={!canDeposit || isLoadingBalance}
+              disabled={!canDeposit || isLoadingBalance || networkDisabled}
               style={styles.actionButton}
             />
             <AsyncActionButton
               title={canWithdraw ? 'Withdraw' : 'Withdraw Unavailable'}
               variant="secondary"
-              onPress={() => handleAction('withdraw')}
+              onPress={handleWithdrawPress}
               isLoading={isSubmitting && pendingAction === 'withdraw'}
               loadingText="Withdrawing…"
-              disabled={!canWithdraw || isLoadingBalance || depositForm.isSubmitting}
+              disabled={!canWithdraw || isLoadingBalance || depositForm.isSubmitting || networkDisabled}
               style={styles.actionButton}
             />
           </View>
@@ -365,7 +427,7 @@ export default function VaultScreen() {
             onPress={() => handleAction('lock')}
             isLoading={isSubmitting && pendingAction === 'lock'}
             loadingText="Locking…"
-            disabled={!canLock || isSubmitting || depositForm.isSubmitting}
+            disabled={!canLock || isSubmitting || depositForm.isSubmitting || networkDisabled}
             style={styles.lockButton}
           />
           {locks.length === 0 ? (
@@ -378,7 +440,30 @@ export default function VaultScreen() {
           ) : null}
         </View>
       )}
+
+      <WithdrawalPreview
+        visible={showWithdrawalPreview}
+        onDismiss={() => setShowWithdrawalPreview(false)}
+      />
     </ScrollView>
+
+    <DepositPreview
+      visible={showDepositPreview}
+      params={{
+        amount: depositForm.amount,
+        asset: 'XLM',
+        walletBalance,
+        vaultContractId: contractId,
+        isConfigured,
+        isSubmitting,
+        error: depositError,
+      }}
+      onConfirm={handleDepositConfirm}
+      onCancel={() => {
+        setShowDepositPreview(false);
+        setDepositError(null);
+      }}
+    />
   );
 }
 

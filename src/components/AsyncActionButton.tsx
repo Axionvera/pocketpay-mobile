@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -23,6 +23,11 @@ export interface AsyncActionButtonProps extends Omit<TouchableOpacityProps, 'onP
   icon?: React.ReactNode;
   textStyle?: StyleProp<TextStyle>;
   onPress?: (event: GestureResponderEvent) => Promise<void> | void;
+  /**
+   * Receives anything `onPress` throws. Without it a rejection is only logged,
+   * which silently strands the user on flows that surface errors themselves.
+   */
+  onError?: (error: unknown) => void;
 }
 
 /**
@@ -42,6 +47,7 @@ export const AsyncActionButton: React.FC<AsyncActionButtonProps> = ({
   style,
   textStyle,
   onPress,
+  onError,
   children,
   activeOpacity = 0.8,
   accessibilityLabel,
@@ -53,6 +59,14 @@ export const AsyncActionButton: React.FC<AsyncActionButtonProps> = ({
 
   const [isExecuting, setIsExecuting] = useState(false);
   const isExecutingRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const busy = isLoading || isExecuting;
   const isDisabled = disabled || busy;
@@ -67,10 +81,16 @@ export const AsyncActionButton: React.FC<AsyncActionButtonProps> = ({
       await onPress(event);
     } catch (err) {
       // Ensure error doesn't break component execution cycle
-      console.error('AsyncActionButton error:', err);
+      if (onError) {
+        onError(err);
+      } else {
+        console.error('AsyncActionButton error:', err);
+      }
     } finally {
       isExecutingRef.current = false;
-      setIsExecuting(false);
+      // These flows routinely navigate away on success, so the button can be
+      // gone by the time the promise settles.
+      if (isMountedRef.current) setIsExecuting(false);
     }
   };
 

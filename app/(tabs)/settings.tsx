@@ -41,6 +41,7 @@ import { WalletResetConfirmModal } from '../../src/components/WalletResetConfirm
 import { StatusBadge, BadgeTone } from '../../src/components/StatusBadge';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
 import { useNetworkEnvironment, EnvironmentWarning } from '../../src/features/settings';
+import { useConfirm } from '../../src/hooks/useConfirm';
 
 const THEME_OPTIONS: { mode: ThemeMode; label: string; Icon: typeof Sun }[] = [
   { mode: 'light', label: 'Light', Icon: Sun },
@@ -60,6 +61,7 @@ export default function SettingsScreen() {
   const { colors, themeMode, setThemeMode } = useTheme();
   const { isLockEnabled, enableLock, disableLock, authenticate } = useAppLockStore();
   const env = useNetworkEnvironment();
+  const { confirm, confirmationDialog } = useConfirm();
 
   const [showSecret, setShowSecret] = useState(false);
   const [secretKey, setSecretKey] = useState<string | null>(null);
@@ -103,20 +105,14 @@ export default function SettingsScreen() {
       await enableLock();
       await authenticate();
     } else {
-      Alert.alert(
-        'Disable App Lock',
-        'Anyone with your device can access your wallet without app lock. Continue?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Disable',
-            style: 'destructive',
-            onPress: async () => {
-              await disableLock();
-            },
-          },
-        ]
-      );
+      void confirm({
+        title: 'Disable App Lock',
+        message:
+          'Anyone with your device can access your wallet without app lock. Continue?',
+        confirmLabel: 'Disable',
+        destructive: true,
+        onConfirm: () => disableLock(),
+      });
     }
   };
 
@@ -383,6 +379,8 @@ export default function SettingsScreen() {
         onConfirm={handleResetConfirm}
         onCancel={() => setShowResetModal(false)}
       />
+
+      {confirmationDialog}
     </>
   );
 }

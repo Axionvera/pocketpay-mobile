@@ -11,6 +11,7 @@ React Native Expo wallet for Stellar Testnet. The app aims to feel polished and 
 
 ## Documentation
 
+- [Architecture Readiness Review](./docs/architecture-readiness-review.md) - Feature boundaries, duplicated state, SDK integration blockers, security-sensitive areas, and test gaps
 - [Storage Guide](./docs/storage.md) - SecureStore vs AsyncStorage
 - [Contacts Guide](./docs/contacts.md) - Contact storage, backup limitations, and future export/import ideas
 - [Polyfills Guide](./docs/polyfills.md) - React Native polyfills and import order for Stellar SDK
@@ -18,8 +19,9 @@ React Native Expo wallet for Stellar Testnet. The app aims to feel polished and 
 - [Vault Integration Assumptions](./docs/vault-integration-assumptions.md) - Document expected SDK/contract dependencies, placeholder behaviors, and known gaps
 - [Vault Integration Risks](./docs/vault-integration-risks.md) - Assumptions, risks, and integration points between the mobile UI, PocketPay SDK, and Soroban contract
 - [Mobile Wallet Security FAQ](./docs/WALLET_SECURITY_FAQ.md) - Local storage, secret handling, reset behaviors, and security guarantees
-- [Accessibility Checklist](./docs/accessibility.md) - Mobile accessibility audit checklist for labels, touch targets, contrast, focus, screen-reader, and error/loading states
-- [UI State Catalogue](./docs/ui-states.md) - Screen-by-screen loading, empty, error, success, disabled, and pending states for wallet, send, receive, transactions, contacts, and vault
+- [Accessibility Checklist](./docs/accessibility.md) - Required mobile accessibility checks and reusable-component review guidance for major screens and every UI state
+- [UI State Catalogue](./docs/ui-states.md) - Canonical loading, empty, error, success, disabled, and pending behavior for wallet, send, receive, transactions, contacts, vault, settings, and diagnostics
+- [Scan-to-Pay Review](./docs/scan-to-pay.md) - QR scan → validate → review screen → cancel-before-payment flow (never signs on scan)
 - [Release Testing Checklist](./docs/release-testing-checklist.md) - Manual QA checklist run before every tagged build, covering wallet, payment, vault, errors, and environment verification
 
 > ⚠️ **This app runs on the Stellar Testnet only.** Testnet XLM has no real monetary value. Read the [Security Guide](docs/security.md) before storing or sharing any keys.
@@ -45,7 +47,8 @@ PocketPay Mobile is part of a broader PocketPay stack:
 
 - [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
 - [Mobile Onboarding Checklist](docs/mobile-onboarding-checklist.md) - Quick-reference setup checklist for new contributors
-- [UI State Catalogue](docs/ui-states.md) - The canonical reference for loading, empty, error, success, disabled, and pending states across the main screens
+- [UI State Catalogue](docs/ui-states.md) and [Accessibility Checklist](docs/accessibility.md) - Governance for major-screen states, shared component contracts, and accessible review evidence
+- [QR Receive Payload Format](docs/qr-payment-requests.md) - The address-only and SEP-0007-based payment-request formats the Receive screen encodes into its QR code
 
 ## Screenshots
 
@@ -79,25 +82,3 @@ React Native, Expo Router, Zustand, PocketPay SDK, SecureStore, AsyncStorage
 npm install --legacy-peer-deps
 cp .env.example .env
 npm start
-
-The PocketPay SDK is pinned to an official source commit and built by the
-app's `postinstall` script because the SDK is not currently published to npm.
-
-## Contributing
-
-Before adding new screens or components, read the [Design System guide](docs/design-system.md). It covers colour tokens, typography, spacing, card patterns, buttons, inputs, and dark mode rules derived directly from the existing codebase.
-
-Please read our [Contributing Guidelines](CONTRIBUTING.md) and review our [Accessibility Checklist](docs/accessibility.md) before making UI changes.
-
-## Changelog
-
-See [CHANGELOG.md](./CHANGELOG.md) for a full list of notable changes across releases.
-
-## Security
-
-See the full [Security Guide](docs/security.md) for details on secret key handling, device storage, backups, and safe development practices.
-- [Mobile Security Checklist](docs/mobile-security-checklist.md) - Checklist for reviewing security-sensitive changes
-## License
-
-MIT
-MIT
