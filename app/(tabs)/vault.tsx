@@ -28,6 +28,8 @@ import { VaultReceiptModal } from "../../src/components/VaultReceiptModal";
 import { isActionSupported, getActionUnsupportedReason, getActionUnsupportedDetail } from '../../src/utils/vaultCapabilities';
 import { useNetworkState } from '../../src/hooks/useNetworkState';
 import { NetworkStateBanner } from '../../src/components/NetworkStateBanner';
+import { WithdrawalPreview } from '../../src/features/vault/WithdrawalPreview';
+import { DepositPreview } from '../../src/features/vault/DepositPreview';
 
 const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const VAULT_INTRO_SEEN_KEY = '@pocketpay_vault_intro_seen';
@@ -77,6 +79,9 @@ export default function VaultScreen() {
   const [pendingAction, setPendingAction] = useState<'deposit' | 'withdraw' | 'lock' | null>(null);
   const [pendingUnlockDate, setPendingUnlockDate] = useState<string>('');
   const [receiptVisible, setReceiptVisible] = useState(false);
+  const [showWithdrawalPreview, setShowWithdrawalPreview] = useState(false);
+  const [showDepositPreview, setShowDepositPreview] = useState(false);
+  const [depositError, setDepositError] = useState<string | null>(null);
 
   const [receiptData, setReceiptData] = useState({
     actionType: "deposit" as "deposit" | "withdraw" | "lock",
@@ -114,6 +119,22 @@ export default function VaultScreen() {
   const handleAmountChange = (value: string) => {
     depositForm.setAmount(value);
     depositForm.setAmountError(undefined);
+  };
+
+  const handleDepositPress = () => {
+    const isValid = depositForm.validate(walletBalance);
+    if (!isValid) return;
+
+    setDepositError(null);
+    setShowDepositPreview(true);
+  };
+
+  const handleDepositConfirm = () => {
+    setShowDepositPreview(false);
+    // Set pending action and execute the deposit flow directly —
+    // the DepositPreview itself serves as the confirmation step.
+    setPendingAction('deposit');
+    handleConfirmAction();
   };
 
   const vaultAction = useVaultAction();
@@ -216,6 +237,10 @@ export default function VaultScreen() {
     } catch (e: any) {
       Alert.alert('Unlock failed', e.message);
     }
+  };
+
+  const handleWithdrawPress = () => {
+    setShowWithdrawalPreview(true);
   };
 
   return (
@@ -375,7 +400,7 @@ export default function VaultScreen() {
           <View style={styles.actions}>
             <AsyncActionButton
               title={canDeposit ? 'Deposit' : 'Deposit Unavailable'}
-              onPress={() => handleAction('deposit')}
+              onPress={handleDepositPress}
               isLoading={depositForm.isSubmitting || (isSubmitting && pendingAction === 'deposit')}
               loadingText="Depositing…"
               disabled={!canDeposit || isLoadingBalance || networkDisabled}
@@ -384,7 +409,7 @@ export default function VaultScreen() {
             <AsyncActionButton
               title={canWithdraw ? 'Withdraw' : 'Withdraw Unavailable'}
               variant="secondary"
-              onPress={() => handleAction('withdraw')}
+              onPress={handleWithdrawPress}
               isLoading={isSubmitting && pendingAction === 'withdraw'}
               loadingText="Withdrawing…"
               disabled={!canWithdraw || isLoadingBalance || depositForm.isSubmitting || networkDisabled}
@@ -410,7 +435,30 @@ export default function VaultScreen() {
           ) : null}
         </View>
       )}
+
+      <WithdrawalPreview
+        visible={showWithdrawalPreview}
+        onDismiss={() => setShowWithdrawalPreview(false)}
+      />
     </ScrollView>
+
+    <DepositPreview
+      visible={showDepositPreview}
+      params={{
+        amount: depositForm.amount,
+        asset: 'XLM',
+        walletBalance,
+        vaultContractId: contractId,
+        isConfigured,
+        isSubmitting,
+        error: depositError,
+      }}
+      onConfirm={handleDepositConfirm}
+      onCancel={() => {
+        setShowDepositPreview(false);
+        setDepositError(null);
+      }}
+    />
   );
 }
 

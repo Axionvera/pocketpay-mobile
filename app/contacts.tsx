@@ -36,7 +36,7 @@ export default function ContactsScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { contacts, addContactIfUnique, removeContact, updateContact, findDuplicateContact } =
-      useAppStore();
+    useAppStore();
   const { confirm, confirmationDialog } = useConfirm();
 
   // ── Form state ──────────────────────────────────────────────────────────────
@@ -60,8 +60,6 @@ export default function ContactsScreen() {
     setFoundDuplicate(null);
     setIsSaving(false);
   }, []);
-
-  // ── Field change handlers ───────────────────────────────────────────────────
 
   const handleNameChange = (value: string) => {
     setName(value);
@@ -112,6 +110,16 @@ export default function ContactsScreen() {
 
     setNameError(currentNameError);
     setKeyError(currentKeyError);
+  const handleSave = async () => {
+    const trimmedName = name.trim();
+    const trimmedKey = publicKey.trim();
+
+    const currentNameError = trimmedName ? undefined : "Please enter a name.";
+    const addrValidationError = validateAddress(trimmedKey) ?? undefined;
+    const currentKeyError = addrValidationError;
+
+    setNameError(currentNameError);
+    setKeyError(currentKeyError);
 
     if (currentNameError || currentKeyError) return;
 
@@ -150,8 +158,8 @@ export default function ContactsScreen() {
     try {
       await updateContact(foundDuplicate.id, newName);
       Alert.alert(
-          "Updated",
-          `Contact "${foundDuplicate.name}" has been updated to "${newName}".`,
+        "Updated",
+        `Contact "${foundDuplicate.name}" has been updated to "${newName}".`,
       );
       resetForm();
       setMode("list");
@@ -227,40 +235,132 @@ export default function ContactsScreen() {
   const isFormMode = mode === "manual" || mode === "confirm-scan";
 
   return (
-      <View style={styles.container}>
-        {isFormMode ? (
-            <View style={styles.addForm}>
-              <Text style={styles.title}>
-                {mode === "confirm-scan"
-                    ? "Save Scanned Contact"
-                    : "Add New Contact"}
+    <View style={styles.container}>
+      {isFormMode ? (
+        <View style={styles.addForm}>
+          <Text style={styles.title}>
+            {mode === "confirm-scan"
+              ? "Save Scanned Contact"
+              : "Add New Contact"}
+          </Text>
+
+          {/* Name field */}
+          <Input
+            label="Name"
+            placeholder="Alice"
+            value={name}
+            onChangeText={handleNameChange}
+            error={nameError}
+            autoFocus
+            accessibilityLabel="Contact name"
+          />
+          {nameWarning && !nameError && (
+            <Text style={styles.warningText}>{nameWarning}</Text>
+          )}
+
+          {/* Address field – read-only when pre-filled from scan */}
+          <Input
+            label="Stellar Address"
+            placeholder="G..."
+            value={publicKey}
+            onChangeText={handleKeyChange}
+            error={keyError}
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={mode !== "confirm-scan"}
+            accessibilityLabel="Stellar public key address"
+          />
+          {/* Duplicate address update banner */}
+          {foundDuplicate && (
+            <View style={styles.duplicateBanner}>
+              <View style={styles.duplicateBannerHeader}>
+                <AlertTriangle color={colors.warning} size={18} />
+                <Text style={styles.duplicateBannerTitle}>Duplicate Address</Text>
+              </View>
+              <Text style={styles.duplicateBannerText}>
+                This address is already saved as "{foundDuplicate.name}".
               </Text>
+              <Text style={styles.duplicateBannerHint}>
+                You can update the existing entry's name below, or cancel to keep it unchanged.
+              </Text>
+              <TouchableOpacity style={styles.updateButton} onPress={handleUpdateExisting}>
+                <Pencil color={colors.primary} size={16} />
+                <Text style={styles.updateButtonText}>
+                  Update "{foundDuplicate.name}" to "{name.trim() || foundDuplicate.name}"
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-              {/* Name field */}
-              <Input
-                  label="Name"
-                  placeholder="Alice"
-                  value={name}
-                  onChangeText={handleNameChange}
-                  error={nameError}
-                  autoFocus
-                  accessibilityLabel="Contact name"
-              />
-              {nameWarning && !nameError && (
-                  <Text style={styles.warningText}>{nameWarning}</Text>
-              )}
+          {/* Scan button (only in manual mode – lets the user switch to scanner) */}
+          {mode === "manual" && (
+            <Button
+              title="Scan QR Instead"
+              variant="outline"
+              onPress={() => {
+                resetForm();
+                setMode("scanning");
+              }}
+              style={styles.scanInsteadBtn}
+              accessibilityLabel="Open QR scanner"
+            />
+          )}
 
-              {/* Address field – read-only when pre-filled from scan */}
-              <Input
-                  label="Stellar Address"
-                  placeholder="G..."
-                  value={publicKey}
-                  onChangeText={handleKeyChange}
-                  error={keyError}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={mode !== "confirm-scan"}
-                  accessibilityLabel="Stellar public key address"
+          <View style={styles.actions}>
+            <Button
+              title="Save Contact"
+              onPress={handleSave}
+              isLoading={isSaving}
+              style={styles.actionBtn}
+              accessibilityLabel="Save contact"
+            />
+            <Button
+              title="Cancel"
+              variant="outline"
+              onPress={() => {
+                resetForm();
+                setMode("list");
+              }}
+              style={styles.actionBtn}
+              accessibilityLabel="Cancel"
+            />
+          </View>
+        </View>
+      ) : (
+        <>
+          {/* ── List header: two action buttons ────────────────────────────── */}
+          <View style={styles.headerActions}>
+            <Button
+              title="+ Add Manually"
+              onPress={() => {
+                resetForm();
+                setMode("manual");
+              }}
+              style={styles.headerBtn}
+              accessibilityLabel="Add contact manually"
+            />
+            <Button
+              title="Scan QR"
+              variant="secondary"
+              onPress={() => {
+                resetForm();
+                setMode("scanning");
+              }}
+              style={styles.headerBtn}
+              accessibilityLabel="Scan QR code to add contact"
+            />
+          </View>
+
+          {/* ── Contact list ─────────────────────────────────────────────────── */}
+          <FlatList
+            data={contacts}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={
+              <EmptyState
+                icon={<User color={colors.textMuted} size={48} />}
+                title="No contacts yet"
+                message="Add a contact manually or scan a QR code."
               />
 
               {/* Duplicate address update banner */}
@@ -388,130 +488,130 @@ export default function ContactsScreen() {
 
 // ── Styles ───────────────────────────────────────────────────────────────────
 const createStyles = (colors: ThemeColors) =>
-    StyleSheet.create({
-      container: {
-        flex: 1,
-        backgroundColor: colors.background,
-        padding: SIZES.lg,
-      },
-      // ── Header ──────────────────────────────────────────────────────────────────
-      headerActions: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginBottom: SIZES.lg,
-        gap: SIZES.sm,
-      },
-      headerBtn: {
-        flex: 1,
-      },
-      // ── Add / confirm form ───────────────────────────────────────────────────────
-      addForm: {
-        backgroundColor: colors.surface,
-        padding: SIZES.xl,
-        borderRadius: RADIUS.lg,
-        borderWidth: 1,
-        borderColor: colors.border,
-      },
-      title: {
-        color: colors.textPrimary,
-        fontSize: 20,
-        fontWeight: "bold",
-        marginBottom: SIZES.lg,
-      },
-      warningText: {
-        color: colors.warning,
-        fontSize: 12,
-        marginTop: -SIZES.xs,
-        marginBottom: SIZES.md,
-        marginLeft: SIZES.xs,
-      },
-      scanInsteadBtn: {
-        marginBottom: SIZES.md,
-      },
-      actions: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginTop: SIZES.md,
-        gap: SIZES.sm,
-      },
-      actionBtn: {
-        flex: 1,
-      },
-      // ── Duplicate address banner ────────────────────────────────────────────────
-      duplicateBanner: {
-        backgroundColor: "rgba(255, 196, 0, 0.08)",
-        borderRadius: RADIUS.md,
-        padding: SIZES.md,
-        marginTop: SIZES.sm,
-        marginBottom: SIZES.sm,
-        borderWidth: 1,
-        borderColor: "rgba(255, 196, 0, 0.25)",
-      },
-      duplicateBannerHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: SIZES.sm,
-        marginBottom: SIZES.xs,
-      },
-      duplicateBannerTitle: {
-        color: colors.warning,
-        fontSize: 14,
-        fontWeight: "700",
-      },
-      duplicateBannerText: {
-        color: colors.warning,
-        fontSize: 13,
-        marginBottom: SIZES.xs,
-        lineHeight: 18,
-      },
-      duplicateBannerHint: {
-        color: colors.textMuted,
-        fontSize: 12,
-        marginBottom: SIZES.md,
-        lineHeight: 17,
-      },
-      updateButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "rgba(0, 229, 255, 0.1)",
-        borderRadius: RADIUS.sm,
-        padding: SIZES.sm + 2,
-        gap: SIZES.sm,
-        borderWidth: 1,
-        borderColor: "rgba(0, 229, 255, 0.2)",
-      },
-      updateButtonText: {
-        color: colors.primary,
-        fontSize: 13,
-        fontWeight: "600",
-        flex: 1,
-      },
-      // ── Contact list ─────────────────────────────────────────────────────────────
-      listContent: {
-        paddingBottom: SIZES.xxl,
-      },
-      contactItem: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: colors.surface,
-        padding: SIZES.lg,
-        borderRadius: RADIUS.md,
-        marginBottom: SIZES.sm,
-        borderWidth: 1,
-        borderColor: colors.border,
-      },
-      contactInfo: {
-        flex: 1,
-        marginRight: SIZES.md,
-      },
-      contactName: {
-        color: colors.textPrimary,
-        fontSize: 16,
-        fontWeight: "600",
-        marginBottom: 4,
-      },
-      contactKey: {
-        color: colors.textSecondary,
-        fontSize: 12,
-      },
-    });
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      padding: SIZES.lg,
+    },
+    // ── Header ──────────────────────────────────────────────────────────────────
+    headerActions: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: SIZES.lg,
+      gap: SIZES.sm,
+    },
+    headerBtn: {
+      flex: 1,
+    },
+    // ── Add / confirm form ───────────────────────────────────────────────────────
+    addForm: {
+      backgroundColor: colors.surface,
+      padding: SIZES.xl,
+      borderRadius: RADIUS.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    title: {
+      color: colors.textPrimary,
+      fontSize: 20,
+      fontWeight: "bold",
+      marginBottom: SIZES.lg,
+    },
+    warningText: {
+      color: colors.warning,
+      fontSize: 12,
+      marginTop: -SIZES.xs,
+      marginBottom: SIZES.md,
+      marginLeft: SIZES.xs,
+    },
+    scanInsteadBtn: {
+      marginBottom: SIZES.md,
+    },
+    actions: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: SIZES.md,
+      gap: SIZES.sm,
+    },
+    actionBtn: {
+      flex: 1,
+    },
+    // ── Duplicate address banner ────────────────────────────────────────────────
+    duplicateBanner: {
+      backgroundColor: "rgba(255, 196, 0, 0.08)",
+      borderRadius: RADIUS.md,
+      padding: SIZES.md,
+      marginTop: SIZES.sm,
+      marginBottom: SIZES.sm,
+      borderWidth: 1,
+      borderColor: "rgba(255, 196, 0, 0.25)",
+    },
+    duplicateBannerHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SIZES.sm,
+      marginBottom: SIZES.xs,
+    },
+    duplicateBannerTitle: {
+      color: colors.warning,
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    duplicateBannerText: {
+      color: colors.warning,
+      fontSize: 13,
+      marginBottom: SIZES.xs,
+      lineHeight: 18,
+    },
+    duplicateBannerHint: {
+      color: colors.textMuted,
+      fontSize: 12,
+      marginBottom: SIZES.md,
+      lineHeight: 17,
+    },
+    updateButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "rgba(0, 229, 255, 0.1)",
+      borderRadius: RADIUS.sm,
+      padding: SIZES.sm + 2,
+      gap: SIZES.sm,
+      borderWidth: 1,
+      borderColor: "rgba(0, 229, 255, 0.2)",
+    },
+    updateButtonText: {
+      color: colors.primary,
+      fontSize: 13,
+      fontWeight: "600",
+      flex: 1,
+    },
+    // ── Contact list ─────────────────────────────────────────────────────────────
+    listContent: {
+      paddingBottom: SIZES.xxl,
+    },
+    contactItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      padding: SIZES.lg,
+      borderRadius: RADIUS.md,
+      marginBottom: SIZES.sm,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    contactInfo: {
+      flex: 1,
+      marginRight: SIZES.md,
+    },
+    contactName: {
+      color: colors.textPrimary,
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    contactKey: {
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+  });
