@@ -445,25 +445,25 @@ export default function VaultScreen() {
         visible={showWithdrawalPreview}
         onDismiss={() => setShowWithdrawalPreview(false)}
       />
-    </ScrollView>
 
-    <DepositPreview
-      visible={showDepositPreview}
-      params={{
-        amount: depositForm.amount,
-        asset: 'XLM',
-        walletBalance,
-        vaultContractId: contractId,
-        isConfigured,
-        isSubmitting,
-        error: depositError,
-      }}
-      onConfirm={handleDepositConfirm}
-      onCancel={() => {
-        setShowDepositPreview(false);
-        setDepositError(null);
-      }}
-    />
+      <DepositPreview
+        visible={showDepositPreview}
+        params={{
+          amount: depositForm.amount,
+          asset: 'XLM',
+          walletBalance,
+          vaultContractId: contractId,
+          isConfigured,
+          isSubmitting,
+          error: depositError,
+        }}
+        onConfirm={handleDepositConfirm}
+        onCancel={() => {
+          setShowDepositPreview(false);
+          setDepositError(null);
+        }}
+      />
+    </ScrollView>
   );
 }
 
