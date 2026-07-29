@@ -81,20 +81,36 @@ describe its user impact and link a follow-up issue when one exists.
 
 **Known limitations and follow-up work:**
 
-### Acceptance Criteria
+### Acceptance Criteria Audit
 
 - [ ] I checked every acceptance criterion in the linked issue against the
       implementation and evidence.
 - [ ] Every criterion is satisfied, or an exception has been explicitly agreed
       with a maintainer and documented below.
 
-<!-- Map each acceptance criterion to implementation or verification evidence. -->
+#### How to Complete the Audit Template
+
+- **Acceptance Criterion:** Copy the exact requirement from the issue.
+- **Implementation Evidence:** List the files modified, attach a screenshot, or explain the change.
+- **Test Evidence:** Reference the automated test file, or describe the manual verification step.
+- **Documentation Impact:** List any updated documentation files, or write "None needed" if applicable.
+- **Status:** Must be exactly one of: `Complete`, `Partial`, `Not Applicable`, `Not Implemented`.
+
+#### Handling Incomplete Criteria
+
+When a piece of work cannot be fully completed in the current pull request:
+- Explain why a criterion is incomplete in the *Implementation Evidence* column.
+- Link to follow-up issues if applicable.
+- Clearly distinguish completed work from future work.
+- Avoid marking incomplete work as complete (use `Partial` or `Not Implemented`).
+
+<!-- Map each acceptance criterion to implementation or verification evidence using the audit template below. -->
 
 **Acceptance criteria confirmation:**
 
-| Acceptance criterion | Implementation or evidence | Status |
-| --- | --- | --- |
-| <!-- Criterion --> | <!-- File, test, screenshot, or explanation --> | Pass / Not applicable |
+| Acceptance Criterion | Implementation Evidence | Test Evidence | Documentation Impact | Status |
+| --- | --- | --- | --- | --- |
+| <!-- Criterion --> | <!-- File, screenshot, or explanation --> | <!-- Test file or manual check --> | <!-- Docs changed, or N/A --> | Complete / Partial / Not Applicable / Not Implemented |
 
 ### Final Confirmation
 
