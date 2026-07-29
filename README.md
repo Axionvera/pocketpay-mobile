@@ -24,6 +24,8 @@ React Native Expo wallet for Stellar Testnet. The app aims to feel polished and 
 - [Test-First Contribution Guide](./docs/test-first-contribution-guide.md) - Required test planning, happy-path and negative-path coverage, no-test justification rules, and local verification commands for mobile PRs
 - [Low-Effort Contribution Examples](./docs/low-effort-contribution-examples.md) - Worked examples of superficial changes, partial implementations, missing tests, and failing CI, with why each is insufficient and an improved alternative for each
 - [Contacts Guide](./docs/contacts.md) - Contact storage, backup limitations, and future export/import ideas
+- [Contact Import Design](./docs/contact-import-design.md) - Design for safe contact import, validation, duplicate handling, privacy boundaries
+
 - [Polyfills Guide](./docs/polyfills.md) - React Native polyfills and import order for Stellar SDK
 - [Vault UI Guidance](./docs/vault-ui-guidance.md) - How to present the Soroban Savings Vault, Testnet risks, and contract limitations
 - [Vault Integration Assumptions](./docs/vault-integration-assumptions.md) - Document expected SDK/contract dependencies, placeholder behaviors, and known gaps
