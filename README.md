@@ -22,6 +22,7 @@ React Native Expo wallet for Stellar Testnet. The app aims to feel polished and 
 - [Reviewer Evidence Checklist](./docs/reviewer-evidence-checklist.md) - Maintainer-facing checklist for reviewing whether a PR is complete and evaluation-ready, covering implementation scope, quality, test evidence, CI status, documentation impact, acceptance-criteria verification, and risk
 - [Storage Guide](./docs/storage.md) - SecureStore vs AsyncStorage
 - [Test-First Contribution Guide](./docs/test-first-contribution-guide.md) - Required test planning, happy-path and negative-path coverage, no-test justification rules, and local verification commands for mobile PRs
+- [Low-Effort Contribution Examples](./docs/low-effort-contribution-examples.md) - Worked examples of superficial changes, partial implementations, missing tests, and failing CI, with why each is insufficient and an improved alternative for each
 - [Contacts Guide](./docs/contacts.md) - Contact storage, backup limitations, and future export/import ideas
 - [Polyfills Guide](./docs/polyfills.md) - React Native polyfills and import order for Stellar SDK
 - [Vault UI Guidance](./docs/vault-ui-guidance.md) - How to present the Soroban Savings Vault, Testnet risks, and contract limitations
