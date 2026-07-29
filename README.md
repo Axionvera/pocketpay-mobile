@@ -63,6 +63,7 @@ PocketPay Mobile is part of a broader PocketPay stack:
 - [UI State Catalogue](docs/ui-states.md) and [Accessibility Checklist](docs/accessibility.md) - Governance for major-screen states, shared component contracts, and accessible review evidence
 - [QR Receive Payload Format](docs/qr-payment-requests.md) - The address-only and SEP-0007-based payment-request formats the Receive screen encodes into its QR code
 - [Test Fixture Framework](docs/testing/fixtures.md) - Reusable, typed fixtures for wallet, payment, vault, transaction, error, and diagnostics states, and how to use them in a test
+- [Traceability Table Guide](docs/traceability-table.md) - How to map mobile changes to issue acceptance criteria
 
 ## Screenshots
 

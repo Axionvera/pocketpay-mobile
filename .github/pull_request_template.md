@@ -48,6 +48,8 @@ requesting review. Include concise evidence below; use
 
 ### Acceptance Criteria
 
+<!-- Map your changes to the issue acceptance criteria. See the [Traceability Table Guide](../docs/traceability-table.md) for how to fill this out. -->
+
 | Acceptance criterion | Implementation or evidence | Status |
 | --- | --- | --- |
 | <!-- Criterion --> | <!-- File, test, screenshot, or explanation --> | Pass / Not applicable |
