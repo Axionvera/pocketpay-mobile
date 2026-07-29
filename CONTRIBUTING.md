@@ -225,7 +225,7 @@ We strive to build a wallet that is accessible to everyone. Before submitting a 
    - Reference any related issues using `Closes #<issue-number>`.
    - Describe how you tested the change.
    - Note any accessibility or security considerations.
-   - For GrantFox mobile issues, review the [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) before the payment evaluation period. A merged PR does not guarantee payment approval.
+   - For GrantFox mobile issues, run through the [Issue Approval Readiness Checklist](docs/issue-approval-readiness-checklist.md) before requesting review, then the full [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) before the payment evaluation period. A merged PR does not guarantee payment approval.
 
 8. A maintainer will review your PR. Please respond to feedback and update your branch as needed.
 
