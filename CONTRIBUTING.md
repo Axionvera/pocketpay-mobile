@@ -124,6 +124,10 @@ npm run test:watch
 
 ### UI Testing Expectations
 
+- Before touching a screen, check its row in the
+  [Screen Test Matrix](docs/screen-test-matrix.md) for the test types it's
+  expected to have and its current coverage status. If you add a new screen,
+  add a row for it in the same PR.
 - All new screens and interactive components **must include tests**.
 - Use `@testing-library/react-native` to render components and interact with them via accessible queries (`getByRole`, `getByLabelText`, etc.).
 - Test the key user-facing behaviours: form validation, loading states, error messages, and successful flows.
