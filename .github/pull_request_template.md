@@ -14,7 +14,9 @@ runtime tests are not applicable and list the static review performed.
 
 ## Self-Assessment
 
-Complete the
+Before opening this PR, run through the
+[Self-Review Checklist](https://github.com/Axionvera/pocketpay-mobile/blob/main/docs/self-review-checklist.md).
+Then complete the
 [Contributor Self-Assessment](https://github.com/Axionvera/pocketpay-mobile/blob/main/docs/contributor-self-assessment.md) before
 requesting review. Include concise evidence below; use
 `Not applicable — <reason>` instead of leaving a required area unexplained.

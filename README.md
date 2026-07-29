@@ -13,6 +13,7 @@ React Native Expo wallet for Stellar Testnet. The app aims to feel polished and 
 
 - [Architecture Readiness Review](./docs/architecture-readiness-review.md) - Feature boundaries, duplicated state, SDK integration blockers, security-sensitive areas, and test gaps
 - [Evaluation Readiness Checklist](./docs/evaluation-readiness-checklist.md) - GrantFox contributor checklist for mobile issues, including tests, CI, screenshots, acceptance criteria, and the reminder that merge does not guarantee payment approval
+- [Self-Review Checklist](./docs/self-review-checklist.md) - Quick checklist to run before opening a PR, covering feature completion, tests, CI, screenshots, and device/emulator verification
 - [Contributor Self-Assessment](./docs/contributor-self-assessment.md) - Pre-review form for confirming scope, test evidence, CI, documentation, limitations, and acceptance criteria
 - [Storage Guide](./docs/storage.md) - SecureStore vs AsyncStorage
 - [Test-First Contribution Guide](./docs/test-first-contribution-guide.md) - Required test planning, happy-path and negative-path coverage, no-test justification rules, and local verification commands for mobile PRs
@@ -51,6 +52,7 @@ PocketPay Mobile is part of a broader PocketPay stack:
 - [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
 - [Screen Test Matrix](docs/screen-test-matrix.md) - Which test types and visual verification each screen requires, and current coverage gaps
 - [Mobile Onboarding Checklist](docs/mobile-onboarding-checklist.md) - Quick-reference setup checklist for new contributors
+- [Self-Review Checklist](docs/self-review-checklist.md) - Pre-PR checklist covering feature completion, tests, CI, screenshots, and device/emulator verification
 - [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) - Mobile-issue review checklist for GrantFox contributors before payment evaluation
 - [UI State Catalogue](docs/ui-states.md) and [Accessibility Checklist](docs/accessibility.md) - Governance for major-screen states, shared component contracts, and accessible review evidence
 - [QR Receive Payload Format](docs/qr-payment-requests.md) - The address-only and SEP-0007-based payment-request formats the Receive screen encodes into its QR code
