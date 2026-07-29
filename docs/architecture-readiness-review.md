@@ -250,7 +250,7 @@ This is a reasonable strategy — but the three pieces have drifted apart.
 This is not a cosmetic mismatch — the app depends on the *undeclared* behaviour:
 
 ```ts
-// src/utils/validation.ts:32-36 — relies on the throw, not the boolean
+// src/utils/validation.ts:32-36 — relies on the throw, and not the boolean
 try {
   validatePublicKey(trimmed);
 } catch {

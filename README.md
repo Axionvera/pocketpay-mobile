@@ -12,7 +12,7 @@ React Native Expo wallet for Stellar Testnet. The app aims to feel polished and 
 ## Documentation
 
 - [Architecture Readiness Review](./docs/architecture-readiness-review.md) - Feature boundaries, duplicated state, SDK integration blockers, security-sensitive areas, and test gaps
-- [Evaluation Readiness Checklist](./docs/evaluation-readiness-checklist.md) - GrantFox contributor checklist for contract issues, including tests, CI, issue requirements, edge cases, and the reminder that merge does not guarantee payment approval
+- [Evaluation Readiness Checklist](./docs/evaluation-readiness-checklist.md) - GrantFox contributor checklist for mobile issues, including tests, CI, screenshots, acceptance criteria, and the reminder that merge does not guarantee payment approval
 - [Storage Guide](./docs/storage.md) - SecureStore vs AsyncStorage
 - [Contacts Guide](./docs/contacts.md) - Contact storage, backup limitations, and future export/import ideas
 - [Polyfills Guide](./docs/polyfills.md) - React Native polyfills and import order for Stellar SDK
@@ -48,8 +48,7 @@ PocketPay Mobile is part of a broader PocketPay stack:
 
 - [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
 - [Mobile Onboarding Checklist](docs/mobile-onboarding-checklist.md) - Quick-reference setup checklist for new contributors
-- [CI Troubleshooting Guide](docs/ci-troubleshooting.md) - Local commands and fixes for common TypeScript, lint, test, dependency, and Expo CI failures
-- [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) - Contract-issue review checklist for GrantFox contributors before payment evaluation
+- [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) - Mobile-issue review checklist for GrantFox contributors before payment evaluation
 - [UI State Catalogue](docs/ui-states.md) and [Accessibility Checklist](docs/accessibility.md) - Governance for major-screen states, shared component contracts, and accessible review evidence
 - [QR Receive Payload Format](docs/qr-payment-requests.md) - The address-only and SEP-0007-based payment-request formats the Receive screen encodes into its QR code
 
@@ -79,6 +78,7 @@ PocketPay Mobile is part of a broader PocketPay stack:
 
 React Native, Expo Router, Zustand, PocketPay SDK, SecureStore, AsyncStorage
 
+// To Start
 ## Quick Start
 
 ```bash
