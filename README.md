@@ -11,6 +11,8 @@ React Native Expo wallet for Stellar Testnet. The app aims to feel polished and 
 
 ## Documentation
 
+- [Navigation and Feature Boundary Map](./docs/navigation-map.md) - Canonical route tree, screen ownership, shared state, cross-feature dependencies, and high-risk contributor boundaries
+
 - [Architecture Readiness Review](./docs/architecture-readiness-review.md) - Feature boundaries, duplicated state, SDK integration blockers, security-sensitive areas, and test gaps
 - [Issue Approval Readiness Checklist](./docs/issue-approval-readiness-checklist.md) - Fast pre-approval gate covering implementation completeness, tests, CI status, acceptance criteria, documentation, and known limitations, plus the reminder that a merged PR does not guarantee payment approval
 - [Evaluation Readiness Checklist](./docs/evaluation-readiness-checklist.md) - GrantFox contributor checklist for mobile issues, including tests, CI, screenshots, acceptance criteria, and the reminder that merge does not guarantee payment approval
