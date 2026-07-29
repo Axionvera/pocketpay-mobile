@@ -49,6 +49,7 @@ PocketPay Mobile is part of a broader PocketPay stack:
 ## Documentation
 
 - [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
+- [Screen Test Matrix](docs/screen-test-matrix.md) - Which test types and visual verification each screen requires, and current coverage gaps
 - [Mobile Onboarding Checklist](docs/mobile-onboarding-checklist.md) - Quick-reference setup checklist for new contributors
 - [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) - Mobile-issue review checklist for GrantFox contributors before payment evaluation
 - [UI State Catalogue](docs/ui-states.md) and [Accessibility Checklist](docs/accessibility.md) - Governance for major-screen states, shared component contracts, and accessible review evidence
