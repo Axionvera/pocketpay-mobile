@@ -3,7 +3,7 @@ import { Tabs } from "expo-router";
 import { Home, History, PiggyBank, Settings } from "lucide-react-native";
 import { useTheme } from "../../src/hooks/useTheme";
 import { useNetworkState } from "../../src/hooks/useNetworkState";
-import { NetworkStateBanner } from "../../src/components/NetworkStateBanner";
+import { NetworkStatusBanner } from "../../src/components/NetworkStatusBanner";
 
 export default function TabsLayout() {
   const { colors } = useTheme();
@@ -11,7 +11,7 @@ export default function TabsLayout() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <NetworkStateBanner state={networkState} onRetry={retry} />
+      <NetworkStatusBanner state={networkState} onRetry={retry} />
       <Tabs
         screenOptions={{
           headerStyle: {
@@ -36,14 +36,14 @@ export default function TabsLayout() {
           name="index"
           options={{
             title: "Home",
-            tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => <Home color={color} size={size} />,
           }}
         />
         <Tabs.Screen
           name="history"
           options={{
             title: "Activity",
-            tabBarIcon: ({ color, size }) => (
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => (
               <History color={color} size={size} />
             ),
           }}
@@ -52,7 +52,7 @@ export default function TabsLayout() {
           name="vault"
           options={{
             title: "Vault",
-            tabBarIcon: ({ color, size }) => (
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => (
               <PiggyBank color={color} size={size} />
             ),
           }}
@@ -61,7 +61,7 @@ export default function TabsLayout() {
           name="settings"
           options={{
             title: "Settings",
-            tabBarIcon: ({ color, size }) => (
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => (
               <Settings color={color} size={size} />
             ),
           }}

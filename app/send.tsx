@@ -38,7 +38,7 @@ import {
 } from "lucide-react-native";
 import { ScreenHeader } from "@/components";
 import { useNetworkState } from "../src/hooks/useNetworkState";
-import { NetworkStateBanner } from "../src/components/NetworkStateBanner";
+import { NetworkStatusBanner } from "../src/components/NetworkStatusBanner";
 
 interface FieldErrors {
   destination?: string;
@@ -191,7 +191,7 @@ export default function SendScreen() {
         />
 
         {/* Issue #330: Show unfunded account warning */}
-        <NetworkStateBanner
+        <NetworkStatusBanner
           state={networkState}
           onRetry={() => { refreshWalletData(); retry(); }}
         />
@@ -286,7 +286,15 @@ export default function SendScreen() {
         </View>
 
         <AsyncActionButton
-          title={disableWriteActions ? 'Network Unavailable' : isUnfunded ? 'Funding Required' : 'Send Payment'}
+          title={
+            networkState === 'wrong-network'
+              ? 'Wrong Network'
+              : disableWriteActions
+              ? 'Network Unavailable'
+              : isUnfunded
+              ? 'Funding Required'
+              : 'Send Payment'
+          }
           onPress={handleSend}
           isLoading={isLoading}
           loadingText="Sending…"

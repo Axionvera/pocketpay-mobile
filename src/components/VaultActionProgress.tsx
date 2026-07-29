@@ -32,7 +32,7 @@ const STATE_COLOR_KEY: Record<VaultActionState, keyof ThemeColors> = {
 export const VaultActionProgress: React.FC<VaultActionProgressProps> = ({
   state,
   errorMessage,
-}) => {
+}: VaultActionProgressProps) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -58,7 +58,7 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       paddingHorizontal: SIZES.sm,
       paddingVertical: 6,
-      borderRadius: RADIUS.full,
+      borderRadius: RADIUS.round,
       borderWidth: 1,
       alignSelf: 'flex-start',
       marginBottom: SIZES.sm,

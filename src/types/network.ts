@@ -26,6 +26,7 @@ export type NetworkState =
   | 'degraded'
   | 'service-unavailable'
   | 'offline'
+  | 'wrong-network'
   | 'unknown';
 
 /** User-facing copy for each network state. */
@@ -76,6 +77,15 @@ export function describeNetworkState(state: NetworkState): NetworkStateCopy {
         bannerMessage:
           'You are offline. Check your connection and try again.',
         bannerIcon: 'wifi-off',
+        showBanner: true,
+        disableWriteActions: true,
+        retryLabel: 'Retry',
+      };
+    case 'wrong-network':
+      return {
+        bannerMessage:
+          'Connected to the wrong blockchain network. Please check your settings.',
+        bannerIcon: 'alert-triangle',
         showBanner: true,
         disableWriteActions: true,
         retryLabel: 'Retry',

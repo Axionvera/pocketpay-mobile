@@ -10,12 +10,15 @@ import { validateAmount, validateMemo } from "../src/utils/validation";
 import { buildReceivePayload, isPaymentRequestPayload } from "../src/features/receive";
 import QRCode from "react-native-qrcode-svg";
 import { useCopyToClipboard } from "../src/utils/clipboard";
+import { useNetworkState } from "../src/hooks/useNetworkState";
+import { NetworkStatusBanner } from "../src/components/NetworkStatusBanner";
 
 export default function ReceiveScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { publicKey } = useWalletStore();
+  const { publicKey, error } = useWalletStore();
   const { copy } = useCopyToClipboard();
+  const { state: networkState, retry } = useNetworkState({ error });
 
   const [showRequestFields, setShowRequestFields] = useState(false);
   const [amount, setAmount] = useState("");
@@ -62,6 +65,11 @@ export default function ReceiveScreen() {
       <ScreenHeader
         title="Receive XLM"
         subtitle="Show this QR code to receive payments on the Stellar Testnet."
+      />
+
+      <NetworkStatusBanner
+        state={networkState}
+        onRetry={retry}
       />
 
       <View style={styles.qrContainer}>

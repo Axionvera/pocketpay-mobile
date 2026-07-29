@@ -15,7 +15,7 @@ import { useWalletStore, TransactionRecord } from '../../src/store/walletStore';
 import { RADIUS, SIZES, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
-import { NetworkStateBanner } from '../../src/components/NetworkStateBanner';
+import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
 import { EmptyState } from '../../src/components/EmptyState';
 import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { LoadingState } from '../../src/components/LoadingState';
@@ -40,13 +40,19 @@ type FilterType = (typeof FILTERS)[number]['value'];
  * Footer rendered below the list while loading more items or when the
  * end-of-list has been reached.
  */
-const ListFooter: React.FC<{
+const ListFooter = ({
+  isLoadingMore,
+  hasMoreTransactions,
+  hasTransactions,
+  colors,
+  styles,
+}: {
   isLoadingMore: boolean;
   hasMoreTransactions: boolean;
   hasTransactions: boolean;
   colors: ThemeColors;
   styles: ReturnType<typeof createStyles>;
-}> = ({ isLoadingMore, hasMoreTransactions, hasTransactions, colors, styles }) => {
+}) => {
   if (!hasTransactions) return null;
 
   if (isLoadingMore) {
@@ -74,11 +80,15 @@ const ListFooter: React.FC<{
 /**
  * Shown when there are no transactions and the screen is not loading.
  */
-const ActivityEmptyState: React.FC<{
+const ActivityEmptyState = ({
+  colors,
+  styles,
+  onReceivePress,
+}: {
   colors: ThemeColors;
   styles: ReturnType<typeof createStyles>;
   onReceivePress: () => void;
-}> = ({ colors, styles, onReceivePress }) => (
+}) => (
   <View style={styles.emptyState} testID="empty-state">
     <EmptyState
       icon={<Clock color={colors.textMuted} size={48} />}
@@ -135,7 +145,7 @@ export default function HistoryScreen() {
   }
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(tx => {
+    return transactions.filter((tx: TransactionRecord) => {
       if (filter === 'all') return true;
       
       const isSent = tx.from === publicKey;
@@ -165,7 +175,7 @@ export default function HistoryScreen() {
         transaction={item}
         currentPublicKey={publicKey}
         variant="card"
-        onPress={(tx) => router.push(`/transaction/${tx.id}`)}
+        onPress={(tx: TransactionRecord) => router.push(`/transaction/${tx.id}`)}
       />
     ),
     [publicKey, router]
@@ -233,7 +243,7 @@ export default function HistoryScreen() {
         onEndReachedThreshold={0.2}
         ListHeaderComponent={
           <>
-            <NetworkStateBanner
+            <NetworkStatusBanner
               state={networkState}
               onRetry={() => { refreshWalletData(); retry(); }}
               isRetrying={isLoading}
@@ -347,7 +357,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   filterChip: {
     paddingHorizontal: SIZES.md,
     paddingVertical: SIZES.sm,
-    borderRadius: RADIUS.full,
+    borderRadius: RADIUS.round,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,

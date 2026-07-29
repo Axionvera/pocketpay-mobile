@@ -36,8 +36,15 @@ describe('describeNetworkState', () => {
     expect(result.disableWriteActions).toBe(false);
   });
 
+  it('returns banner and disables write-actions for wrong-network', () => {
+    const result = describeNetworkState('wrong-network');
+    expect(result.showBanner).toBe(true);
+    expect(result.disableWriteActions).toBe(true);
+    expect(result.bannerMessage).toContain('wrong blockchain network');
+  });
+
   it('covers all network states without crashing', () => {
-    const states: NetworkState[] = ['online', 'degraded', 'service-unavailable', 'offline', 'unknown'];
+    const states: NetworkState[] = ['online', 'degraded', 'service-unavailable', 'offline', 'wrong-network', 'unknown'];
     states.forEach((state) => {
       const result = describeNetworkState(state);
       expect(result).toHaveProperty('showBanner');

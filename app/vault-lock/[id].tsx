@@ -104,7 +104,7 @@ export default function VaultLockDetailScreen() {
 
         <Button
           title={isEligibleForWithdrawal ? "Withdraw Funds" : "Early Withdrawal Unavailable"}
-          onPress={() => alert('Withdrawal not implemented for mock data.')}
+          onPress={() => Alert.alert('Withdrawal not implemented for mock data.')}
           disabled={!isEligibleForWithdrawal}
           style={styles.withdrawButton}
         />
@@ -144,7 +144,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   statusBadge: {
     paddingHorizontal: SIZES.md,
     paddingVertical: 4,
-    borderRadius: RADIUS.full,
+    borderRadius: RADIUS.round,
   },
   statusLocked: {
     backgroundColor: 'rgba(255, 196, 0, 0.1)',
