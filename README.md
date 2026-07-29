@@ -12,9 +12,12 @@ React Native Expo wallet for Stellar Testnet. The app aims to feel polished and 
 ## Documentation
 
 - [Architecture Readiness Review](./docs/architecture-readiness-review.md) - Feature boundaries, duplicated state, SDK integration blockers, security-sensitive areas, and test gaps
+- [Issue Approval Readiness Checklist](./docs/issue-approval-readiness-checklist.md) - Fast pre-approval gate covering implementation completeness, tests, CI status, acceptance criteria, documentation, and known limitations, plus the reminder that a merged PR does not guarantee payment approval
 - [Evaluation Readiness Checklist](./docs/evaluation-readiness-checklist.md) - GrantFox contributor checklist for mobile issues, including tests, CI, screenshots, acceptance criteria, and the reminder that merge does not guarantee payment approval
+- [Payment-Period Communication Policy](./docs/payment-period-communication-policy.md) - How contributors should communicate during the payment evaluation period: no spam or pressure, self-review before raising payment concerns, and follow the GrantFox evaluation process
 - [Self-Review Checklist](./docs/self-review-checklist.md) - Quick checklist to run before opening a PR, covering feature completion, tests, CI, screenshots, and device/emulator verification
 - [Contributor Self-Assessment](./docs/contributor-self-assessment.md) - Pre-review form for confirming scope, test evidence, CI, documentation, limitations, and acceptance criteria
+- [Reviewer Evidence Checklist](./docs/reviewer-evidence-checklist.md) - Maintainer-facing checklist for reviewing whether a PR is complete and evaluation-ready, covering implementation scope, quality, test evidence, CI status, documentation impact, acceptance-criteria verification, and risk
 - [Storage Guide](./docs/storage.md) - SecureStore vs AsyncStorage
 - [Test-First Contribution Guide](./docs/test-first-contribution-guide.md) - Required test planning, happy-path and negative-path coverage, no-test justification rules, and local verification commands for mobile PRs
 - [Contacts Guide](./docs/contacts.md) - Contact storage, backup limitations, and future export/import ideas
@@ -50,6 +53,7 @@ PocketPay Mobile is part of a broader PocketPay stack:
 ## Documentation
 
 - [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
+- [Screen Test Matrix](docs/screen-test-matrix.md) - Which test types and visual verification each screen requires, and current coverage gaps
 - [Mobile Onboarding Checklist](docs/mobile-onboarding-checklist.md) - Quick-reference setup checklist for new contributors
 - [Self-Review Checklist](docs/self-review-checklist.md) - Pre-PR checklist covering feature completion, tests, CI, screenshots, and device/emulator verification
 - [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) - Mobile-issue review checklist for GrantFox contributors before payment evaluation
@@ -90,3 +94,7 @@ React Native, Expo Router, Zustand, PocketPay SDK, SecureStore, AsyncStorage
 npm install --legacy-peer-deps
 cp .env.example .env
 npm start
+
+## Continuous Integration (CI) Standards
+All contributions are required to pass automated CI pipelines prior to review and merge. 
+Please review the [CI Pass Requirements Guidance](docs/CI_REQUIREMENTS.md) for local reproduction commands and guidelines on resolving failing checks.

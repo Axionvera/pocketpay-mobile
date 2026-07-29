@@ -125,6 +125,10 @@ npm run test:watch
 
 ### UI Testing Expectations
 
+- Before touching a screen, check its row in the
+  [Screen Test Matrix](docs/screen-test-matrix.md) for the test types it's
+  expected to have and its current coverage status. If you add a new screen,
+  add a row for it in the same PR.
 - All new screens and interactive components **must include tests**.
 - Use `@testing-library/react-native` to render components and interact with them via accessible queries (`getByRole`, `getByLabelText`, etc.).
 - Test the key user-facing behaviours: form validation, loading states, error messages, and successful flows.
@@ -221,7 +225,7 @@ We strive to build a wallet that is accessible to everyone. Before submitting a 
    - Reference any related issues using `Closes #<issue-number>`.
    - Describe how you tested the change.
    - Note any accessibility or security considerations.
-   - For GrantFox mobile issues, review the [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) before the payment evaluation period. A merged PR does not guarantee payment approval.
+   - For GrantFox mobile issues, run through the [Issue Approval Readiness Checklist](docs/issue-approval-readiness-checklist.md) before requesting review, then the full [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) before the payment evaluation period. A merged PR does not guarantee payment approval.
 
 8. A maintainer will review your PR. Please respond to feedback and update your branch as needed.
 
@@ -249,6 +253,25 @@ needed.
 ## Code of Conduct
 
 Be respectful and constructive in all interactions. We follow the [Contributor Covenant](https://www.contributor-covenant.org/) code of conduct. Harassment, discrimination, or hostile behaviour will not be tolerated.
+
+### Payment-Period Communication
+
+Merging a pull request does **not** trigger or guarantee payment — approval is
+decided by the GrantFox evaluation process. During the payment evaluation period,
+contributors are expected to communicate professionally and to:
+
+- **Avoid spam and pressure.** Do not post repeated or duplicate payment-status
+  messages, tag maintainers to demand faster responses, or direct complaints at
+  reviewers because a merge did not result in immediate payment.
+- **Self-review first.** Before raising any payment concern, confirm your work
+  against the [Self-Review Checklist](docs/self-review-checklist.md), the
+  [Contributor Self-Assessment](docs/contributor-self-assessment.md), and the
+  [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md).
+- **Raise genuine concerns once.** If a specific, evidenced concern remains,
+  post it a single time in the relevant thread and wait for a response.
+
+See the full [Payment-Period Communication Policy](docs/payment-period-communication-policy.md)
+for the complete expectations.
 
 ---
 
