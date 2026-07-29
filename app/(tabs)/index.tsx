@@ -11,6 +11,9 @@ import { NetworkStateBanner } from '../../src/components/NetworkStateBanner';
 import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { BalanceDisplay } from '../../src/components/BalanceDisplay';
 import { FundingStatusBanner } from '../../src/components/FundingStatusBanner';
+import { LoadingState } from '../../src/components/LoadingState';
+import { EmptyState } from '../../src/components/EmptyState';
+import { ErrorState } from '../../src/components/ErrorState';
 import { useNetworkState } from '../../src/hooks/useNetworkState';
 import { Clock } from 'lucide-react-native';
 import { BackupReminderModal } from '../../src/components/BackupReminderModal';
@@ -127,11 +130,27 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.transactionsList}>
-          {recentTransactions.length === 0 && !isLoading && (
-            <View style={styles.emptyState}>
-              <Clock color={colors.textMuted} size={48} style={{ marginBottom: SIZES.md }} />
-              <Text style={styles.emptyText}>No recent transactions</Text>
-            </View>
+          {recentTransactions.length === 0 && isLoading && (
+            <LoadingState
+              message="Loading transactions…"
+              testID="recent-activity-loading"
+            />
+          )}
+          {recentTransactions.length === 0 && !isLoading && error && (
+            <ErrorState
+              icon={<Clock color={colors.error} size={48} />}
+              title="Could not load transactions"
+              message="Pull down to try again."
+              testID="recent-activity-error"
+            />
+          )}
+          {recentTransactions.length === 0 && !isLoading && !error && (
+            <EmptyState
+              icon={<Clock color={colors.textMuted} size={48} />}
+              title="No recent transactions"
+              message="Your payments will appear here once you send or receive XLM."
+              testID="recent-activity-empty"
+            />
           )}
           {recentTransactions.map((tx, index) => (
             <TransactionListItem
@@ -188,13 +207,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderRadius: RADIUS.lg,
     padding: SIZES.md,
     marginBottom: SIZES.xxl,
-  },
-  emptyState: {
-    padding: SIZES.xl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: 14,
   },
 });
