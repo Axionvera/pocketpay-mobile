@@ -15,6 +15,7 @@ Thank you for your interest in contributing to PocketPay Mobile! We welcome pull
 - [Accessibility](#accessibility)
 - [Security](#security)
 - [Submitting a Pull Request](#submitting-a-pull-request)
+- [Contributor Self-Assessment](#contributor-self-assessment)
 - [Code of Conduct](#code-of-conduct)
 
 ---
@@ -124,11 +125,28 @@ npm run test:watch
 
 ### UI Testing Expectations
 
+- Before touching a screen, check its row in the
+  [Screen Test Matrix](docs/screen-test-matrix.md) for the test types it's
+  expected to have and its current coverage status. If you add a new screen,
+  add a row for it in the same PR.
 - All new screens and interactive components **must include tests**.
 - Use `@testing-library/react-native` to render components and interact with them via accessible queries (`getByRole`, `getByLabelText`, etc.).
 - Test the key user-facing behaviours: form validation, loading states, error messages, and successful flows.
 - Mock external dependencies (Stellar SDK, SecureStore, AsyncStorage) — see the existing mocks in `__mocks__/` and `src/services/__mocks__/` for patterns to follow.
 - Tests should pass before you open a PR. CI will run the suite automatically on every push.
+
+### SDK API Compatibility
+
+If your change touches `src/types/pocketpay-sdk.d.ts` or `src/sdk-stub/`, run:
+
+```bash
+npm run api:check
+```
+
+This detects accidental changes to the `pocketpay-sdk` public contract. If the
+change is intentional, run `npm run api:update`, commit the regenerated
+`api-reports/pocketpay-sdk.api.md`, and note the change in `CHANGELOG.md`. See
+[docs/sdk-api-compatibility.md](docs/sdk-api-compatibility.md) for details.
 
 ---
 
@@ -140,6 +158,7 @@ Before adding new screens or components, read the [Design System Guide](docs/des
 - The app uses a **dark-only palette** — there is no light mode.
 - Use `COLORS.primary` (`#00E5FF`) for the primary action on a screen and `COLORS.secondary` (`#7B61FF`) for a competing secondary action.
 - Follow the card, button, and input patterns documented in the design system.
+- Review every changed screen and reusable component against the [UI State Catalogue](docs/ui-states.md), including loading, empty, error, success, disabled, and pending behavior.
 
 ---
 
@@ -159,6 +178,7 @@ We strive to build a wallet that is accessible to everyone. Before submitting a 
 - **Never commit secret keys, `.env` files, or credentials** to version control.
 - All key storage must go through `expo-secure-store` as documented in the [Storage Guide](docs/storage.md).
 - Read the full [Security Guide](docs/security.md) before touching key management, storage, or any authentication flow.
+- Unexpected crashes are handled by the root ErrorBoundary and redacted reporting funnel — see [Global Error Handling](docs/error-handling.md).
 - If you discover a security vulnerability, please report it privately rather than opening a public issue.
 
 ---
@@ -181,6 +201,11 @@ We strive to build a wallet that is accessible to everyone. Before submitting a 
    npm test
    ```
 
+   Also run `npm run typecheck` and `npm run lint` — all three, plus your
+   tests, are expected to pass before you open a PR. If any of them fail and
+   you're not sure why, see the
+   [CI Troubleshooting Guide](docs/ci-troubleshooting.md).
+
 4. **Commit** with a clear, descriptive message:
 
    ```bash
@@ -193,13 +218,35 @@ We strive to build a wallet that is accessible to everyone. Before submitting a 
    git push -u origin feat/your-feature-name
    ```
 
-6. In the PR description:
+6. Before opening the PR, run through the [Self-Review Checklist](docs/self-review-checklist.md) — feature completion, tests, CI, screenshots, and device/emulator verification.
+
+7. In the PR description:
    - Summarise what changed and why.
    - Reference any related issues using `Closes #<issue-number>`.
    - Describe how you tested the change.
    - Note any accessibility or security considerations.
+   - For GrantFox mobile issues, run through the [Issue Approval Readiness Checklist](docs/issue-approval-readiness-checklist.md) before requesting review, then the full [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) before the payment evaluation period. A merged PR does not guarantee payment approval.
 
-7. A maintainer will review your PR. Please respond to feedback and update your branch as needed.
+8. A maintainer will review your PR. Please respond to feedback and update your branch as needed.
+
+---
+
+## Contributor Self-Assessment
+
+Before requesting review, complete the
+[Contributor Self-Assessment Form](docs/contributor-self-assessment.md). The
+form asks you to confirm the issue scope, provide test evidence and CI status,
+review documentation, disclose known limitations, and map every acceptance
+criterion to evidence.
+
+Update the assessment after substantial changes to the pull request. Check an
+item only after verifying it; if an item does not apply, write
+`Not applicable — <reason>`. An incomplete assessment means the pull request is
+not ready for review or payment evaluation.
+
+The pull request template contains a concise version of the assessment. The
+standalone form provides the full prompts and should be used when more detail is
+needed.
 
 ---
 

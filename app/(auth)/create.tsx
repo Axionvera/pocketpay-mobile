@@ -1,29 +1,46 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button } from '../../src/components/Button';
+import { AsyncActionButton } from '../../src/components/AsyncActionButton';
+import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { generateKeypair } from '../../src/services/stellar';
 import { useWalletStore } from '../../src/store/walletStore';
+import { WALLET_SAVE_FAILURE_MESSAGE } from '../../src/utils/walletStorageErrors';
 import { AlertTriangle, Info, Shield, CheckCircle } from 'lucide-react-native';
 import { SecretKeyReveal } from '../../src/components/SecretKeyReveal';
+import type { OnboardingError, StorageError } from '../../src/types/onboarding';
+import {
+  classifyOnboardingError,
+  mapWalletErrorToStorageError,
+} from '../../src/types/onboarding';
 
 export default function CreateWalletScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { setWallet } = useWalletStore();
+  const { setWallet, markBackupPending } = useWalletStore();
   const [keypair, setKeypair] = useState<{ publicKey: string; secretKey: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+
+  // Recovery states
+  const [onboardingError, setOnboardingError] = useState<OnboardingError | null>(null);
+  const [storageError, setStorageError] = useState<StorageError | null>(null);
+
+  const resetErrors = () => {
+    setOnboardingError(null);
+    setStorageError(null);
+  };
 
   const handleGenerate = () => {
+    resetErrors();
     try {
       const keys = generateKeypair();
       setKeypair(keys);
     } catch (error: any) {
-      Alert.alert('Error', `Failed to generate keypair: ${error?.message || error}`);
+      const errorMsg = error?.message || String(error);
+      setOnboardingError(classifyOnboardingError(errorMsg));
     }
   };
 
@@ -39,23 +56,67 @@ export default function CreateWalletScreen() {
         {
           text: 'Yes, I Saved It',
           onPress: async () => {
+            resetErrors();
             setIsLoading(true);
             const saved = await setWallet(keypair.publicKey, keypair.secretKey);
             setIsLoading(false);
             if (!saved) {
-              Alert.alert('Wallet Not Saved', 'Failed to persist wallet securely. Please try again.');
+              // Classify the storage error
+              setStorageError(mapWalletErrorToStorageError(WALLET_SAVE_FAILURE_MESSAGE));
               return;
             }
-            setIsSuccess(true);
+            await markBackupPending();
+            router.replace('/(auth)/wallet-creation-success');
           }
         }
       ]
     );
   };
 
-  const handleGoToWallet = () => {
-    router.replace('/(tabs)');
+
+  const handleRetry = () => {
+    resetErrors();
+    if (keypair) {
+      // If we have a keypair, retry the save
+      handleContinue();
+    } else {
+      // Otherwise, retry keypair generation
+      handleGenerate();
+    }
   };
+
+  const handleStartOver = () => {
+    resetErrors();
+    setKeypair(null);
+  };
+
+  // ── Storage Error State ────────────────────────────────────
+  if (storageError) {
+    return (
+      <View style={styles.container}>
+        <WalletEmptyState
+          variant="storage_error"
+          storageError={storageError}
+          onRetry={handleRetry}
+          onStartOver={handleStartOver}
+        />
+      </View>
+    );
+  }
+
+  // ── Onboarding Error State ─────────────────────────────────
+  if (onboardingError) {
+    return (
+      <View style={styles.container}>
+        <WalletEmptyState
+          variant="failed_creation"
+          onboardingError={onboardingError}
+          onRetry={handleRetry}
+          onStartOver={handleStartOver}
+        />
+      </View>
+    );
+  }
 
   // ── Success State ──────────────────────────────────────────
   if (isSuccess) {
@@ -70,7 +131,7 @@ export default function CreateWalletScreen() {
             Your Testnet wallet is ready. Fund it with the Friendbot on the home screen to start sending test XLM.
           </Text>
         </View>
-        <Button title="Go to Wallet" onPress={handleGoToWallet} />
+        <AsyncActionButton title="Go to Wallet" onPress={handleGoToWallet} />
       </View>
     );
   }
@@ -92,7 +153,7 @@ export default function CreateWalletScreen() {
             A new keypair will be generated on your device. Your secret key stays private and never leaves this phone.
           </Text>
         </View>
-        <Button title="Generate Keypair" onPress={handleGenerate} />
+        <AsyncActionButton title="Generate Keypair" onPress={handleGenerate} />
       </View>
     );
   }
@@ -127,7 +188,7 @@ export default function CreateWalletScreen() {
         </Text>
       </View>
 
-      <Button
+      <AsyncActionButton
         title="I've Saved It — Continue"
         onPress={handleContinue}
         isLoading={isLoading}

@@ -1,13 +1,21 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button } from '../../src/components/Button';
+import { StrKey } from '@stellar/stellar-sdk';
+import { AsyncActionButton } from '../../src/components/AsyncActionButton';
 import { FormField } from '../../src/components/FormField';
+import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
+import { WALLET_SAVE_FAILURE_MESSAGE } from '../../src/utils/walletStorageErrors';
 import { importWallet } from 'pocketpay-sdk';
 import { Info, Shield, CheckCircle } from 'lucide-react-native';
+import type { OnboardingError, StorageError } from '../../src/types/onboarding';
+import {
+  classifyOnboardingError,
+  mapWalletErrorToStorageError,
+} from '../../src/types/onboarding';
 
 const SECRET_KEY_LENGTH = 56;
 
@@ -17,52 +25,127 @@ export default function ImportWalletScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { setWallet } = useWalletStore();
   const [secretKey, setSecretKey] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleImport = async () => {
-    setError('');
+  // Recovery states
+  const [onboardingError, setOnboardingError] = useState<OnboardingError | null>(null);
+  const [storageError, setStorageError] = useState<StorageError | null>(null);
 
-    const trimmedKey = secretKey.trim();
+  const resetErrors = () => {
+    setOnboardingError(null);
+    setStorageError(null);
+  };
 
+  /**
+   * Validate the trimmed secret key and return a user-friendly error,
+   * or null if it passes all checks.
+   */
+  function validateSecretKey(trimmedKey: string): string | null {
     if (!trimmedKey) {
-      setError('Please enter your secret key.');
-      return;
+      return 'Please enter your secret key.';
     }
 
     if (!trimmedKey.startsWith('S')) {
-      setError('Secret keys start with "S". Please check and try again.');
-      return;
+      return 'Stellar secret keys start with "S". Check your key and try again.';
     }
 
-    if (trimmedKey.length !== SECRET_KEY_LENGTH) {
-      setError(`Secret keys are ${SECRET_KEY_LENGTH} characters. Yours is ${trimmedKey.length}.`);
+    if (trimmedKey.length < SECRET_KEY_LENGTH) {
+      return `Your secret key is too short. Stellar secret keys are exactly ${SECRET_KEY_LENGTH} characters.`;
+    }
+
+    if (trimmedKey.length > SECRET_KEY_LENGTH) {
+      return `Your secret key is too long. Stellar secret keys are exactly ${SECRET_KEY_LENGTH} characters.`;
+    }
+
+    // Quick invalid-character check so users see a specific message before
+    // the SDK's generic checksum error.
+    const base32Regex = /^[A-Z2-7]+$/;
+    if (!base32Regex.test(trimmedKey)) {
+      return 'Secret key contains invalid characters. Only uppercase letters A-Z and digits 2-7 are allowed.';
+    }
+
+    // Use the Stellar SDK's built-in validation which verifies the base32
+    // encoding, version byte, and CRC16 checksum.
+    if (!StrKey.isValidEd25519SecretSeed(trimmedKey)) {
+      return "This doesn't look like a valid Stellar secret key. Double-check that you've copied the complete key correctly.";
+    }
+
+    return null;
+  }
+
+  const handleImport = async () => {
+    setError('');
+    resetErrors();
+
+    const trimmedKey = secretKey.trim();
+
+    // Client-side validation first
+    const validationError = validateSecretKey(trimmedKey);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
     try {
-      setIsLoading(true);
       const { publicKey } = await importWallet(trimmedKey);
 
       const saved = await setWallet(publicKey, trimmedKey);
       if (!saved) {
-        setError('Failed to persist wallet. Please try again.');
-        setIsLoading(false);
+        // Classify the storage error
+        setStorageError(mapWalletErrorToStorageError(WALLET_SAVE_FAILURE_MESSAGE));
         return;
       }
 
-      setIsLoading(false);
       setIsSuccess(true);
-    } catch {
-      setError('Invalid secret key. It may be malformed or from the wrong network.');
-      setIsLoading(false);
+    } catch (err: any) {
+      const errorMsg = err?.message || String(err);
+      setOnboardingError(classifyOnboardingError(errorMsg));
     }
   };
 
   const handleGoToWallet = () => {
     router.replace('/(tabs)');
   };
+
+  const handleRetry = () => {
+    resetErrors();
+    setError('');
+  };
+
+  const handleStartOver = () => {
+    resetErrors();
+    setError('');
+    setSecretKey('');
+  };
+
+  // ── Storage Error State ────────────────────────────────────
+  if (storageError) {
+    return (
+      <View style={styles.container}>
+        <WalletEmptyState
+          variant="storage_error"
+          storageError={storageError}
+          onRetry={handleRetry}
+          onStartOver={handleStartOver}
+        />
+      </View>
+    );
+  }
+
+  // ── Onboarding Error State ─────────────────────────────────
+  if (onboardingError) {
+    return (
+      <View style={styles.container}>
+        <WalletEmptyState
+          variant="failed_import"
+          onboardingError={onboardingError}
+          onRetry={handleRetry}
+          onCreate={handleStartOver}
+        />
+      </View>
+    );
+  }
 
   // ── Success State ──────────────────────────────────────────
   if (isSuccess) {
@@ -77,7 +160,7 @@ export default function ImportWalletScreen() {
             Your Testnet wallet has been restored. You can now send and receive test XLM.
           </Text>
         </View>
-        <Button title="Go to Wallet" onPress={handleGoToWallet} />
+        <AsyncActionButton title="Go to Wallet" onPress={handleGoToWallet} />
       </View>
     );
   }
@@ -126,10 +209,10 @@ export default function ImportWalletScreen() {
         />
       </View>
 
-      <Button
+      <AsyncActionButton
         title="Import Wallet"
         onPress={handleImport}
-        isLoading={isLoading}
+        loadingText="Importing…"
       />
     </KeyboardAvoidingView>
   );

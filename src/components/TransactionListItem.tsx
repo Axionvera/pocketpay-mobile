@@ -4,6 +4,19 @@ import { ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
 import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { TransactionRecord } from '../store/walletStore';
+import { useAppStore } from '../store/appStore';
+import { resolveAddressLabel } from '../utils/contacts';
+import { formatAmount } from '../utils/amount';
+import { StatusBadge, BadgeTone } from './StatusBadge';
+
+// Historical Horizon records have no `status` field and are implicitly
+// confirmed, so they render with no badge. An unrecognized/malformed value
+// also falls back to no badge rather than guessing a status.
+const STATUS_BADGE: Record<string, { text: string; tone: BadgeTone }> = {
+  pending: { text: 'Pending', tone: 'info' },
+  confirmed: { text: 'Confirmed', tone: 'success' },
+  failed: { text: 'Failed', tone: 'error' },
+};
 
 export interface TransactionListItemProps extends Omit<TouchableOpacityProps, 'onPress'> {
   /** The transaction data to display. */
@@ -37,16 +50,15 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const contacts = useAppStore((state) => state.contacts);
 
   const tx = transaction as any;
   const isSent = !!currentPublicKey && tx.from === currentPublicKey;
 
-  const direction = isSent ? 'sent' : 'received';
-
   const label = isSent ? 'Sent XLM' : 'Received XLM';
 
   const formattedAmount = tx.amount
-    ? `${isSent ? '-' : '+'}${tx.amount}`
+    ? `${isSent ? '-' : '+'}${formatAmount(tx.amount)}`
     : null;
 
   const formattedDate = tx.created_at
@@ -54,9 +66,15 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
     : null;
 
   // Counterparty: for sent txs show the recipient, for received show the sender
-  const counterparty = isSent
+  const counterpartyAddress = isSent
     ? tx.to || null
     : tx.from || null;
+
+  const counterpartyLabel = counterpartyAddress
+    ? resolveAddressLabel(counterpartyAddress, contacts)
+    : null;
+
+  const statusBadge = tx.status ? STATUS_BADGE[tx.status] : undefined;
 
   const Container = onPress ? TouchableOpacity : View;
   const containerProps = onPress
@@ -92,9 +110,9 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
           {label}
         </Text>
 
-        {counterparty ? (
+        {counterpartyLabel ? (
           <Text style={styles.counterparty} numberOfLines={1} ellipsizeMode="middle">
-            {counterparty}
+            {counterpartyLabel.label}
           </Text>
         ) : null}
 
@@ -122,6 +140,12 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({
           <Text style={styles.assetType}>
             {tx.asset}
           </Text>
+        ) : null}
+
+        {statusBadge ? (
+          <View style={styles.statusBadgeWrapper}>
+            <StatusBadge text={statusBadge.text} tone={statusBadge.tone} />
+          </View>
         ) : null}
       </View>
     </Container>
@@ -195,5 +219,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.textMuted,
     fontSize: 11,
     marginTop: 2,
+  },
+  statusBadgeWrapper: {
+    marginTop: 4,
   },
 });

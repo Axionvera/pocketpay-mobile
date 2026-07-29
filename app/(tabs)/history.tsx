@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -6,16 +6,33 @@ import {
   StyleSheet,
   Text,
   View,
+  ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { Clock } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useWalletStore, TransactionRecord } from '../../src/store/walletStore';
-import { SIZES, ThemeColors } from '../../src/constants/theme';
+import { RADIUS, SIZES, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
-import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
-import { useNetworkStatus } from '../../src/hooks/useNetworkStatus';
+import { NetworkStateBanner } from '../../src/components/NetworkStateBanner';
+import { EmptyState } from '../../src/components/EmptyState';
+import { WalletEmptyState } from '../../src/components/WalletEmptyState';
+import { LoadingState } from '../../src/components/LoadingState';
+import { useNetworkState } from '../../src/hooks/useNetworkState';
 import { groupTransactionsByDate } from '../../src/utils/transactions';
+import { PendingTransactionQueue } from '../../src/components/PendingTransactionQueue';
+
+const FILTERS = [
+  { label: 'All', value: 'all' },
+  { label: 'Sent', value: 'sent' },
+  { label: 'Received', value: 'received' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Failed', value: 'failed' },
+  { label: 'Vault', value: 'vault' },
+] as const;
+
+type FilterType = (typeof FILTERS)[number]['value'];
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -34,10 +51,12 @@ const ListFooter: React.FC<{
 
   if (isLoadingMore) {
     return (
-      <View style={styles.footer} testID="loading-more-indicator">
-        <ActivityIndicator color={colors.primary} size="small" />
-        <Text style={styles.footerText}>Loading older transactions…</Text>
-      </View>
+      <LoadingState
+        inline
+        message="Loading older transactions…"
+        style={styles.footerLoading}
+        testID="loading-more-indicator"
+      />
     );
   }
 
@@ -55,11 +74,22 @@ const ListFooter: React.FC<{
 /**
  * Shown when there are no transactions and the screen is not loading.
  */
-const EmptyState: React.FC<{ colors: ThemeColors; styles: ReturnType<typeof createStyles> }> = ({ colors, styles }) => (
+const ActivityEmptyState: React.FC<{
+  colors: ThemeColors;
+  styles: ReturnType<typeof createStyles>;
+  onReceivePress: () => void;
+}> = ({ colors, styles, onReceivePress }) => (
   <View style={styles.emptyState} testID="empty-state">
-    <Clock color={colors.textMuted} size={48} style={{ marginBottom: SIZES.md }} />
-    <Text style={styles.emptyText}>No transactions found</Text>
-    <Text style={styles.emptySubtext}>Your recent activity will appear here.</Text>
+    <EmptyState
+      icon={<Clock color={colors.textMuted} size={48} />}
+      title="No activity yet"
+      message="Your payments and transfers will appear here once you send or receive XLM."
+      action={{
+        label: 'Receive XLM',
+        onPress: onReceivePress,
+        variant: 'outline',
+      }}
+    />
   </View>
 );
 
@@ -78,19 +108,55 @@ export default function HistoryScreen() {
     loadMoreTransactions,
   } = useWalletStore();
 
-  const { networkErrorType, message } = useNetworkStatus(error);
+  const { state: networkState, retry } = useNetworkState({ error });
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Load the first page on mount.
   useEffect(() => {
-    refreshWalletData();
+    if (publicKey) {
+      refreshWalletData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [publicKey]);
+
+  const [filter, setFilter] = useState<FilterType>('all');
+
+  if (!publicKey) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <WalletEmptyState
+          variant="missing"
+          onCreate={() => router.replace('/(auth)/create')}
+          onImport={() => router.replace('/(auth)/import')}
+        />
+      </View>
+    );
+  }
+
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(tx => {
+      if (filter === 'all') return true;
+      
+      const isSent = tx.from === publicKey;
+      const isReceived = tx.to === publicKey || tx.into === publicKey;
+      const isFailed = tx.transaction_successful === false;
+      const isPending = tx.is_pending === true || tx.status === 'pending';
+      const isVault = tx.type === 'invoke_host_function' || tx.is_vault === true;
+
+      if (filter === 'sent') return isSent && !isVault;
+      if (filter === 'received') return isReceived && !isVault;
+      if (filter === 'failed') return isFailed;
+      if (filter === 'pending') return isPending;
+      if (filter === 'vault') return isVault;
+
+      return true;
+    });
+  }, [transactions, filter, publicKey]);
 
   const groupedTransactions = useMemo(
-    () => groupTransactionsByDate(transactions),
-    [transactions]
+    () => groupTransactionsByDate(filteredTransactions),
+    [filteredTransactions]
   );
 
   const renderItem = useCallback(
@@ -150,6 +216,10 @@ export default function HistoryScreen() {
           styles.listContent,
           transactions.length === 0 && styles.listContentEmpty,
         ]}
+        // This manual refresh is what reconciles optimistic pending transactions
+        // against Horizon (see walletStore.refreshWalletData). A future polling
+        // hook could trigger it automatically on an interval, shaped like
+        // useOnlineStatus.ts (setInterval + AppState foreground listener).
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
@@ -162,15 +232,50 @@ export default function HistoryScreen() {
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.2}
         ListHeaderComponent={
-          <NetworkStatusBanner
-            networkErrorType={networkErrorType}
-            message={message}
-            onRetry={refreshWalletData}
-            isRetrying={isLoading}
-          />
+          <>
+            <NetworkStateBanner
+              state={networkState}
+              onRetry={() => { refreshWalletData(); retry(); }}
+              isRetrying={isLoading}
+            />
+            <View style={styles.filterContainer}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={styles.filterScroll}
+              >
+                {FILTERS.map((f) => {
+                  const isActive = filter === f.value;
+                  return (
+                    <TouchableOpacity
+                      key={f.value}
+                      style={[styles.filterChip, isActive && styles.filterChipActive]}
+                      onPress={() => setFilter(f.value)}
+                    >
+                      <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                        {f.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+            <PendingTransactionQueue
+              onRefresh={refreshWalletData}
+              isRefreshing={isLoading}
+            />
+          </>
         }
         ListFooterComponent={renderFooter}
-        ListEmptyComponent={!isLoading ? <EmptyState colors={colors} styles={styles} /> : null}
+        ListEmptyComponent={
+          !isLoading ? (
+            <ActivityEmptyState
+              colors={colors}
+              styles={styles}
+              onReceivePress={() => router.push('/receive')}
+            />
+          ) : null
+        }
         // Avoid stale closures while also keeping rendering performant.
         extraData={{ isLoadingMore, hasMoreTransactions, colors, styles }}
       />
@@ -201,22 +306,17 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: 'center',
     marginTop: SIZES.xxl * 2,
   },
-  emptyText: {
-    color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: SIZES.xs,
-  },
-  emptySubtext: {
-    color: colors.textSecondary,
-    fontSize: 14,
-  },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: SIZES.lg,
     gap: SIZES.sm,
+  },
+  // LoadingState supplies its own row layout and spacing, so this only needs
+  // to match the sibling footer's vertical rhythm.
+  footerLoading: {
+    paddingVertical: SIZES.lg,
   },
   footerText: {
     color: colors.textMuted,
@@ -233,5 +333,36 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+  },
+  filterContainer: {
+    paddingVertical: SIZES.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    marginBottom: SIZES.md,
+  },
+  filterScroll: {
+    paddingHorizontal: SIZES.lg,
+    gap: SIZES.xs,
+  },
+  filterChip: {
+    paddingHorizontal: SIZES.md,
+    paddingVertical: SIZES.sm,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    marginRight: SIZES.xs,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterChipText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  filterChipTextActive: {
+    color: colors.background,
   },
 });

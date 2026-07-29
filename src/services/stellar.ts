@@ -2,7 +2,7 @@ import * as StellarSdk from '@stellar/stellar-sdk';
 import * as ExpoCrypto from 'expo-crypto';
 import { Buffer } from 'buffer';
 
-const server = new StellarSdk.Horizon.Server(
+export const server = new StellarSdk.Horizon.Server(
   process.env.EXPO_PUBLIC_STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org'
 );
 
@@ -69,7 +69,7 @@ export const fetchXlmBalance = async (publicKey: string): Promise<string> => {
 export const fetchRecentTransactions = async (
   publicKey: string,
   limit: number = 20
-): Promise<PaymentRecord[]> => {
+): Promise<any[]> => {
   try {
     const response = await server
       .operations()
@@ -108,7 +108,7 @@ export interface TransactionsPage {
  * @param publicKey  – Stellar public key to query.
  * @param limit      – Page size (default 20).
  * @param cursor     – Paging token from a previous page to continue from.
- *                     Pass `undefined` / omit to start from the latest.
+ *                    Pass `undefined` / omit to start from the latest.
  */
 export const fetchTransactionsPage = async (
   publicKey: string,
@@ -143,6 +143,29 @@ export const fetchTransactionsPage = async (
       return { records: [], nextCursor: null, hasMore: false };
     }
     console.error('Error fetching transactions page:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch a single operation by its Horizon ID.  Used by the transaction detail
+ * screen when arriving via deep link — the operation may not be in the local
+ * store yet.
+ *
+ * @param operationId  – Horizon operation ID (numeric string or paging token).
+ * @returns The operation record, or `null` if not found on the network.
+ */
+export const fetchOperationById = async (
+  operationId: string
+): Promise<PaymentRecord | null> => {
+  try {
+    const record = await server.operations().operation(operationId).call();
+    return record as PaymentRecord;
+  } catch (error: any) {
+    if (isNotFoundError(error)) {
+      return null;
+    }
+    console.error('Error fetching operation by ID:', error);
     throw error;
   }
 };
@@ -199,6 +222,23 @@ const isAccountNotFoundError = (error: unknown): boolean =>
   error.code === 'ACCOUNT_NOT_FOUND';
 
 /**
+ * Fund a Stellar testnet account using Friendbot.
+ * Only works on testnet; throws on mainnet or if funding fails.
+ */
+export const fundWithFriendbot = async (publicKey: string): Promise<void> => {
+  try {
+    const url = `https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Friendbot error: ${response.statusText}`);
+    }
+  } catch (error: any) {
+    console.error('Friendbot funding failed:', error);
+    throw new Error(error.message || 'Friendbot funding failed');
+  }
+};
+
+/**
  * MOCK SERVICE WRAPPERS FOR SOROBAN SAVINGS VAULT
  *
  * Used as a fallback by the vault store when EXPO_PUBLIC_VAULT_CONTRACT_ID
@@ -219,6 +259,23 @@ export const mockFetchVaultBalance = async (publicKey: string): Promise<string> 
 export const mockDepositToVault = async (secretKey: string, amount: string): Promise<boolean> => {
   await new Promise(resolve => setTimeout(resolve, 1500));
   return true;
+};
+
+export const mockFetchVaultMaturedLocks = async (publicKey: string): Promise<{ id: string; amount: string; unlockedAt: string }[]> => {
+  await new Promise(resolve => setTimeout(resolve, 500));
+  // Return mock matured locks for preview purposes
+  return [
+    {
+      id: 'lock_a1b2c3d4e5f6',
+      amount: '50.0000000',
+      unlockedAt: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
+    },
+    {
+      id: 'lock_f6e5d4c3b2a1',
+      amount: '25.5000000',
+      unlockedAt: new Date(Date.now() - 86400000 * 7).toISOString(), // 7 days ago
+    },
+  ];
 };
 
 export const mockWithdrawFromVault = async (secretKey: string, amount: string): Promise<boolean> => {
@@ -250,17 +307,3 @@ export const getExplorerTxUrl = (hash: string | null | undefined): string | null
   if (!explorerNetwork) return null;
   return `https://stellar.expert/explorer/${explorerNetwork}/tx/${hash}`;
 };
-
-export const fundWithFriendbot = async (publicKey: string): Promise<void> => {
-  try {
-    const url = `https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Friendbot error: ${response.statusText}`);
-    }
-  } catch (error: any) {
-    console.error('Friendbot funding failed:', error);
-    throw new Error(error.message || 'Friendbot funding failed');
-  }
-};
-

@@ -29,6 +29,8 @@ interface VaultConfirmModalProps {
   unlockTime?: string;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Issue #331: Optional capability warning shown in the detail section. */
+  capabilityWarning?: string | null;
 }
 
 export const VaultConfirmModal: React.FC<VaultConfirmModalProps> = ({
@@ -40,6 +42,7 @@ export const VaultConfirmModal: React.FC<VaultConfirmModalProps> = ({
   unlockTime,
   onConfirm,
   onCancel,
+  capabilityWarning,
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -80,7 +83,7 @@ export const VaultConfirmModal: React.FC<VaultConfirmModalProps> = ({
       accentColor: colors.secondary,
       actionLabel: 'Confirm Lock',
       description:
-        'You are about to lock funds in the vault for a fixed period. Locked funds cannot be withdrawn until the unlock time is reached.',
+        'You are about to set aside funds for 30 days. During this time the locked amount stays safely in your vault but cannot be withdrawn until the unlock date.',
     },
   };
 
@@ -164,6 +167,16 @@ export const VaultConfirmModal: React.FC<VaultConfirmModalProps> = ({
             ) : null}
           </View>
 
+          {/* Issue #331: Capability warning */}
+          {capabilityWarning ? (
+            <View style={styles.capabilityWarning}>
+              <ShieldAlert color={colors.warning} size={14} style={{ marginRight: 6 }} />
+              <Text style={styles.capabilityWarningText}>
+                {capabilityWarning}
+              </Text>
+            </View>
+          ) : null}
+
           {/* Disclaimer */}
           <View style={styles.disclaimer}>
             <ShieldAlert color={colors.textMuted} size={14} style={{ marginRight: 6 }} />
@@ -195,7 +208,10 @@ export const VaultConfirmModal: React.FC<VaultConfirmModalProps> = ({
               activeOpacity={0.7}
             >
               {isLoading ? (
-                <ActivityIndicator color={colors.background} size="small" />
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator color={colors.background} size="small" style={{ marginRight: 6 }} />
+                  <Text style={styles.confirmButtonText}>Processing {actionType}…</Text>
+                </View>
               ) : (
                 <Text style={styles.confirmButtonText}>{config.actionLabel}</Text>
               )}
@@ -309,6 +325,22 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  capabilityWarning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255, 196, 0, 0.1)',
+    borderRadius: RADIUS.sm,
+    padding: SIZES.sm,
+    marginBottom: SIZES.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 196, 0, 0.3)',
+  },
+  capabilityWarningText: {
+    color: colors.warning,
+    fontSize: 12,
+    lineHeight: 16,
+    flex: 1,
+  },
   disclaimer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -349,5 +381,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.background,
     fontSize: 15,
     fontWeight: '600',
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

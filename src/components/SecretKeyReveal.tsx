@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { Eye, EyeOff, Copy } from 'lucide-react-native';
-import * as Clipboard from 'expo-clipboard';
 import { RADIUS, SIZES, ThemeColors } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useConfirm } from '../hooks/useConfirm';
 import { Button } from './Button';
+import { copyToClipboard } from '../utils/clipboard';
 
 interface SecretKeyRevealProps {
   secretKey: string;
@@ -21,6 +22,7 @@ export const SecretKeyReveal: React.FC<SecretKeyRevealProps> = ({
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { confirm, confirmationDialog } = useConfirm();
   const [isRevealed, setIsRevealed] = useState(false);
 
   useEffect(() => {
@@ -41,23 +43,25 @@ export const SecretKeyReveal: React.FC<SecretKeyRevealProps> = ({
       return;
     }
 
-    Alert.alert(
-      warningTitle,
-      warningMessage,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reveal',
-          style: 'destructive',
-          onPress: () => setIsRevealed(true)
-        }
-      ]
-    );
+    void confirm({
+      title: warningTitle,
+      message: warningMessage,
+      confirmLabel: 'Reveal',
+      destructive: true,
+      onConfirm: () => setIsRevealed(true),
+    });
   };
 
   const handleCopy = async () => {
-    await Clipboard.setStringAsync(secretKey);
-    Alert.alert('Copied', 'Secret key copied to clipboard. Keep it safe!');
+    const result = await copyToClipboard(secretKey);
+    if (result.ok) {
+      Alert.alert('Copied', 'Secret key copied to clipboard. Keep it safe!');
+    } else {
+      Alert.alert(
+        'Copy Failed',
+        'Could not copy to clipboard. You can select and copy the revealed key manually instead.'
+      );
+    }
   };
 
   return (
@@ -99,6 +103,8 @@ export const SecretKeyReveal: React.FC<SecretKeyRevealProps> = ({
           )}
         </View>
       </View>
+
+      {confirmationDialog}
     </View>
   );
 };

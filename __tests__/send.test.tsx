@@ -1,12 +1,12 @@
-﻿/**
+/**
  * Send Screen – Validation, Submit & QR Scan Behaviour Tests
  *
  * Acceptance criteria covered:
  *  AC1 – Invalid address error is tested (empty destination blocks submit)
  *  AC2 – Invalid amount error is tested (zero / negative amount blocks submit)
  *  AC3 – Submit is blocked when the form is invalid
- *  AC4 – Valid form calls sendXlmTransaction
- *  AC5 – Failure in sendXlmTransaction displays an error alert
+ *  AC4 – Valid form routes into sign confirmation
+ *  AC5 – Validation includes missing balance / reserve protection states
  *  AC6 – Scan option exists on the destination field
  *  AC7 – Camera permission is handled (denied state shown, grant flow works)
  *  AC8 – A valid scanned address fills the destination field and closes the scanner
@@ -15,6 +15,7 @@
  */
 
 import React from 'react';
+import type { ReactElement } from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 
@@ -22,13 +23,27 @@ import { Alert } from 'react-native';
 
 jest.mock('../src/services/stellar');
 jest.mock('../src/store/walletStore');
-jest.mock('../src/store/appStore');
+jest.mock('../src/store/appStore', () => {
+  const mockUseAppStore = jest.fn((selector) => {
+    const mockState = {
+      contacts: [],
+    };
+    return selector ? selector(mockState) : mockState;
+  });
+  return {
+    normalizePublicKey: (key: string) => key.trim().toUpperCase(),
+    useAppStore: mockUseAppStore,
+  };
+});
 jest.mock('pocketpay-sdk', () => ({ validatePublicKey: jest.fn(() => true) }));
 jest.mock('expo-router');
 jest.mock('lucide-react-native', () => ({
   Send: () => null,
   ScanLine: () => null,
   X: () => null,
+  ShieldCheck: () => null,
+  ArrowRight: () => null,
+  AlertTriangle: () => null,
 }));
 
 // expo-camera mock – controllable via module-level variables (same pattern as contacts.scan.test.tsx)
@@ -57,11 +72,9 @@ jest.mock('expo-camera', () => ({
 
 // ─── Typed mock imports ──────────────────────────────────────────────────
 
-import { sendXlmTransaction } from '../src/services/stellar';
 import { useWalletStore } from '../src/store/walletStore';
 import { useRouter } from 'expo-router';
 
-const mockSendXlmTransaction = sendXlmTransaction as jest.MockedFunction<typeof sendXlmTransaction>;
 const mockUseWalletStore    = useWalletStore as jest.MockedFunction<typeof useWalletStore>;
 const mockUseRouter         = useRouter     as jest.MockedFunction<typeof useRouter>;
 
@@ -105,7 +118,6 @@ beforeEach(() => {
   alertSpy.mockImplementation(() => undefined);
   mockUseRouter.mockReturnValue({ back: mockBack, push: mockPush, replace: mockReplace } as any);
   setupWalletStore();
-  mockSendXlmTransaction.mockResolvedValue({ hash: 'abc123' } as any);
   mockPermissionGranted = true;
   mockPermissionCanAskAgain = true;
 });
@@ -160,6 +172,19 @@ describe('AC2 – invalid amount error', () => {
 
     expect(getByText("You don't have enough XLM for this payment.")).toBeTruthy();
   });
+
+  it('shows a reserve-protection error when the payment would leave too little XLM behind', async () => {
+    setupWalletStore({ balance: '5.0000000' });
+    const { getByPlaceholderText, getByText } = render(<SendScreen />);
+
+    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
+    fireEvent.changeText(getByPlaceholderText('0.00'), '4.5');
+    fireEvent.press(getByText('Send Payment'));
+
+    expect(
+      getByText('You need to keep at least 1 XLM in your wallet, so this amount is too high.'),
+    ).toBeTruthy();
+  });
 });
 
 // ────────────────────────────────────────────────────────────────────────
@@ -185,16 +210,28 @@ describe('AC3 – submit is blocked when the form is invalid', () => {
     fireEvent.press(getByText('Send Payment'));
 
     expect(getByText('Amount must be more than 0.')).toBeTruthy();
-    expect(mockSendXlmTransaction).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('does not continue when the recipient is the current wallet', async () => {
+    setupWalletStore({ publicKey: VALID_DESTINATION });
+    const { getByPlaceholderText, getByText } = render(<SendScreen />);
+
+    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
+    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
+    fireEvent.press(getByText('Send Payment'));
+
+    expect(getByText("You can't send a payment to your own wallet.")).toBeTruthy();
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });
 
 // ────────────────────────────────────────────────────────────────────────
-// AC4 – Valid form calls sendXlmTransaction
+// AC4 – Valid form routes into sign confirmation
 // ────────────────────────────────────────────────────────────────────────
 
-describe('AC4 – valid form calls sendXlmTransaction', () => {
-  it('calls sendXlmTransaction with correct arguments on a valid submission', async () => {
+describe('AC4 – valid form routes into sign confirmation', () => {
+  it('navigates to sign-confirmation with correct arguments on a valid submission', async () => {
     const { getByPlaceholderText, getByText } = render(<SendScreen />);
 
     fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
@@ -202,13 +239,22 @@ describe('AC4 – valid form calls sendXlmTransaction', () => {
     fireEvent.press(getByText('Send Payment'));
 
     await waitFor(() => {
-      expect(mockSendXlmTransaction).toHaveBeenCalledWith(
-        MOCK_SECRET, VALID_DESTINATION, VALID_AMOUNT, '',
-      );
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/sign-confirmation',
+        params: {
+          source: 'GPUBLIC123',
+          destination: VALID_DESTINATION,
+          amount: VALID_AMOUNT,
+          assetCode: 'XLM',
+          memo: '',
+          fee: '100',
+          network: 'Testnet',
+        },
+      });
     });
   });
 
-  it('passes memo text to sendXlmTransaction when provided', async () => {
+  it('passes memo text to sign-confirmation params when provided', async () => {
     const { getByPlaceholderText, getByText } = render(<SendScreen />);
 
     fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
@@ -217,91 +263,22 @@ describe('AC4 – valid form calls sendXlmTransaction', () => {
     fireEvent.press(getByText('Send Payment'));
 
     await waitFor(() => {
-      expect(mockSendXlmTransaction).toHaveBeenCalledWith(
-        MOCK_SECRET, VALID_DESTINATION, VALID_AMOUNT, 'invoice-42',
-      );
-    });
-  });
-
-  it('navigates to the payment success receipt with the tx hash, amount, and destination', async () => {
-    const { getByPlaceholderText, getByText } = render(<SendScreen />);
-
-    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
-    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
-    fireEvent.press(getByText('Send Payment'));
-
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith({
-        pathname: '/payment-success',
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/sign-confirmation',
         params: {
-          hash: 'abc123',
-          amount: VALID_AMOUNT,
+          source: 'GPUBLIC123',
           destination: VALID_DESTINATION,
+          amount: VALID_AMOUNT,
+          assetCode: 'XLM',
+          memo: 'invoice-42',
+          fee: '100',
+          network: 'Testnet',
         },
       });
     });
   });
-
-  it('refreshes wallet data after a successful send', async () => {
-    const refreshWalletData = jest.fn();
-    setupWalletStore({ refreshWalletData });
-    const { getByPlaceholderText, getByText } = render(<SendScreen />);
-
-    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
-    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
-    fireEvent.press(getByText('Send Payment'));
-
-    await waitFor(() => {
-      expect(refreshWalletData).toHaveBeenCalled();
-    });
-  });
 });
 
-// ────────────────────────────────────────────────────────────────────────
-// AC5 – Failure displays an error
-// ────────────────────────────────────────────────────────────────────────
-
-describe('AC5 – failure displays error', () => {
-  it('shows a "Transaction Failed" alert with the error message when sendXlmTransaction throws', async () => {
-    mockSendXlmTransaction.mockRejectedValueOnce(new Error('tx_bad_seq'));
-    const { getByPlaceholderText, getByText } = render(<SendScreen />);
-
-    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
-    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
-    fireEvent.press(getByText('Send Payment'));
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Transaction Failed', 'tx_bad_seq');
-    });
-  });
-
-  it('shows a generic error message when the error has no message', async () => {
-    mockSendXlmTransaction.mockRejectedValueOnce({});
-    const { getByPlaceholderText, getByText } = render(<SendScreen />);
-
-    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
-    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
-    fireEvent.press(getByText('Send Payment'));
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Transaction Failed', 'An error occurred while sending.',
-      );
-    });
-  });
-
-  it('does NOT call router.back after a failed send', async () => {
-    mockSendXlmTransaction.mockRejectedValueOnce(new Error('network error'));
-    const { getByPlaceholderText, getByText } = render(<SendScreen />);
-
-    fireEvent.changeText(getByPlaceholderText('G...'), VALID_DESTINATION);
-    fireEvent.changeText(getByPlaceholderText('0.00'), VALID_AMOUNT);
-    fireEvent.press(getByText('Send Payment'));
-
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
-    expect(mockBack).not.toHaveBeenCalled();
-  });
-});
 
 // ────────────────────────────────────────────────────────────────────────
 // AC6 – Scan option exists
@@ -375,7 +352,7 @@ describe('AC7 – camera permission handling', () => {
 // ────────────────────────────────────────────────────────────────────────
 
 describe('AC8 – valid scan fills destination field', () => {
-  it('closes the scanner and calls sendXlmTransaction with the scanned address on submit', async () => {
+  it('closes the scanner and routes into sign confirmation with the scanned address on submit', async () => {
     const { getByLabelText, getByPlaceholderText, getByText, queryByText } = render(<SendScreen />);
 
     // We drive this through the same handler the QrScanner would call: onScan.
@@ -391,12 +368,22 @@ describe('AC8 – valid scan fills destination field', () => {
     fireEvent.press(getByText('Send Payment'));
 
     await waitFor(() => {
-      expect(mockSendXlmTransaction).toHaveBeenCalledWith(
-        MOCK_SECRET, SCANNED_ADDRESS, VALID_AMOUNT, '',
-      );
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/sign-confirmation',
+        params: {
+          source: 'GPUBLIC123',
+          destination: SCANNED_ADDRESS,
+          amount: VALID_AMOUNT,
+          assetCode: 'XLM',
+          memo: '',
+          fee: '100',
+          network: 'Testnet',
+        },
+      });
     });
   });
 });
+
 
 // ────────────────────────────────────────────────────────────────────────
 // AC9 – Invalid QR shows an error
