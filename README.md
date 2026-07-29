@@ -17,6 +17,7 @@ React Native Expo wallet for Stellar Testnet. The app aims to feel polished and 
 - [Payment-Period Communication Policy](./docs/payment-period-communication-policy.md) - How contributors should communicate during the payment evaluation period: no spam or pressure, self-review before raising payment concerns, and follow the GrantFox evaluation process
 - [Self-Review Checklist](./docs/self-review-checklist.md) - Quick checklist to run before opening a PR, covering feature completion, tests, CI, screenshots, and device/emulator verification
 - [Contributor Self-Assessment](./docs/contributor-self-assessment.md) - Pre-review form for confirming scope, test evidence, CI, documentation, limitations, and acceptance criteria
+- [Reviewer Evidence Checklist](./docs/reviewer-evidence-checklist.md) - Maintainer-facing checklist for reviewing whether a PR is complete and evaluation-ready, covering implementation scope, quality, test evidence, CI status, documentation impact, acceptance-criteria verification, and risk
 - [Storage Guide](./docs/storage.md) - SecureStore vs AsyncStorage
 - [Test-First Contribution Guide](./docs/test-first-contribution-guide.md) - Required test planning, happy-path and negative-path coverage, no-test justification rules, and local verification commands for mobile PRs
 - [Contacts Guide](./docs/contacts.md) - Contact storage, backup limitations, and future export/import ideas
