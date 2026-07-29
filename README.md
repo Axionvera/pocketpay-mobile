@@ -49,6 +49,7 @@ PocketPay Mobile is part of a broader PocketPay stack:
 - [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
 - [Mobile Onboarding Checklist](docs/mobile-onboarding-checklist.md) - Quick-reference setup checklist for new contributors
 - [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) - Contract-issue review checklist for GrantFox contributors before payment evaluation
+- [Meaningful Change Guide](docs/meaningful-change-guide.md) - What counts as meaningful mobile implementation work, with examples of incomplete vs. acceptable PRs
 - [UI State Catalogue](docs/ui-states.md) and [Accessibility Checklist](docs/accessibility.md) - Governance for major-screen states, shared component contracts, and accessible review evidence
 - [QR Receive Payload Format](docs/qr-payment-requests.md) - The address-only and SEP-0007-based payment-request formats the Receive screen encodes into its QR code
 
