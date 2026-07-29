@@ -110,16 +110,6 @@ export default function ContactsScreen() {
 
     setNameError(currentNameError);
     setKeyError(currentKeyError);
-  const handleSave = async () => {
-    const trimmedName = name.trim();
-    const trimmedKey = publicKey.trim();
-
-    const currentNameError = trimmedName ? undefined : "Please enter a name.";
-    const addrValidationError = validateAddress(trimmedKey) ?? undefined;
-    const currentKeyError = addrValidationError;
-
-    setNameError(currentNameError);
-    setKeyError(currentKeyError);
 
     if (currentNameError || currentKeyError) return;
 
@@ -326,99 +316,6 @@ export default function ContactsScreen() {
             />
           </View>
         </View>
-      ) : (
-        <>
-          {/* ── List header: two action buttons ────────────────────────────── */}
-          <View style={styles.headerActions}>
-            <Button
-              title="+ Add Manually"
-              onPress={() => {
-                resetForm();
-                setMode("manual");
-              }}
-              style={styles.headerBtn}
-              accessibilityLabel="Add contact manually"
-            />
-            <Button
-              title="Scan QR"
-              variant="secondary"
-              onPress={() => {
-                resetForm();
-                setMode("scanning");
-              }}
-              style={styles.headerBtn}
-              accessibilityLabel="Scan QR code to add contact"
-            />
-          </View>
-
-          {/* ── Contact list ─────────────────────────────────────────────────── */}
-          <FlatList
-            data={contacts}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={
-              <EmptyState
-                icon={<User color={colors.textMuted} size={48} />}
-                title="No contacts yet"
-                message="Add a contact manually or scan a QR code."
-              />
-
-              {/* Duplicate address update banner */}
-              {foundDuplicate && (
-                  <View style={styles.duplicateBanner}>
-                    <View style={styles.duplicateBannerHeader}>
-                      <AlertTriangle color={colors.warning} size={18} />
-                      <Text style={styles.duplicateBannerTitle}>Duplicate Address</Text>
-                    </View>
-                    <Text style={styles.duplicateBannerText}>
-                      This address is already saved as "{foundDuplicate.name}".
-                    </Text>
-                    <Text style={styles.duplicateBannerHint}>
-                      You can update the existing entry's name below, or cancel to keep it unchanged.
-                    </Text>
-                    <TouchableOpacity style={styles.updateButton} onPress={handleUpdateExisting}>
-                      <Pencil color={colors.primary} size={16} />
-                      <Text style={styles.updateButtonText}>
-                        Update "{foundDuplicate.name}" to "{name.trim() || foundDuplicate.name}"
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-              )}
-
-              {/* Scan button (only in manual mode – lets the user switch to scanner) */}
-              {mode === "manual" && (
-                  <Button
-                      title="Scan QR Instead"
-                      variant="outline"
-                      onPress={() => {
-                        resetForm();
-                        setMode("scanning");
-                      }}
-                      style={styles.scanInsteadBtn}
-                      accessibilityLabel="Open QR scanner"
-                  />
-              )}
-
-              <View style={styles.actions}>
-                <Button
-                    title="Save Contact"
-                    onPress={handleSave}
-                    isLoading={isSaving}
-                    style={styles.actionBtn}
-                    accessibilityLabel="Save contact"
-                />
-                <Button
-                    title="Cancel"
-                    variant="outline"
-                    onPress={() => {
-                      resetForm();
-                      setMode("list");
-                    }}
-                    style={styles.actionBtn}
-                    accessibilityLabel="Cancel"
-                />
-              </View>
-            </View>
         ) : (
             <>
               {/* ── List header: two action buttons ────────────────────────────── */}
