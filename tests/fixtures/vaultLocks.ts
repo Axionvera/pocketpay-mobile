@@ -1,32 +1,64 @@
 import { Lock } from '../../src/store/vaultStore';
 
+/**
+ * Vault lock fixtures for wallet/vault UI and store tests.
+ *
+ * `Lock.status` only has two real states (`'locked'` | `'matured'`) — there is
+ * no separate `'withdrawn'` status in `vaultStore`; once a lock is withdrawn
+ * it is simply removed from the `locks` array. Fixtures below reflect that.
+ */
+
+const inDays = (days: number) =>
+  new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
 export const MOCK_VAULT_LOCKS: Lock[] = [
   {
     id: 'lock-1',
     amount: '100.0000000',
-    unlockDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+    unlockDate: inDays(30),
     status: 'locked',
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+    createdAt: inDays(-5),
   },
   {
     id: 'lock-2',
     amount: '50.5000000',
-    unlockDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago (matured)
+    unlockDate: inDays(-10),
     status: 'matured',
-    createdAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString(), // 40 days ago
+    createdAt: inDays(-40),
   },
   {
     id: 'lock-3',
     amount: '200.0000000',
-    unlockDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days from now
+    unlockDate: inDays(60),
     status: 'locked',
-    createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), // 15 days ago
+    createdAt: inDays(-15),
   },
   {
     id: 'lock-4',
     amount: '75.0000000',
-    unlockDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago (matured)
+    unlockDate: inDays(-2),
     status: 'matured',
-    createdAt: new Date(Date.now() - 32 * 24 * 60 * 60 * 1000).toISOString(), // 32 days ago
+    createdAt: inDays(-32),
   },
 ];
+
+/**
+ * Scenario builders for vault lock lists, grouped by the states a screen or
+ * store test actually needs to assert against. Use these instead of the flat
+ * `MOCK_VAULT_LOCKS` array when the test cares about a specific state mix.
+ */
+export const vaultLockScenarios: {
+  /** A mix of locked and matured locks — the general-purpose default. */
+  mixed: Lock[];
+  /** Only immature (not yet unlockable) locks. */
+  allLocked: Lock[];
+  /** Only matured (withdrawable) locks. */
+  allMatured: Lock[];
+  /** No locks at all — the empty-state case. */
+  empty: Lock[];
+} = {
+  mixed: MOCK_VAULT_LOCKS,
+  allLocked: MOCK_VAULT_LOCKS.filter((lock) => lock.status === 'locked'),
+  allMatured: MOCK_VAULT_LOCKS.filter((lock) => lock.status === 'matured'),
+  empty: [],
+};

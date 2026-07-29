@@ -15,6 +15,7 @@ Thank you for your interest in contributing to PocketPay Mobile! We welcome pull
 - [Accessibility](#accessibility)
 - [Security](#security)
 - [Submitting a Pull Request](#submitting-a-pull-request)
+- [Contributor Self-Assessment](#contributor-self-assessment)
 - [Code of Conduct](#code-of-conduct)
 
 ---
@@ -196,6 +197,11 @@ We strive to build a wallet that is accessible to everyone. Before submitting a 
    npm test
    ```
 
+   Also run `npm run typecheck` and `npm run lint` — all three, plus your
+   tests, are expected to pass before you open a PR. If any of them fail and
+   you're not sure why, see the
+   [CI Troubleshooting Guide](docs/ci-troubleshooting.md).
+
 4. **Commit** with a clear, descriptive message:
 
    ```bash
@@ -213,9 +219,28 @@ We strive to build a wallet that is accessible to everyone. Before submitting a 
    - Reference any related issues using `Closes #<issue-number>`.
    - Describe how you tested the change.
    - Note any accessibility or security considerations.
-   - For GrantFox contract issues, review the [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) before the payment evaluation period. A merged PR does not guarantee payment approval.
+   - For GrantFox mobile issues, review the [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) before the payment evaluation period. A merged PR does not guarantee payment approval.
 
 7. A maintainer will review your PR. Please respond to feedback and update your branch as needed.
+
+---
+
+## Contributor Self-Assessment
+
+Before requesting review, complete the
+[Contributor Self-Assessment Form](docs/contributor-self-assessment.md). The
+form asks you to confirm the issue scope, provide test evidence and CI status,
+review documentation, disclose known limitations, and map every acceptance
+criterion to evidence.
+
+Update the assessment after substantial changes to the pull request. Check an
+item only after verifying it; if an item does not apply, write
+`Not applicable — <reason>`. An incomplete assessment means the pull request is
+not ready for review or payment evaluation.
+
+The pull request template contains a concise version of the assessment. The
+standalone form provides the full prompts and should be used when more detail is
+needed.
 
 ---
 

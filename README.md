@@ -12,8 +12,10 @@ React Native Expo wallet for Stellar Testnet. The app aims to feel polished and 
 ## Documentation
 
 - [Architecture Readiness Review](./docs/architecture-readiness-review.md) - Feature boundaries, duplicated state, SDK integration blockers, security-sensitive areas, and test gaps
-- [Evaluation Readiness Checklist](./docs/evaluation-readiness-checklist.md) - GrantFox contributor checklist for contract issues, including tests, CI, issue requirements, edge cases, and the reminder that merge does not guarantee payment approval
+- [Evaluation Readiness Checklist](./docs/evaluation-readiness-checklist.md) - GrantFox contributor checklist for mobile issues, including tests, CI, screenshots, acceptance criteria, and the reminder that merge does not guarantee payment approval
+- [Contributor Self-Assessment](./docs/contributor-self-assessment.md) - Pre-review form for confirming scope, test evidence, CI, documentation, limitations, and acceptance criteria
 - [Storage Guide](./docs/storage.md) - SecureStore vs AsyncStorage
+- [Test-First Contribution Guide](./docs/test-first-contribution-guide.md) - Required test planning, happy-path and negative-path coverage, no-test justification rules, and local verification commands for mobile PRs
 - [Contacts Guide](./docs/contacts.md) - Contact storage, backup limitations, and future export/import ideas
 - [Polyfills Guide](./docs/polyfills.md) - React Native polyfills and import order for Stellar SDK
 - [Vault UI Guidance](./docs/vault-ui-guidance.md) - How to present the Soroban Savings Vault, Testnet risks, and contract limitations
@@ -48,10 +50,10 @@ PocketPay Mobile is part of a broader PocketPay stack:
 
 - [Screen Inventory](docs/screen-inventory.md) - A map of the main screens and routes in the app.
 - [Mobile Onboarding Checklist](docs/mobile-onboarding-checklist.md) - Quick-reference setup checklist for new contributors
-- [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) - Contract-issue review checklist for GrantFox contributors before payment evaluation
-- [Meaningful Change Guide](docs/meaningful-change-guide.md) - What counts as meaningful mobile implementation work, with examples of incomplete vs. acceptable PRs
+- [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) - Mobile-issue review checklist for GrantFox contributors before payment evaluation
 - [UI State Catalogue](docs/ui-states.md) and [Accessibility Checklist](docs/accessibility.md) - Governance for major-screen states, shared component contracts, and accessible review evidence
 - [QR Receive Payload Format](docs/qr-payment-requests.md) - The address-only and SEP-0007-based payment-request formats the Receive screen encodes into its QR code
+- [Test Fixture Framework](docs/testing/fixtures.md) - Reusable, typed fixtures for wallet, payment, vault, transaction, error, and diagnostics states, and how to use them in a test
 
 ## Screenshots
 
@@ -79,6 +81,7 @@ PocketPay Mobile is part of a broader PocketPay stack:
 
 React Native, Expo Router, Zustand, PocketPay SDK, SecureStore, AsyncStorage
 
+// To Start
 ## Quick Start
 
 ```bash
