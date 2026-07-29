@@ -214,14 +214,16 @@ We strive to build a wallet that is accessible to everyone. Before submitting a 
    git push -u origin feat/your-feature-name
    ```
 
-6. In the PR description:
+6. Before opening the PR, run through the [Self-Review Checklist](docs/self-review-checklist.md) — feature completion, tests, CI, screenshots, and device/emulator verification.
+
+7. In the PR description:
    - Summarise what changed and why.
    - Reference any related issues using `Closes #<issue-number>`.
    - Describe how you tested the change.
    - Note any accessibility or security considerations.
    - For GrantFox mobile issues, review the [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md) before the payment evaluation period. A merged PR does not guarantee payment approval.
 
-7. A maintainer will review your PR. Please respond to feedback and update your branch as needed.
+8. A maintainer will review your PR. Please respond to feedback and update your branch as needed.
 
 ---
 
