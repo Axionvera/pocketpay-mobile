@@ -46,13 +46,13 @@ requesting review. Include concise evidence below; use
 
 <!-- Write "None known" only after checking for limitations. -->
 
-### Acceptance Criteria
+### Acceptance Criteria Audit
 
-<!-- Map your changes to the issue acceptance criteria. See the [Traceability Table Guide](../docs/traceability-table.md) for how to fill this out. -->
+<!-- Map your changes to the issue acceptance criteria. See the [Traceability Table Guide](../docs/traceability-table.md) and docs/contributor-self-assessment.md for guidance on handling incomplete criteria and filling each field. -->
 
-| Acceptance criterion | Implementation or evidence | Status |
-| --- | --- | --- |
-| <!-- Criterion --> | <!-- File, test, screenshot, or explanation --> | Pass / Not applicable |
+| Acceptance Criterion | Implementation Evidence | Test Evidence | Documentation Impact | Status |
+| --- | --- | --- | --- | --- |
+| <!-- Criterion --> | <!-- File, screenshot, or explanation --> | <!-- Test file or manual check --> | <!-- Docs changed, or N/A --> | Complete / Partial / Not Applicable / Not Implemented |
 
 ## Screenshots or Recordings
 
