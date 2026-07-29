@@ -92,3 +92,7 @@ React Native, Expo Router, Zustand, PocketPay SDK, SecureStore, AsyncStorage
 npm install --legacy-peer-deps
 cp .env.example .env
 npm start
+
+## Continuous Integration (CI) Standards
+All contributions are required to pass automated CI pipelines prior to review and merge. 
+Please review the [CI Pass Requirements Guidance](docs/CI_REQUIREMENTS.md) for local reproduction commands and guidelines on resolving failing checks.
