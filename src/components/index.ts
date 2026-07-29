@@ -23,6 +23,7 @@ export { MaturedLockWithdrawalModal } from "./MaturedLockWithdrawalModal";
 export { SigningConfirmModal } from "./SigningConfirmModal";
 export { VaultUnavailableState } from "./VaultUnavailableState";
 export { StatusBadge } from "./StatusBadge";
+export { WalletResetConfirmModal } from "./WalletResetConfirmModal";
 export type { BadgeTone } from "./StatusBadge";
 export { BalanceDisplay } from "./BalanceDisplay";
 export type { BalanceDisplayProps } from "./BalanceDisplay";

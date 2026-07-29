@@ -7,7 +7,7 @@
  * Accessibility: all interactive elements carry accessibilityLabel / accessibilityRole.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { SIZES, RADIUS, ThemeColors } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
@@ -42,6 +42,12 @@ export const WalletResetConfirmModal: React.FC<WalletResetConfirmModalProps> = (
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [typedText, setTypedText] = useState('');
+
+  useEffect(() => {
+    if (visible) {
+      setTypedText('');
+    }
+  }, [visible]);
 
   const isConfirmed = typedText.trim().toLowerCase() === CONFIRMATION_TEXT;
 
