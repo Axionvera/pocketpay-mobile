@@ -27,9 +27,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VaultReceiptModal } from "../../src/components/VaultReceiptModal";
 import { isActionSupported, getActionUnsupportedReason, getActionUnsupportedDetail } from '../../src/utils/vaultCapabilities';
 import { useNetworkState } from '../../src/hooks/useNetworkState';
-import { NetworkStateBanner } from '../../src/components/NetworkStateBanner';
+import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
 import { WithdrawalPreview } from '../../src/features/vault/WithdrawalPreview';
 import { DepositPreview } from '../../src/features/vault/DepositPreview';
+import type { VaultLock } from '../../src/types';
 
 const LOCK_PERIOD_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const VAULT_INTRO_SEEN_KEY = '@pocketpay_vault_intro_seen';
@@ -45,11 +46,11 @@ export default function VaultScreen() {
   const { state: networkState, disableWriteActions: networkDisabled, retry: retryNetwork } = useNetworkState({ error: walletError });
   const {
     balance,
-    locks,
+    locks: _unused_locks,
     isConfigured,
     contractId,
     isLoadingBalance,
-    isLoadingLocks,
+    isLoadingLocks: _unused_isLoadingLocks,
     isSubmitting,
     balanceError,
     vaultError,
@@ -276,7 +277,7 @@ export default function VaultScreen() {
         onClose={() => setReceiptVisible(false)}
       />
 
-      <NetworkStateBanner
+      <NetworkStatusBanner
         state={networkState}
         onRetry={() => {
           retryNetwork();

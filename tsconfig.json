@@ -13,11 +13,13 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "baseUrl": ".",
+    "ignoreDeprecations": "5.0",
     "paths": {
       "@/*": [
         "src/*"
       ]
-    }
+    },
+    "types": []
   },
   "exclude": [
     "node_modules",
@@ -26,6 +28,5 @@
     "jest.config.js",
     "tests",
     "__tests__"
-  ],
-  "extends": "expo/tsconfig.base"
+  ]
 }

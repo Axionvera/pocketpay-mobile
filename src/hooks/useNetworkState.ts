@@ -22,10 +22,11 @@
  * ```
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useOnlineStatus } from './useOnlineStatus';
 import { classifyNetworkError } from './useNetworkStatus';
 import type { NetworkState } from '../types/network';
+import { checkNetworkPassphrase } from '../services/stellar';
 
 export interface UseNetworkStateResult {
   /** The derived network state. */
@@ -54,6 +55,7 @@ interface UseNetworkStateOptions {
 const WRITE_ACTION_DISABLING_STATES: ReadonlySet<NetworkState> = new Set([
   'offline',
   'service-unavailable',
+  'wrong-network',
 ]);
 
 export function useNetworkState(
@@ -65,29 +67,65 @@ export function useNetworkState(
       : undefined,
   );
 
+  const [isWrongNetwork, setIsWrongNetwork] = useState<boolean | null>(null);
+  const [isCheckingPassphrase, setIsCheckingPassphrase] = useState(false);
+
+  const checkPassphrase = useCallback(async () => {
+    if (!isOnline) {
+      setIsWrongNetwork(null);
+      return;
+    }
+    setIsCheckingPassphrase(true);
+    try {
+      const matches = await checkNetworkPassphrase();
+      setIsWrongNetwork(!matches);
+    } catch (err) {
+      // If the passphrase check fails (e.g. timeout/unreachable), do not assume wrong network.
+      setIsWrongNetwork(null);
+    } finally {
+      setIsCheckingPassphrase(false);
+    }
+  }, [isOnline]);
+
+  useEffect(() => {
+    if (isOnline) {
+      checkPassphrase();
+    } else {
+      setIsWrongNetwork(null);
+    }
+  }, [isOnline, checkPassphrase]);
+
+  const handleRetry = useCallback(async () => {
+    await checkNow();
+    await checkPassphrase();
+  }, [checkNow, checkPassphrase]);
+
   const state = useMemo<NetworkState>(() => {
     // 1. Device offline → offline
     if (!isOnline) return 'offline';
 
-    // 2. Device online — check for service-level errors
+    // 2. Wrong network → wrong-network
+    if (isWrongNetwork) return 'wrong-network';
+
+    // 3. Device online — check for service-level errors
     if (options?.error) {
       const errorType = classifyNetworkError(options.error);
       if (errorType === 'service-unavailable') return 'service-unavailable';
       if (errorType === 'offline') return 'degraded';
     }
 
-    // 3. Device online, no error → online
-    if (!isChecking) return 'online';
+    // 4. Device online, no error → online
+    if (!isChecking && !isCheckingPassphrase) return 'online';
 
-    // 4. Still checking → unknown
+    // 5. Still checking → unknown
     return 'unknown';
-  }, [isOnline, isChecking, options?.error]);
+  }, [isOnline, isWrongNetwork, isChecking, isCheckingPassphrase, options?.error]);
 
   return {
     state,
     disableWriteActions: WRITE_ACTION_DISABLING_STATES.has(state),
-    retry: checkNow,
-    isChecking,
+    retry: handleRetry,
+    isChecking: isChecking || isCheckingPassphrase,
     isOnline,
   };
 }

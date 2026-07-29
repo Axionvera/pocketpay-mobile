@@ -1,53 +1,59 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { WifiOff, AlertTriangle, RefreshCw } from 'lucide-react-native';
+import { WifiOff, AlertTriangle, CloudOff, RefreshCw } from 'lucide-react-native';
 import { COLORS, SIZES, RADIUS } from '../constants/theme';
-import type { NetworkErrorType } from '../hooks/useNetworkStatus';
+import type { NetworkState } from '../types/network';
+import { describeNetworkState } from '../types/network';
 
-interface NetworkStatusBannerProps {
-  /** The classified network error type. When 'none' the banner is not rendered. */
-  networkErrorType: NetworkErrorType;
-  /** Human-readable message to display. */
-  message: string;
-  /** Called when the user taps the Retry button. Should reuse existing refresh logic. */
-  onRetry: () => void;
-  /** Set to true while a refresh is already in flight to disable the retry button. */
+export interface NetworkStatusBannerProps {
+  /** The current network state. */
+  state: NetworkState;
+  /** Called when the user taps the Retry button. */
+  onRetry?: () => void;
+  /** True while a re-check or refresh is in flight. */
   isRetrying?: boolean;
+  /** Optional custom test ID for the container. Defaults to 'network-status-banner'. */
+  testID?: string;
+  /** Optional custom test ID for the retry button. Defaults to 'network-status-retry'. */
+  retryTestID?: string;
 }
 
-/**
- * NetworkStatusBanner
- *
- * A lightweight, non-intrusive banner displayed below the screen header when
- * a network-related error is detected.  It differentiates between:
- *
- *  - Device offline  (WifiOff icon, warning-tinted)
- *  - Service unavailable  (AlertTriangle icon, warning-tinted)
- *
- * The banner includes a Retry button that delegates back to the existing
- * refresh logic in the wallet store, keeping request code in one place.
- *
- * The component renders nothing when `networkErrorType === 'none'`.
- */
+const ICON_MAP = {
+  'wifi-off': WifiOff,
+  'alert-triangle': AlertTriangle,
+  'cloud-off': CloudOff,
+  'help-circle': AlertTriangle,
+} as const;
+
+const STATE_COLORS: Record<NetworkState, string> = {
+  online: COLORS.success,
+  degraded: COLORS.warning,
+  'service-unavailable': COLORS.error,
+  offline: COLORS.error,
+  'wrong-network': COLORS.error,
+  unknown: COLORS.textMuted,
+};
+
 export const NetworkStatusBanner: React.FC<NetworkStatusBannerProps> = ({
-  networkErrorType,
-  message,
+  state,
   onRetry,
   isRetrying = false,
-}) => {
-  if (networkErrorType === 'none') return null;
+  testID = 'network-status-banner',
+  retryTestID = 'network-status-retry',
+}: NetworkStatusBannerProps) => {
+  const copy = describeNetworkState(state);
 
-  const isOffline = networkErrorType === 'offline';
+  if (!copy.showBanner) return null;
 
-  const Icon = isOffline ? WifiOff : AlertTriangle;
-  const iconColor = COLORS.warning;
+  const Icon = ICON_MAP[copy.bannerIcon];
+  const iconColor = STATE_COLORS[state];
 
   return (
     <View
-      style={styles.container}
+      style={[styles.container, { borderColor: `${iconColor}30` }]}
       accessibilityRole="alert"
-      accessibilityLabel={message}
-      testID="network-status-banner"
+      accessibilityLabel={copy.bannerMessage}
+      testID={testID}
     >
       <View style={styles.content}>
         <Icon
@@ -57,30 +63,32 @@ export const NetworkStatusBanner: React.FC<NetworkStatusBannerProps> = ({
           accessibilityElementsHidden
           importantForAccessibility="no"
         />
-        <Text style={styles.message} numberOfLines={2}>
-          {message}
+        <Text style={[styles.message, { color: iconColor }]} numberOfLines={2}>
+          {copy.bannerMessage}
         </Text>
       </View>
 
-      <TouchableOpacity
-        onPress={onRetry}
-        disabled={isRetrying}
-        style={[styles.retryButton, isRetrying && styles.retryButtonDisabled]}
-        accessibilityRole="button"
-        accessibilityLabel="Retry"
-        accessibilityState={{ disabled: isRetrying }}
-        testID="network-status-retry"
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <RefreshCw
-          color={isRetrying ? COLORS.textMuted : COLORS.primary}
-          size={14}
-          style={styles.retryIcon}
-        />
-        <Text style={[styles.retryText, isRetrying && styles.retryTextDisabled]}>
-          Retry
-        </Text>
-      </TouchableOpacity>
+      {onRetry && copy.retryLabel ? (
+        <TouchableOpacity
+          onPress={onRetry}
+          disabled={isRetrying}
+          style={[styles.retryButton, isRetrying && styles.retryButtonDisabled]}
+          accessibilityRole="button"
+          accessibilityLabel={copy.retryLabel}
+          accessibilityState={{ disabled: isRetrying }}
+          testID={retryTestID}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <RefreshCw
+            color={isRetrying ? COLORS.textMuted : COLORS.primary}
+            size={14}
+            style={styles.retryIcon}
+          />
+          <Text style={[styles.retryText, isRetrying && styles.retryTextDisabled]}>
+            {copy.retryLabel}
+          </Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 };
@@ -90,10 +98,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 196, 0, 0.10)', // Warning tint, consistent with FundButton error pattern
+    backgroundColor: 'rgba(255, 196, 0, 0.10)',
     borderRadius: RADIUS.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255, 196, 0, 0.30)',
     paddingHorizontal: SIZES.md,
     paddingVertical: SIZES.sm,
     marginBottom: SIZES.md,
@@ -106,11 +113,10 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginRight: SIZES.xs,
-    marginTop: 1, // Visual alignment with first line of text
+    marginTop: 1,
   },
   message: {
     flex: 1,
-    color: COLORS.warning,
     fontSize: 13,
     lineHeight: 18,
   },

@@ -7,7 +7,7 @@ import { useTheme } from '../../src/hooks/useTheme';
 import { Button } from '../../src/components/Button';
 import { FundButton } from '../../src/components/FundButton';
 import { TransactionListItem } from '../../src/components/TransactionListItem';
-import { NetworkStateBanner } from '../../src/components/NetworkStateBanner';
+import { NetworkStatusBanner } from '../../src/components/NetworkStatusBanner';
 import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { BalanceDisplay } from '../../src/components/BalanceDisplay';
 import { FundingStatusBanner } from '../../src/components/FundingStatusBanner';
@@ -80,7 +80,7 @@ export default function HomeScreen() {
           />
         }
       >
-        <NetworkStateBanner
+        <NetworkStatusBanner
           state={networkState}
           onRetry={handleRetry}
           isRetrying={isLoading}

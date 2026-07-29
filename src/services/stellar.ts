@@ -52,7 +52,7 @@ export const fetchAccountDetails = async (publicKey: string) => {
 export const fetchXlmBalance = async (publicKey: string): Promise<string> => {
   try {
     const account = await fetchAccountDetails(publicKey);
-    const nativeBalance = account.balances.find((b) => b.asset_type === 'native');
+    const nativeBalance = account.balances.find((b: any) => b.asset_type === 'native');
     return nativeBalance ? nativeBalance.balance : '0.0000000';
   } catch (error: any) {
     // If account is not found (unfunded), balance is 0
@@ -306,4 +306,15 @@ export const getExplorerTxUrl = (hash: string | null | undefined): string | null
   const explorerNetwork = EXPLORER_NETWORK_PATHS[network];
   if (!explorerNetwork) return null;
   return `https://stellar.expert/explorer/${explorerNetwork}/tx/${hash}`;
+};
+
+/**
+ * Checks if the connected Horizon server's network passphrase matches the expected passphrase.
+ * Returns true if it matches, false if it doesn't match.
+ * Throws if the server is unreachable.
+ */
+export const checkNetworkPassphrase = async (): Promise<boolean> => {
+  const root = await server.root();
+  const expectedPassphrase = process.env.EXPO_PUBLIC_STELLAR_NETWORK_PASSPHRASE || StellarSdk.Networks.TESTNET;
+  return root.network_passphrase === expectedPassphrase;
 };

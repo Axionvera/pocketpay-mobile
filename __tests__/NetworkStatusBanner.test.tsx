@@ -2,12 +2,13 @@
  * NetworkStatusBanner – component tests
  *
  * Acceptance criteria covered:
- *  AC-NB1 – Banner is not rendered when networkErrorType is 'none'.
+ *  AC-NB1 – Banner is not rendered when state is 'online'.
  *  AC-NB2 – Banner is rendered for 'offline'.
  *  AC-NB3 – Banner is rendered for 'service-unavailable'.
- *  AC-NB4 – Retry button calls onRetry when tapped.
- *  AC-NB5 – Retry button is disabled while isRetrying is true.
- *  AC-NB6 – App does not crash when rendered with any valid props.
+ *  AC-NB4 – Banner is rendered for 'wrong-network'.
+ *  AC-NB5 – Retry button calls onRetry when tapped.
+ *  AC-NB6 – Retry button is disabled while isRetrying is true.
+ *  AC-NB7 – App does not crash when rendered with any valid state.
  */
 
 import React from 'react';
@@ -16,22 +17,19 @@ import { render, fireEvent } from '@testing-library/react-native';
 jest.mock('lucide-react-native', () => ({
   WifiOff: () => null,
   AlertTriangle: () => null,
+  CloudOff: () => null,
   RefreshCw: () => null,
 }));
 
 import { NetworkStatusBanner } from '../src/components/NetworkStatusBanner';
 
-const OFFLINE_MESSAGE = 'No internet connection. Check your network and try again.';
-const SERVICE_MESSAGE = 'Stellar Testnet services appear unavailable. Please try again shortly.';
+// ─── AC-NB1: Hidden when online ────────────────────────────────────────────
 
-// ─── AC-NB1: Hidden when no error ────────────────────────────────────────────
-
-describe('AC-NB1 – not rendered when networkErrorType is none', () => {
-  it('returns null when type is "none"', () => {
+describe('AC-NB1 – not rendered when state is online', () => {
+  it('returns null when state is "online"', () => {
     const { queryByTestId } = render(
       <NetworkStatusBanner
-        networkErrorType="none"
-        message=""
+        state="online"
         onRetry={jest.fn()}
       />
     );
@@ -42,44 +40,56 @@ describe('AC-NB1 – not rendered when networkErrorType is none', () => {
 // ─── AC-NB2: Offline banner ───────────────────────────────────────────────────
 
 describe('AC-NB2 – offline banner', () => {
-  it('renders the banner and message when type is "offline"', () => {
+  it('renders the banner and message when state is "offline"', () => {
     const { getByTestId, getByText } = render(
       <NetworkStatusBanner
-        networkErrorType="offline"
-        message={OFFLINE_MESSAGE}
+        state="offline"
         onRetry={jest.fn()}
       />
     );
     expect(getByTestId('network-status-banner')).toBeTruthy();
-    expect(getByText(OFFLINE_MESSAGE)).toBeTruthy();
+    expect(getByText(/You are offline/i)).toBeTruthy();
   });
 });
 
 // ─── AC-NB3: Service-unavailable banner ──────────────────────────────────────
 
 describe('AC-NB3 – service-unavailable banner', () => {
-  it('renders the banner and message when type is "service-unavailable"', () => {
+  it('renders the banner and message when state is "service-unavailable"', () => {
     const { getByTestId, getByText } = render(
       <NetworkStatusBanner
-        networkErrorType="service-unavailable"
-        message={SERVICE_MESSAGE}
+        state="service-unavailable"
         onRetry={jest.fn()}
       />
     );
     expect(getByTestId('network-status-banner')).toBeTruthy();
-    expect(getByText(SERVICE_MESSAGE)).toBeTruthy();
+    expect(getByText(/Stellar network services are unavailable/i)).toBeTruthy();
   });
 });
 
-// ─── AC-NB4: Retry callback ───────────────────────────────────────────────────
+// ─── AC-NB4: Wrong-network banner ────────────────────────────────────────────
 
-describe('AC-NB4 – retry button calls onRetry', () => {
+describe('AC-NB4 – wrong-network banner', () => {
+  it('renders the banner and message when state is "wrong-network"', () => {
+    const { getByTestId, getByText } = render(
+      <NetworkStatusBanner
+        state="wrong-network"
+        onRetry={jest.fn()}
+      />
+    );
+    expect(getByTestId('network-status-banner')).toBeTruthy();
+    expect(getByText(/Connected to the wrong blockchain network/i)).toBeTruthy();
+  });
+});
+
+// ─── AC-NB5: Retry callback ───────────────────────────────────────────────────
+
+describe('AC-NB5 – retry button calls onRetry', () => {
   it('calls onRetry when the retry button is pressed', () => {
     const onRetry = jest.fn();
     const { getByTestId } = render(
       <NetworkStatusBanner
-        networkErrorType="offline"
-        message={OFFLINE_MESSAGE}
+        state="offline"
         onRetry={onRetry}
       />
     );
@@ -88,35 +98,32 @@ describe('AC-NB4 – retry button calls onRetry', () => {
   });
 });
 
-// ─── AC-NB5: Retry disabled while retrying ───────────────────────────────────
+// ─── AC-NB6: Retry disabled while retrying ───────────────────────────────────
 
-describe('AC-NB5 – retry button is disabled while isRetrying', () => {
+describe('AC-NB6 – retry button is disabled while isRetrying', () => {
   it('renders retry button as disabled when isRetrying is true', () => {
     const onRetry = jest.fn();
     const { getByTestId } = render(
       <NetworkStatusBanner
-        networkErrorType="offline"
-        message={OFFLINE_MESSAGE}
+        state="offline"
         onRetry={onRetry}
         isRetrying={true}
       />
     );
     const retryBtn = getByTestId('network-status-retry');
-    // The button should not respond to presses when disabled
     fireEvent.press(retryBtn);
     expect(onRetry).not.toHaveBeenCalled();
   });
 });
 
-// ─── AC-NB6: Does not crash ───────────────────────────────────────────────────
+// ─── AC-NB7: Does not crash ───────────────────────────────────────────────────
 
-describe('AC-NB6 – does not crash with any valid props', () => {
+describe('AC-NB7 – does not crash with any valid state', () => {
   it('renders without crashing for "offline"', () => {
     expect(() =>
       render(
         <NetworkStatusBanner
-          networkErrorType="offline"
-          message={OFFLINE_MESSAGE}
+          state="offline"
           onRetry={jest.fn()}
         />
       )
@@ -127,20 +134,29 @@ describe('AC-NB6 – does not crash with any valid props', () => {
     expect(() =>
       render(
         <NetworkStatusBanner
-          networkErrorType="service-unavailable"
-          message={SERVICE_MESSAGE}
+          state="service-unavailable"
           onRetry={jest.fn()}
         />
       )
     ).not.toThrow();
   });
 
-  it('renders without crashing for "none"', () => {
+  it('renders without crashing for "wrong-network"', () => {
     expect(() =>
       render(
         <NetworkStatusBanner
-          networkErrorType="none"
-          message=""
+          state="wrong-network"
+          onRetry={jest.fn()}
+        />
+      )
+    ).not.toThrow();
+  });
+
+  it('renders without crashing for "online"', () => {
+    expect(() =>
+      render(
+        <NetworkStatusBanner
+          state="online"
           onRetry={jest.fn()}
         />
       )

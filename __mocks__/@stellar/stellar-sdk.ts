@@ -56,6 +56,9 @@ export const Networks = {
 };
 
 export const Server = jest.fn(() => ({
+  root: jest.fn(async () => ({
+    network_passphrase: 'Test SDF Network ; September 2015',
+  })),
   loadAccount: jest.fn(async () => ({ sequence: '0', balances: [] })),
   submitTransaction: jest.fn(async () => ({ hash: 'mockhash' })),
   payments: jest.fn(() => ({
