@@ -254,6 +254,25 @@ needed.
 
 Be respectful and constructive in all interactions. We follow the [Contributor Covenant](https://www.contributor-covenant.org/) code of conduct. Harassment, discrimination, or hostile behaviour will not be tolerated.
 
+### Payment-Period Communication
+
+Merging a pull request does **not** trigger or guarantee payment — approval is
+decided by the GrantFox evaluation process. During the payment evaluation period,
+contributors are expected to communicate professionally and to:
+
+- **Avoid spam and pressure.** Do not post repeated or duplicate payment-status
+  messages, tag maintainers to demand faster responses, or direct complaints at
+  reviewers because a merge did not result in immediate payment.
+- **Self-review first.** Before raising any payment concern, confirm your work
+  against the [Self-Review Checklist](docs/self-review-checklist.md), the
+  [Contributor Self-Assessment](docs/contributor-self-assessment.md), and the
+  [Evaluation Readiness Checklist](docs/evaluation-readiness-checklist.md).
+- **Raise genuine concerns once.** If a specific, evidenced concern remains,
+  post it a single time in the relevant thread and wait for a response.
+
+See the full [Payment-Period Communication Policy](docs/payment-period-communication-policy.md)
+for the complete expectations.
+
 ---
 
 *Happy building! If you have questions, open a discussion or leave a comment on the relevant issue.*
