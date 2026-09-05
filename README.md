@@ -94,6 +94,14 @@ PocketPay Mobile is part of a broader PocketPay stack:
 
 React Native, Expo Router, Zustand, PocketPay SDK, SecureStore, AsyncStorage
 
+## Local Verification
+
+Before opening a PR, run the local verification command:
+
+`npm run verify`
+
+This command runs typecheck, lint, tests, and formatting checks. See the [CI Pass Requirements Guidance](docs/CI_REQUIREMENTS.md) for CI reproduction details.
+
 // To Start
 ## Quick Start
 

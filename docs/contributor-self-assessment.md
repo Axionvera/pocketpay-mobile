@@ -14,9 +14,9 @@ checks.
 
 ### Scope
 
-- [ ] I re-read the linked issue and kept this change within its requested
-      scope.
-- [ ] I removed unrelated changes, unfinished work, and misleading TODOs.
+- [] I re-read the linked issue and kept this change within its requested
+scope.
+- [] I removed unrelated changes, unfinished work, and misleading TODOs.
 
 <!--
 Link the issue and briefly list the behavior and files intentionally changed.
@@ -27,12 +27,12 @@ Explain any scope change agreed with a maintainer.
 
 ### Tests
 
-- [ ] I added or updated appropriate automated tests, or explained why runtime
-      tests are not applicable.
-- [ ] I covered the relevant happy path, negative path, regression, and edge
-      cases.
-- [ ] I manually verified affected behavior where automated coverage is not
-      sufficient.
+- [] I added or updated appropriate automated tests, or explained why runtime
+tests are not applicable.
+- [] I covered the relevant happy path, negative path, regression, and edge
+cases.
+- [] I manually verified affected behavior where automated coverage is not
+sufficient.
 
 <!--
 List every command run and its result, relevant test files, and manual
@@ -44,49 +44,52 @@ Do not write only "tests pass."
 
 ### CI and Local Checks
 
-- [ ] I ran the repository checks relevant to this change and recorded their
-      results.
-- [ ] All required CI checks pass on the latest commit, or I have identified
-      each pending or failing check below.
-- [ ] I did not skip, mute, or bypass a failing check.
+- [] I ran the repository checks relevant to this change and recorded their
+results.
+- [] All required CI checks pass on the latest commit, or I have identified
+each pending or failing check below.
+- [] I did not skip, mute, or bypass a failing check.
 
 <!--
 Report the status of tests, typecheck, lint, and api:check as applicable. Link
-the latest CI run when available. A pending or failing required check means
-this assessment is not yet complete.
+the latest CI
+run when available. For local verification, run the repository's
+single verification command: `npm run verify` typecheck, lint, tests, and
+formatting)
+ A pending or failing required check means this assessment is not
+yet complete.
 -->
 
 **Local check results and CI status:**
 
 ### Documentation
 
-- [ ] I added or updated contributor, user, API, or architecture documentation
-      affected by this change, or documented why no update is needed.
-- [ ] Any comments, examples, screenshots, and links affected by the change
-      remain accurate.
+- [] I added or updated contributor, user, API, or architecture documentation
+affected by this change, or documented why no update is needed.
+- [] Any comments, examples, screenshots, and links affected by the change
+remain accurate.
 
 **Documentation evidence:**
 
 ### Known Limitations
 
-- [ ] I tested realistic boundary conditions and documented all known
-      limitations, assumptions, risks, skipped checks, and follow-up work.
-- [ ] I confirmed the change does not claim support for behavior it does not
-      implement.
+- [] I tested realistic boundary conditions and documented all known
+limitations, assumptions, risks, skipped checks, and follow-up work.
+- [] I confirmed the change does not claim support for behavior it does
+not implement.
 
 <!--
-Write "None known" only after checking for limitations. If something remains,
-describe its user impact and link a follow-up issue when one exists.
+Write "None known" only after checking for limitations. If something remains,	describe its user impact and link a follow-up issue when one exists.
 -->
 
 **Known limitations and follow-up work:**
 
 ### Acceptance Criteria Audit
 
-- [ ] I checked every acceptance criterion in the linked issue against the
-      implementation and evidence.
-- [ ] Every criterion is satisfied, or an exception has been explicitly agreed
-      with a maintainer and documented below.
+- [] I checked every acceptance criterion in the linked issue against the
+implementation and evidence.
+- [] Every criterion is satisfied, or an exception has been explicitly agreed
+with a maintainer and documented below.
 
 #### How to Complete the Audit Template
 
@@ -114,11 +117,11 @@ When a piece of work cannot be fully completed in the current pull request:
 
 ### Final Confirmation
 
-- [ ] I reviewed the complete diff as if I were the reviewer.
-- [ ] The pull request description is accurate and contains enough evidence to
-      evaluate this work without relying on private context.
-- [ ] I believe this contribution is ready for review and, when applicable,
-      payment evaluation.
+- [] I reviewed the complete diff as if I were the reviewer.
+- [] The pull request description is accurate and contains enough evidence to
+evaluate this work without relying on private context.
+- [] I believe this contribution is ready for review and, when applicable,
+payment evaluation.
 
 **Contributor:** @<!-- username -->
 

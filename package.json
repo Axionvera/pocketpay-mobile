@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "api:check": "node scripts/check-sdk-api.js",
-    "api:update": "node scripts/check-sdk-api.js --update"
+    "api:update": "node scripts/check-sdk-api.js --update",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run api:check"
   },
   "jest": {
     "preset": "jest-expo",

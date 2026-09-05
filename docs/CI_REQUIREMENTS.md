@@ -6,9 +6,9 @@ All Pull Requests (PRs) submitted to `pocketpay-mobile` are evaluated against au
 
 ## 1. CI Pass Requirement Policy
 
-* **Evaluation Impact:** Failing CI checks directly affect PR evaluation and scoring. A PR with red/failing checks will **not** be considered complete, regardless of whether code has been merged.
-* **Contributor Expectation:** Contributors are required to actively monitor CI status after pushing changes and resolve all failures prior to requesting final review.
-* **Reviewer Responsibility:** Maintainers and reviewers will defer PR approval until all required workflow jobs report a green (`passing`) status.
+* *Evaluation Impact:*` Failing CI checks directly affect PR evaluation and scoring. A PR with red/failing checks will *not* be considered complete, regardless of whether code has been merged.
+* *Contributor Expectation:** Contributors are required to actively monitor CI status after pushing changes and resolve all failures prior to requesting final review.
+* *Reviewer Responsibility:** Maintainers and reviewers will defer PR approval until all required workflow jobs report a green (`passing`) status.
 
 ---
 
@@ -16,7 +16,7 @@ All Pull Requests (PRs) submitted to `pocketpay-mobile` are evaluated against au
 
 |Failure Category | Common Causes | Prevention / Fix |
 | :--- | :--- | :--- |
-|`Linting & Formatting m | Missing semi-colons, unused variables, unformatted code, or ESLint rule violations. | Run code formatters and static linters prior to committing. |
+|` Linting & Formatting` | Missing semi-colons, unused variables, unformatted code, or ESLint rule violations. | Run code formatters and static linters prior to committing. |
 | `TypeScript / Type Checks` | Type mismatches, implicit `any`, unhandled null/undefined fields, or broken interfaces. | Perform strict local compilation checks. |
 |`Unit & Integration Tests` | Regression in existing business logic, missing mock data, or failing component specs. | Run the complete local Jest/RTL Test suite across affected files. |
 |`Build & Bundle Verification` | Unresolved imports, invalid environment variable references, or native dependency conflicts. | Trigger local build scripts prior to opening/pushing PRs. |
@@ -25,10 +25,20 @@ All Pull Requests (PRs) submitted to `pocketpay-mobile` are evaluated against au
 
 ## 3. Local Reproduction Commands
 
-Run these standard commands locally in `pocketpay-mobile` to reproduce and fix failures before pushing to GitHub:
+Run these standard commands locally in `pocketpay-mobile` to reproduce and fix failures before pushing to GitHub.
+
+### One-Command Verification
+
+To run all required checks in a single command, use:
+
+```bash
+npm run verify
+```
+
+This runs typecheck, lint, and tests. It is the quickest way to confirm your PR is ready for CI.
 
 ### Execute Linting & Formatting Checks
-``bash
+```bash
 # Check code style and linting issues
 npm run lint
 
@@ -37,19 +47,19 @@ npm run lint:fix
 ```
 
 ### Run Type Checking
-``bash
+```bash
 # Verify TypeScript compile targets without emitting output
-npm run type-check
- ```
+npm run typecheck
+```
 
 ### Run Test Suite
-``bash
+```bash
 # Run unit & integration tests locally
 npm test
 
 # Run tests with coverage output
-npm test -- --coverage
-```\
+npm test -- .coverage
+```
 
 ### Run Production Build Test
 ```bash
