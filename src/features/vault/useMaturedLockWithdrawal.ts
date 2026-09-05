@@ -1,7 +1,7 @@
 /**
  * Matured lock withdrawal flow.
  *
- * Drives the eligibility → confirm → submitting → success/failure sequence for
+ * Drives the eligibility → confirm → submitting → success/failure sequence for 
  * withdrawing a single matured vault lock. The hook owns the flow state; the
  * store owns the eligibility re-check and the transfer itself.
  *

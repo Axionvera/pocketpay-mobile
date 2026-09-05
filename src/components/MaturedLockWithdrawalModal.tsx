@@ -18,7 +18,7 @@ import {
   ShieldAlert,
   X,
 } from 'lucide-react-native';
-import type { MaturedLockWithdrawalResult } from '../store/vaultStore';
+import type { MaturedLockWithdrawaalResult } from '../store/vaultStore';
 import type { WithdrawalErrorCopy, WithdrawalStep } from '../features/vault';
 
 interface MaturedLockWithdrawalModalProps {
@@ -38,7 +38,7 @@ interface MaturedLockWithdrawalModalProps {
 }
 
 const PREVIEW_NOTICE =
-  'No vault contract is configured yet, so this is a preview of the withdrawal flow — no funds move on the network.';
+  'No vault contract is configured yet, so this is a preview of the withdrawal flow -- no funds move on the network.';
 
 const LIVE_NOTICE =
   'This submits a withdrawal to the Soroban Savings Vault on Testnet. The transaction is signed on this device.';
@@ -93,7 +93,7 @@ export const MaturedLockWithdrawalModal: React.FC<MaturedLockWithdrawalModalProp
                     hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                     accessibilityRole="button"
                     accessibilityLabel="Close withdrawal"
-                  >
+                  =
                     <X color={colors.textMuted} size={22} />
                   </TouchableOpacity>
                 </View>
@@ -145,7 +145,7 @@ export const MaturedLockWithdrawalModal: React.FC<MaturedLockWithdrawalModalProp
                 </View>
 
                 <View style={styles.disclaimer}>
-                  <ShieldAlert color={colors.textMuted} size={14} style={{ marginRight: 6 }} />
+                  <ShieldAlert color={colors.textMuted} size={14} style={ { marginRight: 6 }} />
                   <Text style={styles.disclaimerText}>
                     {isPreview ? PREVIEW_NOTICE : LIVE_NOTICE}
                   </Text>
@@ -204,14 +204,14 @@ export const MaturedLockWithdrawalModal: React.FC<MaturedLockWithdrawalModalProp
                   <View style={styles.hashBox}>
                     <Text style={styles.hashLabel}>Transaction</Text>
                     <Text style={styles.hashValue} numberOfLines={1} ellipsizeMode="middle">
-                      {result.hash}
+                      {result?.hash}
                     </Text>
                   </View>
                 ) : null}
 
                 {result?.isPreview ? (
                   <View style={styles.disclaimer}>
-                    <ShieldAlert color={colors.textMuted} size={14} style={{ marginRight: 6 }} />
+                    <ShieldAlert color={colors.textMuted} size={14} style={ { marginRight: 6 } } />
                     <Text style={styles.disclaimerText}>{PREVIEW_NOTICE}</Text>
                   </View>
                 ) : null}
@@ -347,115 +347,115 @@ const createStyles = (colors: ThemeColors) =>
     },
     detailLabel: {
       color: colors.textSecondary,
-      fontSize: 14,
-    },
-    labelWithIcon: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      fontSize: 13,
     },
     detailValue: {
       color: colors.textPrimary,
       fontSize: 14,
       fontWeight: '600',
-      maxWidth: '55%',
-      textAlign: 'right',
     },
     detailValueMono: {
       color: colors.textPrimary,
       fontSize: 12,
-      fontFamily: 'monospace',
-      maxWidth: '55%',
+      fontVariant: ['tabular-nums'],
     },
     networkBadge: {
-      backgroundColor: 'rgba(255, 196, 0, 0.15)',
+      backgroundColor: colors.surfaceLight,
       paddingHorizontal: SIZES.sm,
       paddingVertical: 2,
       borderRadius: RADIUS.sm,
     },
     networkBadgeText: {
-      color: colors.warning,
+      color: colors.textSecondary,
       fontSize: 12,
       fontWeight: '600',
     },
+    labelWithIcon: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
     disclaimer: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
-      backgroundColor: 'rgba(160, 170, 191, 0.08)',
-      borderRadius: RADIUS.sm,
+      alignItems: 'center',
+      backgroundColor: colors.surfaceLight,
+      borderRadius: RADIUS.md,
       padding: SIZES.sm,
-      marginBottom: SIZES.lg,
+      marginTop: SIZES.sm,
+      marginBottom: SIZES.md,
     },
     disclaimerText: {
       color: colors.textMuted,
-      fontSize: 11,
-      lineHeight: 16,
+      fontSize: 12,
+      lineHeight: 18,
       flex: 1,
     },
     actions: {
       flexDirection: 'row',
-      gap: SIZES.sm,
-      width: '100%',
+      justifyContent: 'space-between',
+      gap: SIZES.md,
+      marginTop: SIZES.md,
     },
     actionButton: {
       flex: 1,
-      height: 50,
-      borderRadius: RADIUS.lg,
+      paddingVertical: SIZES.md,
+      borderRadius: RADIUS.md,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    fullWidthButton: {
-      flexGrow: 0,
-      width: '100%',
-    },
     cancelButton: {
       backgroundColor: colors.surfaceLight,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    confirmButton: {
+      backgroundColor: colors.primary,
     },
     cancelButtonText: {
       color: colors.textPrimary,
       fontSize: 15,
       fontWeight: '600',
     },
-    confirmButton: {
-      backgroundColor: colors.primary,
-    },
     confirmButtonText: {
-      color: colors.background,
+      color: colors.surface,
       fontSize: 15,
       fontWeight: '600',
     },
     statusContent: {
       alignItems: 'center',
+      paddingVertical: SIZES.lg,
     },
     statusTitle: {
       color: colors.textPrimary,
       fontSize: 18,
       fontWeight: 'bold',
-      textAlign: 'center',
       marginTop: SIZES.md,
       marginBottom: SIZES.sm,
+      textAlign: 'center',
     },
     statusMessage: {
       color: colors.textSecondary,
       fontSize: 14,
       lineHeight: 20,
       textAlign: 'center',
-      marginBottom: SIZES.lg,
+      marginBottom: SIZES.md,
+      paddingHorizontal: SIZES.sm,
     },
     hashBox: {
-      width: '100%',
       backgroundColor: colors.background,
       borderRadius: RADIUS.md,
       padding: SIZES.md,
-      marginBottom: SIZES.lg,
+      marginBottom: SIZES.md,
     },
     hashLabel: {
       color: colors.textMuted,
       fontSize: 12,
-      marginBottom: 2,
+      marginBottom: 4,
     },
     hashValue: {
       color: colors.textPrimary,
-      fontSize: 12,
-      fontFamily: 'monospace',
+      fontSize: 13,
+    },
+    fullWidthButton: {
+      alignSelf: 'stretch',
     },
   });

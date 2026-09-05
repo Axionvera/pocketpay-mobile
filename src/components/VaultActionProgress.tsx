@@ -6,11 +6,11 @@ import type { VaultActionState } from '../types/vault';
 import { VAULT_ACTION_LABELS } from '../types/vault';
 
 export interface VaultActionProgressProps {
-  state: VaultActionState;
+  state: VaultActionState | 'eligible';
   errorMessage?: string;
 }
 
-const STATE_COLOR_KEY: Record<VaultActionState, keyof ThemeColors> = {
+const STATE_COLOR_KEY: Record<VaultActionState | 'eligible', keyOf ThemeColors> = {
   idle: 'textMuted',
   review: 'textSecondary',
   signing: 'primary',
@@ -18,6 +18,7 @@ const STATE_COLOR_KEY: Record<VaultActionState, keyof ThemeColors> = {
   pending: 'warning',
   confirmed: 'success',
   failed: 'error',
+  eligible: 'success',
 };
 
 /**
@@ -29,7 +30,7 @@ const STATE_COLOR_KEY: Record<VaultActionState, keyof ThemeColors> = {
  * submitting vs. pending), satisfying the "signing and submitting are
  * distinct" requirement from #332.
  */
-export const VaultActionProgress: React.FC<VaultActionProgressProps> = ({
+export const VaultActionProgress: React.FC<<VaultActionProgressProps> = ({
   state,
   errorMessage,
 }: VaultActionProgressProps) => {
@@ -39,7 +40,7 @@ export const VaultActionProgress: React.FC<VaultActionProgressProps> = ({
   if (state === 'idle') return null;
 
   const color = colors[STATE_COLOR_KEY[state]] as string;
-  const label = state === 'failed' && errorMessage ? errorMessage : VAULT_ACTION_LABELS[state];
+  const label = state === 'failed' && errorMessage ? errorMessage : state === 'eligible' ? 'Ready to withdraw' : VAUL_ACTION_LABELS[state];
 
   return (
     <View style={[styles.container, { borderColor: color }]}>

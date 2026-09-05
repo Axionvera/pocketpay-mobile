@@ -3,9 +3,12 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
 import { VaultUnavailableState } from '../../src/components/VaultUnavailableState';
+import { MaturedLockWithdrawalModal } from '../../src/components/MaturedLockWithdrawalModal';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useVaultAvailability } from '../../src/hooks/useVaultAvailability';
+import { useVaultStore } from '../../src/store/vaultStore';
+import { useMaturedLockWithdrawal } from '../../src/features/vault';
 import { Lock, Clock, Calendar, CheckCircle, AlertCircle } from 'lucide-react-native';
 
 export default function VaultLockDetailScreen() {
@@ -15,16 +18,32 @@ export default function VaultLockDetailScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { isAvailable, reasons } = useVaultAvailability();
 
-  // Mock data for the lock
-  const mockLock = {
+  // Pull the lock from the store, falling back to an inert placeholder when
+  // the id does not match (e.g. deep link to a removed lock).
+  const locks = useVaultStore((state) => state.locks);
+  const contractId = useVaultStore((state) => state.contractId);
+  const lock = locks.find((candidate) => candidate.id === id) ?? {
     id: id as string,
-    amount: '500.0000000',
-    createdDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    unlockDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-    status: 'LOCKED',
+    amount: '0',
+    unlockDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+    status: 'locked' as const,
+    createdAt: new Date().toISOString(),
   };
 
-  const isEligibleForWithdrawal = new Date(mockLock.unlockDate).getTime() <= Date.now();
+  const {
+    step,
+    eligibility,
+    isPreview,
+    result,
+    error,
+    start,
+    confirm,
+    cancel,
+    retry,
+    close,
+  } = useMaturedLockWithdrawal(lock);
+
+  const isEligibleForWithdrawal = eligibility.isEligible;
 
   if (!isAvailable) {
     return (
@@ -39,7 +58,6 @@ export default function VaultLockDetailScreen() {
   }
 
   return (
-
     <>
       <Stack.Screen options={{ title: 'Vault Lock Details', headerBackTitle: 'Vault' }} />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -47,7 +65,7 @@ export default function VaultLockDetailScreen() {
           <View style={styles.iconContainer}>
             <Lock color={colors.primary} size={32} />
           </View>
-          <Text style={styles.amountText}>{mockLock.amount} XLM</Text>
+          <Text style={styles.amountText}>{lock.amount} XLM</Text>
           <View style={[styles.statusBadge, isEligibleForWithdrawal ? styles.statusUnlocked : styles.statusLocked]}>
             <Text style={[styles.statusText, isEligibleForWithdrawal && styles.statusTextUnlocked]}>
               {isEligibleForWithdrawal ? 'UNLOCKED' : 'LOCKED'}
@@ -64,7 +82,7 @@ export default function VaultLockDetailScreen() {
             </View>
             <View style={styles.detailTextContainer}>
               <Text style={styles.detailLabel}>Created Date</Text>
-              <Text style={styles.detailValue}>{new Date(mockLock.createdDate).toLocaleString()}</Text>
+              <Text style={styles.detailValue}>{new Date(lock.createdAt).toLocaleString()}</Text>
             </View>
           </View>
           
@@ -76,7 +94,7 @@ export default function VaultLockDetailScreen() {
             </View>
             <View style={styles.detailTextContainer}>
               <Text style={styles.detailLabel}>Unlock Date</Text>
-              <Text style={styles.detailValue}>{new Date(mockLock.unlockDate).toLocaleString()}</Text>
+              <Text style={styles.detailValue}>{new Date(lock.unlockDate).toLocaleString()}</Text>
             </View>
           </View>
         </View>
@@ -88,14 +106,14 @@ export default function VaultLockDetailScreen() {
               <>
                 <CheckCircle color={colors.success} size={24} style={styles.eligibilityIcon} />
                 <Text style={styles.eligibilityText}>
-                  This lock has matured. You can now withdraw these funds.
+                  {eligibility.message}
                 </Text>
               </>
             ) : (
               <>
                 <AlertCircle color={colors.warning} size={24} style={styles.eligibilityIcon} />
                 <Text style={styles.eligibilityText}>
-                  Funds are currently locked and cannot be withdrawn until the unlock date.
+                  {eligibility.message}
                 </Text>
               </>
             )}
@@ -103,12 +121,26 @@ export default function VaultLockDetailScreen() {
         </View>
 
         <Button
-          title={isEligibleForWithdrawal ? "Withdraw Funds" : "Early Withdrawal Unavailable"}
-          onPress={() => Alert.alert('Withdrawal not implemented for mock data.')}
+          title={isEligibleForWithdrawal ? 'Withdraw Funds' : 'Early Withdrawal Unavailable'}
+          onPress={start}
           disabled={!isEligibleForWithdrawal}
           style={styles.withdrawButton}
         />
       </ScrollView>
+
+      <MaturedLockWithdrawalModal
+        step={step}
+        amount={lock.amount}
+        availableFrom={eligibility.availableFrom}
+        isPreview={isPreview}
+        result={result}
+        error={error}
+        contractId={contractId}
+        onConfirm={confirm}
+        onCancel={cancel}
+        onRetry={retry}
+        onClose={close}
+      />
     </>
   );
 }

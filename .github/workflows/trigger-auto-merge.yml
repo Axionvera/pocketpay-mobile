@@ -18,13 +18,13 @@ jobs:
 
     steps:
       - name: Trigger automation repo
+        continue-on-error: true
         env:
-          GH_TOKEN: ${{ secrets.AXIONVERA_AUTOMATION_TOKEN }}
+          GH_TOKEN: $ {{ secrets.AXIONVERA_AUTOMATION_TOKEN }}
         run: |
-          gh api \
-            --method POST \
-            -H "Accept: application/vnd.github+json" \
-            /repos/Axionvera/pocketpay-issue-automation/dispatches \
-            -f event_type=axionvera-pr-opened \
-            -F client_payload[repo]="${{ github.repository }}" \
-            -F client_payload[pr_number]="${{ github.event.pull_request.number }}"
+          jq -n --arg event "axionvera-pr-opened" --arg repo "$ {{ github.repository }}" --arg pr "$ {{ github.event.pull_request.number }}" '{event_type:$event, client_payload:{"repo":$repo, pr_number:$pr}}' |
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              /repos/Axionvera/pocketpay-issue-automation/dispatches \
+              --input -
