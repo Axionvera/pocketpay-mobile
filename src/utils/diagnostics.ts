@@ -3,27 +3,113 @@ import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 import { useAppStore } from '../store/appStore';
 import { useWalletStore } from '../store/walletStore';
+import { classifyNetworkError } from '../hooks/useNetworkStatus';
 import { getLastErrorReport } from './errorReporting';
 import { redactSensitiveString } from './redactSensitive';
 import { computeNetworkEnvironment } from '../features/settings/useNetworkEnvironment';
 import { FEATURE_FLAGS } from '../config/featureFlags';
 
+export type SecureStorageDiagnosticCode =
+  | 'available'
+  | 'unavailable'
+  | 'availability_check_failed'
+  | 'write_failed'
+  | 'read_failed'
+  | 'delete_failed';
+
+export interface SecureStorageDiagnostics {
+  secureStoreAvailable: boolean;
+  secureStoreOperational: boolean;
+  secureStoreStatus: SecureStorageDiagnosticCode;
+}
+
+const SECURE_STORE_PROBE_KEY = '__pocketpay_secure_store_diagnostic__';
+const SECURE_STORE_PROBE_VALUE = 'pocketpay-diagnostic';
+let activeStorageProbe: Promise<SecureStorageDiagnostics> | null = null;
+
 /**
- * Storage status is read via SecureStore.isAvailableAsync() (a real device
- * capability check — Keychain/Keystore access, not a read of any stored
- * value), which is why this function is async unlike the rest of the
- * diagnostics builder.
+ * Probe SecureStore without reading wallet material.
+ *
+ * The probe is deliberately argument-free so callers cannot pass wallet data.
+ * It uses one fixed non-sensitive value and returns only a coarse stage code,
+ * never a raw Keychain or Keystore error.
  */
-async function getStorageStatus(): Promise<{ secureStoreAvailable: boolean }> {
-  try {
-    const secureStoreAvailable = await SecureStore.isAvailableAsync();
-    return { secureStoreAvailable };
-  } catch {
-    // isAvailableAsync itself should not throw, but if the platform shim is
-    // missing (e.g. an unsupported test environment), report unavailable
-    // rather than letting diagnostics export fail entirely.
-    return { secureStoreAvailable: false };
+export function probeSecureStorage(): Promise<SecureStorageDiagnostics> {
+  // Share only the active round trip so callers cannot delete each other's probe.
+  if (!activeStorageProbe) {
+    activeStorageProbe = runSecureStorageProbe().finally(() => {
+      activeStorageProbe = null;
+    });
   }
+  return activeStorageProbe;
+}
+
+async function runSecureStorageProbe(): Promise<SecureStorageDiagnostics> {
+  let available = false;
+  try {
+    available = await SecureStore.isAvailableAsync();
+  } catch {
+    return {
+      secureStoreAvailable: false,
+      secureStoreOperational: false,
+      secureStoreStatus: 'availability_check_failed',
+    };
+  }
+
+  if (!available) {
+    return {
+      secureStoreAvailable: false,
+      secureStoreOperational: false,
+      secureStoreStatus: 'unavailable',
+    };
+  }
+
+  try {
+    await SecureStore.setItemAsync(SECURE_STORE_PROBE_KEY, SECURE_STORE_PROBE_VALUE);
+  } catch {
+    return {
+      secureStoreAvailable: true,
+      secureStoreOperational: false,
+      secureStoreStatus: 'write_failed',
+    };
+  }
+
+  let readMatches = false;
+  try {
+    readMatches =
+      (await SecureStore.getItemAsync(SECURE_STORE_PROBE_KEY)) === SECURE_STORE_PROBE_VALUE;
+  } catch {
+    // Cleanup still runs below. Raw platform errors are not exported.
+  }
+
+  let cleanupSucceeded = true;
+  try {
+    await SecureStore.deleteItemAsync(SECURE_STORE_PROBE_KEY);
+  } catch {
+    cleanupSucceeded = false;
+  }
+
+  if (!readMatches) {
+    return {
+      secureStoreAvailable: true,
+      secureStoreOperational: false,
+      secureStoreStatus: 'read_failed',
+    };
+  }
+
+  if (!cleanupSucceeded) {
+    return {
+      secureStoreAvailable: true,
+      secureStoreOperational: false,
+      secureStoreStatus: 'delete_failed',
+    };
+  }
+
+  return {
+    secureStoreAvailable: true,
+    secureStoreOperational: true,
+    secureStoreStatus: 'available',
+  };
 }
 
 /** Enabled/disabled state per flag key. No description text — flag names and
@@ -40,7 +126,7 @@ export const getDiagnostics = async () => {
   const walletState = useWalletStore.getState();
   const lastError = getLastErrorReport();
   const network = computeNetworkEnvironment();
-  const storage = await getStorageStatus();
+  const storage = await probeSecureStorage();
 
   // Derive network health from the wallet store error string.
   const networkErrorType = classifyNetworkError(walletState.error);
