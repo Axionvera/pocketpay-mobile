@@ -1,11 +1,14 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { ContactForm } from '@/components/ContactForm';
-import { useContactStore } from '@/features/contacts/contactStore';
+import { useAppStore } from '@/store/appStore';
 
 // Mock the store
-jest.mock('@/features/contacts/contactStore', () => ({
-  useContactStore: jest.fn(),
+jest.mock('@/store/appStore', () => ({
+  useAppStore: jest.fn(),
 }));
+
+const VALID_ADDRESS = 'GAAQEAYEAUDAOCAJBIFQYDIOB4IBCEQTCQKRMFYYDENBWHA5DYPSABOV';
+const INVALID_CHECKSUM_ADDRESS = `G${'A'.repeat(55)}`;
 
 describe('ContactForm', () => {
   const mockOnSave = jest.fn();
@@ -14,9 +17,12 @@ describe('ContactForm', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useContactStore as jest.Mock).mockReturnValue({
-      contacts: [],
-      getContactByAddress: jest.fn(() => undefined),
+    (useAppStore as jest.Mock).mockReturnValue({
+      findDuplicateContact: jest.fn(() => ({
+        isDuplicate: false,
+        type: 'none',
+        message: '',
+      })),
     });
   });
 
@@ -36,7 +42,7 @@ describe('ContactForm', () => {
   });
 
   it('renders edit contact form with pre-filled values', () => {
-    const contact = { id: '1', name: 'Alice', address: 'GABC123' };
+    const contact = { id: '1', name: 'Alice', publicKey: VALID_ADDRESS };
 
     render(
       <ContactForm
@@ -50,7 +56,7 @@ describe('ContactForm', () => {
 
     expect(screen.getByText('Edit Contact')).toBeTruthy();
     expect(screen.getByDisplayValue('Alice')).toBeTruthy();
-    expect(screen.getByDisplayValue('GABC123')).toBeTruthy();
+    expect(screen.getByDisplayValue(VALID_ADDRESS)).toBeTruthy();
   });
 
   it('shows validation errors for empty fields', async () => {
@@ -73,7 +79,7 @@ describe('ContactForm', () => {
     expect(mockOnSave).not.toHaveBeenCalled();
   });
 
-  it('validates Stellar address format', async () => {
+  it('rejects checksum-invalid Stellar addresses', async () => {
     render(
       <ContactForm
         visible={true}
@@ -84,13 +90,16 @@ describe('ContactForm', () => {
     );
 
     fireEvent.changeText(screen.getByPlaceholderText('Contact name'), 'Alice');
-    fireEvent.changeText(screen.getByPlaceholderText('G...'), 'invalid');
+    fireEvent.changeText(
+      screen.getByPlaceholderText('G...'),
+      INVALID_CHECKSUM_ADDRESS,
+    );
 
     fireEvent.press(screen.getByText('Save'));
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Invalid Stellar address/)
+        screen.getByText(/valid Stellar address/i)
       ).toBeTruthy();
     });
 
@@ -112,7 +121,7 @@ describe('ContactForm', () => {
     fireEvent.changeText(screen.getByPlaceholderText('Contact name'), longName);
     fireEvent.changeText(
       screen.getByPlaceholderText('G...'),
-      'GABC12345678901234567890123456789012345678901234567890'
+      VALID_ADDRESS
     );
 
     fireEvent.press(screen.getByText('Save'));
@@ -127,15 +136,14 @@ describe('ContactForm', () => {
   });
 
   it('detects duplicate address when adding new contact', async () => {
-    const mockGetContactByAddress = jest.fn(() => ({
-      id: '1',
-      name: 'Existing',
-      address: 'GABC123',
+    const mockFindDuplicateContact = jest.fn(() => ({
+      isDuplicate: true,
+      type: 'address',
+      message: 'This address is already saved as "Existing".',
     }));
 
-    (useContactStore as jest.Mock).mockReturnValue({
-      contacts: [{ id: '1', name: 'Existing', address: 'GABC123', createdAt: Date.now() }],
-      getContactByAddress: mockGetContactByAddress,
+    (useAppStore as jest.Mock).mockReturnValue({
+      findDuplicateContact: mockFindDuplicateContact,
     });
 
     render(
@@ -148,7 +156,7 @@ describe('ContactForm', () => {
     );
 
     fireEvent.changeText(screen.getByPlaceholderText('Contact name'), 'New Contact');
-    fireEvent.changeText(screen.getByPlaceholderText('G...'), 'GABC123');
+    fireEvent.changeText(screen.getByPlaceholderText('G...'), VALID_ADDRESS);
 
     fireEvent.press(screen.getByText('Save'));
 
@@ -174,7 +182,7 @@ describe('ContactForm', () => {
     fireEvent.changeText(screen.getByPlaceholderText('Contact name'), 'Alice');
     fireEvent.changeText(
       screen.getByPlaceholderText('G...'),
-      'GABC12345678901234567890123456789012345678901234567890'
+      VALID_ADDRESS
     );
 
     fireEvent.press(screen.getByText('Save'));
@@ -182,7 +190,7 @@ describe('ContactForm', () => {
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalledWith(
         'Alice',
-        'GABC12345678901234567890123456789012345678901234567890'
+        VALID_ADDRESS
       );
     });
   });
@@ -202,7 +210,7 @@ describe('ContactForm', () => {
   });
 
   it('shows delete button when editing contact', () => {
-    const contact = { id: '1', name: 'Alice', address: 'GABC123' };
+    const contact = { id: '1', name: 'Alice', publicKey: VALID_ADDRESS };
 
     render(
       <ContactForm
@@ -218,7 +226,7 @@ describe('ContactForm', () => {
   });
 
   it('calls onDelete when delete button is pressed', () => {
-    const contact = { id: '1', name: 'Alice', address: 'GABC123' };
+    const contact = { id: '1', name: 'Alice', publicKey: VALID_ADDRESS };
 
     render(
       <ContactForm

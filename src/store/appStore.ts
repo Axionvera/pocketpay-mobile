@@ -31,6 +31,7 @@ export interface DuplicateCheckResult {
 
 interface AppState {
   contacts: Contact[];
+  recentRecipients: string[];
   themeMode: ThemeMode;
   isInitialized: boolean;
 
@@ -38,7 +39,12 @@ interface AppState {
   initializeApp: () => Promise<void>;
   addContact: (contact: Contact) => Promise<{ success: boolean; duplicateName?: string }>;
   addContactIfUnique: (contact: Contact) => Promise<DuplicateCheckResult>;
-  updateContact: (id: string, name: string) => Promise<void>;
+  updateContact: (
+    id: string,
+    name: string,
+    publicKey?: string,
+  ) => Promise<DuplicateCheckResult>;
+  addRecentRecipient: (publicKey: string) => Promise<void>;
   removeContact: (id: string) => Promise<void>;
   findContactByPublicKey: (publicKey: string) => Contact | undefined;
   findContactByName: (name: string) => Contact | undefined;
@@ -52,8 +58,13 @@ interface AppState {
 
 const STORAGE_KEYS = {
   CONTACTS: "@pocketpay_contacts",
+  RECENT_RECIPIENTS: "@pocketpay_recent_recipients",
   THEME_MODE: "@pocketpay_theme",
+  LEGACY_CONTACTS: "pocketpay-contacts",
+  LEGACY_CONTACTS_MIGRATED: "@pocketpay_legacy_contacts_migrated",
 };
+
+const RECENT_RECIPIENT_LIMIT = 5;
 
 /**
  * @deprecated Use normalizeAddress from src/utils/address instead.
@@ -71,6 +82,103 @@ const persistContacts = async (contacts: Contact[]) => {
   }
 };
 
+const persistRecentRecipients = async (recentRecipients: string[]) => {
+  try {
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.RECENT_RECIPIENTS,
+      JSON.stringify(recentRecipients),
+    );
+  } catch (e) {
+    console.error("Failed to save recent recipients:", e);
+  }
+};
+
+function normalizeRecentRecipients(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+
+  const result: string[] = [];
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const normalized = normalizeAddress(value);
+    if (normalized && !result.includes(normalized)) {
+      result.push(normalized);
+    }
+    if (result.length === RECENT_RECIPIENT_LIMIT) break;
+  }
+  return result;
+}
+
+function parseStoredRecentRecipients(stored: string | null): string[] {
+  if (!stored) return [];
+  try {
+    return normalizeRecentRecipients(JSON.parse(stored));
+  } catch {
+    return [];
+  }
+}
+
+function parseLegacyContactStore(stored: string | null): {
+  contacts: Contact[];
+  recentRecipients: string[];
+} {
+  if (!stored) return { contacts: [], recentRecipients: [] };
+
+  try {
+    const parsed = JSON.parse(stored);
+    const state = parsed?.state;
+    const contacts: Contact[] = [];
+    const seen = new Set<string>();
+
+    if (Array.isArray(state?.contacts)) {
+      for (const value of state.contacts) {
+        if (!value || typeof value !== "object") continue;
+        const legacy = value as { id?: unknown; name?: unknown; address?: unknown };
+        if (
+          typeof legacy.id !== "string" ||
+          typeof legacy.name !== "string" ||
+          typeof legacy.address !== "string"
+        ) {
+          continue;
+        }
+
+        const publicKey = normalizeAddress(legacy.address);
+        if (!publicKey || seen.has(publicKey)) continue;
+        seen.add(publicKey);
+        contacts.push({
+          id: legacy.id,
+          name: legacy.name.trim(),
+          publicKey,
+        });
+      }
+    }
+
+    return {
+      contacts,
+      recentRecipients: normalizeRecentRecipients(state?.recentRecipients),
+    };
+  } catch {
+    return { contacts: [], recentRecipients: [] };
+  }
+}
+
+function mergeContacts(primary: Contact[], legacy: Contact[]): Contact[] {
+  const merged = [...primary];
+  const seen = new Set(primary.map((contact) => normalizeAddress(contact.publicKey)));
+
+  for (const contact of legacy) {
+    const normalized = normalizeAddress(contact.publicKey);
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    merged.push({ ...contact, publicKey: normalized });
+  }
+
+  return merged;
+}
+
+function mergeRecentRecipients(primary: string[], legacy: string[]): string[] {
+  return normalizeRecentRecipients([...primary, ...legacy]);
+}
+
 /** Parses a stored theme preference, falling back safely if it is missing, malformed, or not a recognized mode. */
 function parseStoredThemeMode(stored: string | null): ThemeMode {
   if (!stored) return DEFAULT_THEME_MODE;
@@ -84,27 +192,104 @@ function parseStoredThemeMode(stored: string | null): ThemeMode {
 
 export const useAppStore = create<AppState>((set, get) => ({
   contacts: [],
+  recentRecipients: [],
   themeMode: DEFAULT_THEME_MODE,
   isInitialized: false,
 
   initializeApp: async () => {
     try {
-      const [storedContacts, storedTheme] = await Promise.all([
+      const [
+        storedContacts,
+        storedRecentRecipients,
+        storedTheme,
+        storedLegacyContacts,
+        storedLegacyMigrationMarker,
+      ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.CONTACTS),
+        AsyncStorage.getItem(STORAGE_KEYS.RECENT_RECIPIENTS),
         AsyncStorage.getItem(STORAGE_KEYS.THEME_MODE),
+        AsyncStorage.getItem(STORAGE_KEYS.LEGACY_CONTACTS),
+        AsyncStorage.getItem(STORAGE_KEYS.LEGACY_CONTACTS_MIGRATED),
       ]);
 
+      const canonicalContacts: Contact[] = storedContacts
+        ? JSON.parse(storedContacts)
+        : [];
+      const canonicalRecentRecipients =
+        parseStoredRecentRecipients(storedRecentRecipients);
+      const themeMode = parseStoredThemeMode(storedTheme);
+      const migrationComplete = storedLegacyMigrationMarker === "1";
+
+      if (storedLegacyContacts && !migrationComplete) {
+        const legacy = parseLegacyContactStore(storedLegacyContacts);
+        const contacts = mergeContacts(canonicalContacts, legacy.contacts);
+        const recentRecipients = mergeRecentRecipients(
+          canonicalRecentRecipients,
+          legacy.recentRecipients,
+        );
+
+        try {
+          await Promise.all([
+            AsyncStorage.setItem(
+              STORAGE_KEYS.CONTACTS,
+              JSON.stringify(contacts),
+            ),
+            AsyncStorage.setItem(
+              STORAGE_KEYS.RECENT_RECIPIENTS,
+              JSON.stringify(recentRecipients),
+            ),
+          ]);
+          // Commit the migration before exposing imported entries in memory.
+          // If legacy cleanup fails after this marker is durable, future
+          // initialization ignores the stale legacy payload, so a contact
+          // deleted from the canonical store cannot be resurrected.
+          await AsyncStorage.setItem(STORAGE_KEYS.LEGACY_CONTACTS_MIGRATED, "1");
+
+          set({
+            contacts,
+            recentRecipients,
+            themeMode,
+            isInitialized: true,
+          });
+
+          try {
+            await AsyncStorage.removeItem(STORAGE_KEYS.LEGACY_CONTACTS);
+          } catch (cleanupError) {
+            console.error("Failed to remove migrated legacy contacts:", cleanupError);
+          }
+        } catch (migrationError) {
+          console.error("Failed to migrate legacy contacts:", migrationError);
+          // Do not expose an uncommitted merge. A later initialization can
+          // safely retry from the still-present legacy payload.
+          set({
+            contacts: canonicalContacts,
+            recentRecipients: canonicalRecentRecipients,
+            themeMode,
+            isInitialized: true,
+          });
+        }
+        return;
+      }
+
       set({
-        contacts: storedContacts ? JSON.parse(storedContacts) : [],
-        themeMode: parseStoredThemeMode(storedTheme),
+        contacts: canonicalContacts,
+        recentRecipients: canonicalRecentRecipients,
+        themeMode,
         isInitialized: true,
       });
+
+      if (migrationComplete && storedLegacyContacts) {
+        try {
+          await AsyncStorage.removeItem(STORAGE_KEYS.LEGACY_CONTACTS);
+        } catch (cleanupError) {
+          console.error("Failed to remove migrated legacy contacts:", cleanupError);
+        }
+      }
     } catch (e) {
       console.error("Failed to load app settings:", e);
       set({ isInitialized: true });
     }
   },
-
   addContact: async (contact: Contact) => {
     const { contacts } = get();
     const normalized = normalizeAddress(contact.publicKey);
@@ -130,12 +315,31 @@ export const useAppStore = create<AppState>((set, get) => ({
     return { success: true };
   },
 
-  updateContact: async (id: string, name: string) => {
-    const newContacts = get().contacts.map((c) =>
-      c.id === id ? { ...c, name: name.trim() } : c,
+  updateContact: async (
+    id: string,
+    name: string,
+    publicKey?: string,
+  ) => {
+    const contacts = get().contacts;
+    const existing = contacts.find((contact) => contact.id === id);
+    if (!existing) {
+      return { isDuplicate: false, type: "none", message: "" };
+    }
+
+    const nextPublicKey = normalizeAddress(publicKey ?? existing.publicKey);
+    const duplicateCheck = get().findDuplicateContact(name, nextPublicKey, id);
+    if (duplicateCheck.isDuplicate) {
+      return duplicateCheck;
+    }
+
+    const newContacts = contacts.map((contact) =>
+      contact.id === id
+        ? { ...contact, name: name.trim(), publicKey: nextPublicKey }
+        : contact,
     );
     set({ contacts: newContacts });
     await persistContacts(newContacts);
+    return duplicateCheck;
   },
 
   addContactIfUnique: async (contact: Contact) => {
@@ -150,6 +354,21 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     await get().addContact(contact);
     return { isDuplicate: false, type: "none", message: "" };
+  },
+
+  addRecentRecipient: async (publicKey: string) => {
+    const normalized = normalizeAddress(publicKey);
+    if (!normalized) return;
+
+    const recentRecipients = [
+      normalized,
+      ...get().recentRecipients.filter(
+        (recipient) => normalizeAddress(recipient) !== normalized,
+      ),
+    ].slice(0, RECENT_RECIPIENT_LIMIT);
+
+    set({ recentRecipients });
+    await persistRecentRecipients(recentRecipients);
   },
 
   removeContact: async (id: string) => {
