@@ -2,6 +2,8 @@
  * Transaction feature types and interfaces
  */
 
+import type { PaymentReceiptStatus } from './receipt';
+
 export interface TransactionDetail {
   id: string;
   from?: string;
@@ -9,6 +11,8 @@ export interface TransactionDetail {
   into?: string;
   amount?: string;
   asset?: string;
+  asset_type?: string;
+  asset_code?: string;
   created_at?: string;
   createdAt?: string;
   timestamp?: string;
@@ -18,12 +22,14 @@ export interface TransactionDetail {
   memo_type?: string;
   transaction_successful?: boolean;
   is_pending?: boolean;
+  status?: PaymentReceiptStatus;
+  network?: string;
   type?: string;
   paging_token?: string;
   is_vault?: boolean;
 }
 
-export type TransactionStatus = 'successful' | 'pending' | 'failed';
+export type TransactionStatus = PaymentReceiptStatus;
 
 export interface TransactionStatusConfig {
   icon: React.ReactNode;

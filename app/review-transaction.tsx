@@ -31,6 +31,7 @@ import {
   StatusBadge,
 } from '@/components';
 import { UNCONFIRMED_SUBMISSION_MESSAGE } from '../src/utils/paymentErrors';
+import { createReceiptParams, resolveSigningErrorReceiptStatus } from '../src/features/transactions/receipt';
 
 /** Copy for each in-flight signing phase, shared by the visible card and its screen-reader label. */
 const PHASE_COPY = {
@@ -119,17 +120,20 @@ export default function ReviewTransactionScreen() {
   useEffect(() => {
     if (phase === 'completed' && store.lastResult) {
       refreshWalletData();
+      // Capture receipt fields from the completed operation before clearing the store.
+      const completedReview = store.lastResult.review;
+      const receiptParams = createReceiptParams({
+        status: 'successful',
+        hash: store.lastResult.hash,
+        amount: completedReview?.amount,
+        asset: completedReview?.assetCode,
+        destination: completedReview?.destinationPublicKey,
+        date: store.lastResult.completedAt || new Date().toISOString(),
+        network: completedReview?.network,
+      });
       const timer = setTimeout(() => {
         store.reset();
-        router.replace({
-          pathname: '/payment-success',
-          params: {
-            hash: store.lastResult!.hash,
-            amount: amount.trim(),
-            destination: destination.trim(),
-            date: new Date().toISOString(),
-          },
-        });
+        router.replace({ pathname: '/payment-receipt', params: receiptParams });
       }, 1500);
       return () => clearTimeout(timer);
     }
@@ -146,7 +150,7 @@ export default function ReviewTransactionScreen() {
       return;
     }
     const fee = await server.fetchBaseFee();
-    store.startReview({
+    const submittedReview = {
       requestId: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
       sourcePublicKey: publicKey!,
       destinationPublicKey: destination.trim(),
@@ -158,7 +162,8 @@ export default function ReviewTransactionScreen() {
       createdAt: new Date().toISOString(),
       timeoutSeconds: 30,
       fee: fee.toString(),
-    });
+    };
+    store.startReview(submittedReview);
 
     store.enterHandoff();
     store.enterSigning();
@@ -191,7 +196,7 @@ export default function ReviewTransactionScreen() {
 
       const signingResult = {
         hash: result.hash,
-        review: store.currentReview!,
+        review: submittedReview,
         signerType: 'local' as const,
         completedAt: new Date().toISOString(),
       };
@@ -225,6 +230,22 @@ export default function ReviewTransactionScreen() {
   const handleDismissError = () => {
     store.reset();
     router.back();
+  };
+
+  const handleViewReceipt = () => {
+    const receiptParams = createReceiptParams({
+      // Only an explicit pre-submission cancellation/rejection is safe to call rejected.
+      status: phase === 'cancelled'
+        ? 'rejected'
+        : resolveSigningErrorReceiptStatus(error?.type),
+      amount: amount.trim(),
+      asset: 'XLM',
+      destination: destination.trim(),
+      date: store.currentReview?.createdAt || new Date().toISOString(),
+      network: store.currentReview?.network || getNetworkLabel(),
+    });
+    store.reset();
+    router.replace({ pathname: '/payment-receipt', params: receiptParams });
   };
 
   const reviewItems: ReviewItem[] = useMemo(() => {
@@ -361,6 +382,7 @@ export default function ReviewTransactionScreen() {
 
       {(phase === 'failed' || phase === 'cancelled') && (
         <View style={styles.actions}>
+          <Button title="View Receipt" onPress={handleViewReceipt} />
           <Button
             title="Go Back"
             variant="secondary"
