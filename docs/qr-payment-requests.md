@@ -8,7 +8,7 @@ that never reached a decision.
 ## Two formats, chosen automatically
 
 The Receive screen (`app/receive.tsx`) builds its payload through
-[`buildReceivePayload`](../src/features/receive/qrPayload.ts). Which format
+[`createReceivePayload`](../src/features/receive/qrPayload.ts). Which format
 comes out depends on whether the user filled in the optional "Request a
 specific amount" fields:
 
@@ -35,7 +35,7 @@ the Stellar ecosystem's URI scheme for delegated signing / payment
 requests.
 
 ```
-web+stellar:pay?destination=G...&amount=10.5&memo=Invoice+42&memo_type=MEMO_TEXT
+web+stellar:pay?destination=G...&network_passphrase=Test+SDF+Network+%3B+September+2015&amount=10.5&memo=Invoice+42&memo_type=MEMO_TEXT
 ```
 
 Used as soon as the user fills in an amount, a memo, or both. There's no
@@ -46,6 +46,7 @@ the requester.
 | Parameter | When present | Notes |
 | --- | --- | --- |
 | `destination` | Always | The requester's public key. |
+| `network_passphrase` | Every validated mobile payment request | `Test SDF Network ; September 2015`, URL-encoded. SEP-0007 defaults to the public network when this is omitted. |
 | `amount` | User entered an amount | Plain decimal string, validated with `validateAmount` (no balance check — the requester isn't the one spending). |
 | `asset_code` / `asset_issuer` | Both provided together, or neither | A code with no issuer is ambiguous, so it's dropped rather than emitted alone. The app is currently XLM-only end to end (see `app/send.tsx`), so the builder accepts these for forward-compatibility but the Receive screen's UI doesn't expose an asset picker yet. |
 | `memo` | User entered a memo | Validated with `validateMemo` (28-byte UTF-8 limit, per Stellar's text memo limit). |
@@ -54,6 +55,44 @@ the requester.
 Query values are encoded with the platform's `URLSearchParams`
 (`application/x-www-form-urlencoded`), matching how SEP-0007 URIs are
 specified.
+
+## Validation before display
+
+The Receive screen never renders a QR directly from unchecked form values.
+It calls `createReceivePayload`, which validates the complete request and
+returns either a payload or field-specific errors.
+
+- **Destination:** must be a valid Stellar public key. Missing or malformed
+  wallet addresses suppress the QR instead of producing an unusable code.
+- **Network:** the current mobile receive flow is Testnet-only. A Mainnet or
+  custom network configuration suppresses QR generation and shows the network
+  error rather than presenting a request that the app cannot safely honor.
+  Validated payment-request URIs explicitly include the Testnet passphrase;
+  checking the local network setting alone does not communicate it to another
+  wallet. The bare-address format remains unchanged and carries no network
+  information, so its sender must select Testnet separately.
+- **Amount:** optional, but when present it must pass the shared positive-decimal
+  validation used by payment flows.
+- **Memo:** optional. The validated mobile receive flow currently supports
+  `MEMO_TEXT` only and enforces Stellar's 28-byte UTF-8 text-memo limit.
+  `MEMO_ID`, `MEMO_HASH`, and `MEMO_RETURN` remain representable by the
+  low-level formatter for forward compatibility, but validated mobile requests
+  reject them rather than applying text-memo rules to a different memo type. A
+  memo type without a memo is also rejected.
+- **Issued assets:** the low-level formatter can still represent
+  `asset_code`/`asset_issuer` together for forward compatibility, but the
+  current mobile screen is XLM-only. The validated mobile path therefore rejects
+  issued-asset fields instead of silently dropping or advertising unsupported
+  behavior.
+
+The low-level `buildReceivePayload(params, networkPassphrase?)` formatter accepts
+an explicit passphrase for non-public payment requests. Its omitted-passphrase
+behavior remains the SEP-0007 public-network default. Mobile callers should use
+`createReceivePayload` so validation and the Testnet parameter stay together.
+
+When validation fails, the QR is replaced by a visible error state and Share is
+disabled. Invalid optional fields are not removed from the request to make a
+different payload appear valid.
 
 ## Parsing on the scan side
 
