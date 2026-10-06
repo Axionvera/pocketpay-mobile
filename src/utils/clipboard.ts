@@ -14,7 +14,10 @@ export interface CopyResult {
  */
 export async function copyToClipboard(text: string): Promise<CopyResult> {
   try {
-    await Clipboard.setStringAsync(text);
+    const copied = await Clipboard.setStringAsync(text);
+    if (copied === false) {
+      return { ok: false, error: 'Clipboard did not accept the text.' };
+    }
     return { ok: true };
   } catch (error) {
     console.error('Clipboard copy failed:', error);
@@ -51,8 +54,8 @@ export function useCopyToClipboard(resetDelayMs = COPY_FEEDBACK_DURATION_MS) {
   const copy = useCallback(
     async (text: string, fieldKey: string): Promise<CopyResult> => {
       const result = await copyToClipboard(text);
+      reset();
       if (result.ok) {
-        reset();
         setCopiedField(fieldKey);
         timeoutRef.current = setTimeout(() => {
           setCopiedField(null);
