@@ -1,6 +1,20 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
 import * as ExpoCrypto from 'expo-crypto';
 import { Buffer } from 'buffer';
+import { mapSdkError } from '../utils/sdkErrorMapper';
+import type { SdkErrorCategory } from '../utils/sdkErrorMapper';
+
+/** Safe, stage-specific payment failure. Never exposes raw network payloads. */
+export class PaymentFlowFailure extends Error {
+  constructor(
+    public readonly stage: 'preparation' | 'rejected' | 'uncertain',
+    public readonly category: SdkErrorCategory,
+    public readonly transactionHash?: string
+  ) {
+    super('Payment ' + stage);
+    this.name = 'PaymentFlowFailure';
+  }
+}
 
 export const server = new StellarSdk.Horizon.Server(
   process.env.EXPO_PUBLIC_STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org'
@@ -179,6 +193,8 @@ export const sendXlmTransaction = async (
   amount: string,
   memoText?: string
 ) => {
+  let submissionAttempted = false;
+  let signedTransactionHash: string | undefined;
   try {
     const sourceKeypair = StellarSdk.Keypair.fromSecret(secretKey);
     const sourcePublicKey = sourceKeypair.publicKey();
@@ -206,12 +222,33 @@ export const sendXlmTransaction = async (
     transactionBuilder.setTimeout(30);
     const transaction = transactionBuilder.build();
     transaction.sign(sourceKeypair);
+    // The hash is deterministic after signing and is safe to retain when
+    // Horizon accepted the transaction but its HTTP response is lost.
+    signedTransactionHash = transaction.hash().toString('hex');
 
+    submissionAttempted = true;
     const response = await server.submitTransaction(transaction);
     return response;
-  } catch (error: any) {
-    console.error('Error sending transaction:', error?.response?.data || error);
-    throw new Error(error?.response?.data?.extras?.result_codes?.transaction || 'Transaction failed');
+  } catch (error: unknown) {
+    if (!submissionAttempted) {
+      // Account lookup, fee fetch, construction or signing failed before
+      // any network submission. Provide only safe categorized guidance.
+      throw new PaymentFlowFailure('preparation', mapSdkError(error, 'payment').category);
+    }
+
+    const codes = (error as any)?.response?.data?.extras?.result_codes;
+    const hasResultCodes =
+      typeof codes?.transaction === 'string' ||
+      typeof codes?.operation === 'string' ||
+      (Array.isArray(codes?.operations) &&
+        codes.operations.some((code: unknown) => typeof code === 'string'));
+    if (hasResultCodes) {
+      // Horizon gave explicit rejection codes, not a transport timeout.
+      throw new PaymentFlowFailure('rejected', mapSdkError(error, 'payment').category);
+    }
+    // Timeout/lost response may happen AFTER network acceptance: do not
+    // expose raw exceptions or suggest a blind second submission.
+    throw new PaymentFlowFailure('uncertain', 'unknown', signedTransactionHash);
   }
 };
 
