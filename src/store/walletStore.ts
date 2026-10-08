@@ -18,13 +18,73 @@ const WALLET_KEY = 'pocketpay_wallet_secret';
 // otherwise the in-memory `showBackupReminder` flag resets to false on the
 // next launch and the user never sees the warning again.
 const BACKUP_ACK_KEY = '@pocketpay_backup_acknowledged';
+const PENDING_TX_KEY_PREFIX = '@pocketpay_pending_transactions:';
 const DEFAULT_BALANCE = '0.0000000';
 const TX_PAGE_SIZE = 20;
+let refreshRequestGeneration = 0;
 
 // Transaction records from the Stellar Horizon API – use a flexible type
 // until a proper typed SDK wrapper is available.
-export type TransactionStatus = 'pending' | 'confirmed' | 'failed';
+export type TransactionStatus = 'pending' | 'unknown' | 'confirmed' | 'failed';
 export type TransactionRecord = Record<string, any> & { id: string; status?: TransactionStatus };
+
+const pendingTransactionsKey = (publicKey: string) => `${PENDING_TX_KEY_PREFIX}${publicKey}`;
+
+const isPersistedPendingRecord = (hash: string, value: unknown): value is TransactionRecord => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return (
+    record.id === hash &&
+    (record.status === 'pending' || record.status === 'unknown')
+  );
+};
+
+const readPendingTransactions = async (
+  publicKey: string
+): Promise<Record<string, TransactionRecord>> => {
+  try {
+    const raw = await AsyncStorage.getItem(pendingTransactionsKey(publicKey));
+    if (!raw) return {};
+
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([hash, value]) => isPersistedPendingRecord(hash, value))
+    );
+  } catch {
+    console.warn('Failed to restore pending transaction state');
+    return {};
+  }
+};
+
+const persistPendingTransactions = async (
+  publicKey: string,
+  pending: Record<string, TransactionRecord>
+): Promise<void> => {
+  try {
+    const key = pendingTransactionsKey(publicKey);
+    if (Object.keys(pending).length === 0) {
+      await AsyncStorage.removeItem(key);
+      return;
+    }
+    await AsyncStorage.setItem(key, JSON.stringify(pending));
+  } catch {
+    console.warn('Failed to persist pending transaction state');
+  }
+};
+
+// Serialize writes so a slower older snapshot cannot overwrite a newer one.
+let pendingPersistQueue: Promise<void> = Promise.resolve();
+const enqueuePendingTransactionsPersist = (
+  publicKey: string,
+  pending: Record<string, TransactionRecord>
+): Promise<void> => {
+  pendingPersistQueue = pendingPersistQueue
+    .catch(() => undefined)
+    .then(() => persistPendingTransactions(publicKey, pending));
+  return pendingPersistQueue;
+};
 
 interface WalletState {
   publicKey: string | null;
@@ -67,7 +127,7 @@ interface WalletState {
   loadWalletFromStorage: () => Promise<boolean>;
   /** Pull-to-refresh: resets pagination and loads the first page fresh. */
   refreshWalletData: () => Promise<void>;
-  /** Optimistically show a just-submitted transaction as pending, keyed by hash. */
+  /** Show a submitted transaction as pending/unknown, keyed by its deterministic hash. */
   addPendingTransaction: (hash: string, tx: Record<string, any> & { id: string }) => void;
   loadMoreTransactions: () => Promise<void>;
   clearWallet: () => Promise<boolean>;
@@ -87,6 +147,7 @@ const resetWalletState = () => ({
   transactions: [],
   pendingTransactions: {},
   lastRefreshed: null,
+  isLoading: false,
   isLoadingMore: false,
   hasMoreTransactions: false,
   nextCursor: null,
@@ -166,7 +227,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   setWallet: async (publicKey: string, secretKey: string) => {
     try {
       await SecureStore.setItemAsync(WALLET_KEY, secretKey);
-      set({ publicKey, balance: DEFAULT_BALANCE, transactions: [], pendingTransactions: {}, error: null });
+      set({ publicKey, balance: DEFAULT_BALANCE, transactions: [], pendingTransactions: {}, isLoading: false, error: null });
       return true;
     } catch {
       console.error(PERSIST_WALLET_ERROR);
@@ -209,7 +270,17 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         // Non-critical: default to not re-showing the reminder on read failure.
       }
 
-      set({ publicKey: keypair.publicKey(), error: null, showBackupReminder, walletChecked: true });
+      const publicKey = keypair.publicKey();
+      const pendingTransactions = await readPendingTransactions(publicKey);
+
+      set({
+        publicKey,
+        pendingTransactions,
+        transactions: Object.values(pendingTransactions),
+        error: null,
+        showBackupReminder,
+        walletChecked: true,
+      });
       return true;
     } catch {
       console.error(RESTORE_WALLET_ERROR);
@@ -222,6 +293,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   refreshWalletData: async () => {
     const { publicKey } = get();
     if (!publicKey) return;
+    const requestGeneration = ++refreshRequestGeneration;
 
     set({ isLoading: true, error: null, balanceState: 'loading', isLoadingMore: false, nextCursor: null, hasMoreTransactions: false });
     try {
@@ -229,6 +301,10 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         fetchXlmBalance(publicKey),
         fetchTransactionsPage(publicKey, TX_PAGE_SIZE),
       ]);
+      if (
+        get().publicKey !== publicKey ||
+        requestGeneration !== refreshRequestGeneration
+      ) return;
 
       // Reconcile: drop any optimistic pending entry whose hash now shows up in the
       // real Horizon response, so it isn't displayed twice. Operation records
@@ -243,6 +319,10 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         Object.entries(get().pendingTransactions).filter(([hash]) => !confirmedHashes.has(hash))
       );
 
+      // Commit the reconciled snapshot before waiting on storage. A new
+      // optimistic transaction can be added while persistence is in flight; if
+      // this set happened afterwards, the older refresh snapshot would erase it
+      // from memory and its queued write could resurrect already-confirmed rows.
       const isZero = balance === '0.0000000';
       set({
         balance,
@@ -256,7 +336,17 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         // Also update funding status: if we got balance data, the account exists
         fundingStatus: 'funded',
       });
+
+      // Writes are serialized. Any optimistic add that happens while this await
+      // is pending observes the reconciled in-memory state above and queues a
+      // newer snapshot behind this one. Never write remainingPending to memory
+      // again after the await.
+      await enqueuePendingTransactionsPersist(publicKey, remainingPending);
     } catch (err: any) {
+      if (
+        get().publicKey !== publicKey ||
+        requestGeneration !== refreshRequestGeneration
+      ) return;
       console.error('Failed to refresh wallet data');
       set({
         isLoading: false,
@@ -267,15 +357,35 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   },
 
   addPendingTransaction: (hash, tx) => {
-    const pendingRecord: TransactionRecord = { ...tx, status: 'pending' };
-    set((state) => ({
-      pendingTransactions: { ...state.pendingTransactions, [hash]: pendingRecord },
-      transactions: [pendingRecord, ...state.transactions],
-    }));
+    // Preserve an explicit unknown state when submission may have reached the
+    // network but acknowledgement was lost. All other optimistic inserts are
+    // ordinary pending transactions.
+    const status: TransactionStatus = tx.status === 'unknown' ? 'unknown' : 'pending';
+    const pendingRecord: TransactionRecord = { ...tx, status };
+    const state = get();
+    const pendingTransactions = { ...state.pendingTransactions, [hash]: pendingRecord };
+
+    const transactionsWithoutSameOptimisticHash = state.transactions.filter((record) => {
+      if (record.status !== 'pending' && record.status !== 'unknown') return true;
+      return (
+        record.id !== hash &&
+        record.hash !== hash &&
+        record.transaction_hash !== hash
+      );
+    });
+
+    set({
+      pendingTransactions,
+      transactions: [pendingRecord, ...transactionsWithoutSameOptimisticHash],
+    });
+
+    if (state.publicKey) {
+      void enqueuePendingTransactionsPersist(state.publicKey, pendingTransactions);
+    }
   },
 
   loadMoreTransactions: async () => {
-    const { publicKey, isLoadingMore, hasMoreTransactions, nextCursor, transactions } = get();
+    const { publicKey, isLoadingMore, hasMoreTransactions, nextCursor } = get();
 
     // Guard: nothing to do if already loading or no more pages.
     if (!publicKey || isLoadingMore || !hasMoreTransactions || !nextCursor) return;
@@ -284,27 +394,43 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     try {
       const page = await fetchTransactionsPage(publicKey, TX_PAGE_SIZE, nextCursor);
 
-      // Deduplicate: build a set of existing IDs then filter the new records.
-      const existingIds = new Set(transactions.map((tx) => tx.id));
-      const newRecords = (page.records as TransactionRecord[]).filter(
-        (tx) => !existingIds.has(tx.id)
-      );
+      set((state) => {
+        // A refresh or wallet change may have replaced this pagination request.
+        if (state.publicKey !== publicKey || state.nextCursor !== nextCursor || !state.isLoadingMore) {
+          return state;
+        }
 
-      set({
-        transactions: [...transactions, ...newRecords],
-        nextCursor: page.nextCursor,
-        hasMoreTransactions: page.hasMore,
-        isLoadingMore: false,
+        // Preserve records added or updated while the older page was loading.
+        const existingIds = new Set(state.transactions.map((tx) => tx.id));
+        const newRecords = (page.records as TransactionRecord[]).filter(
+          (tx) => !existingIds.has(tx.id)
+        );
+
+        return {
+          transactions: [...state.transactions, ...newRecords],
+          nextCursor: page.nextCursor,
+          hasMoreTransactions: page.hasMore,
+          isLoadingMore: false,
+        };
       });
     } catch (err: any) {
       console.error('Failed to load more transactions:', err);
-      set({ isLoadingMore: false, error: err.message || 'Failed to load more' });
+      set((state) => {
+        if (state.publicKey !== publicKey || state.nextCursor !== nextCursor || !state.isLoadingMore) {
+          return state;
+        }
+        return { isLoadingMore: false, error: err.message || 'Failed to load more' };
+      });
     }
   },
 
   clearWallet: async () => {
+    const publicKey = get().publicKey;
     try {
       await SecureStore.deleteItemAsync(WALLET_KEY);
+      if (publicKey) {
+        await enqueuePendingTransactionsPersist(publicKey, {});
+      }
       set({ ...resetWalletState(), showBackupReminder: false, error: null });
       try {
         await AsyncStorage.removeItem(BACKUP_ACK_KEY);

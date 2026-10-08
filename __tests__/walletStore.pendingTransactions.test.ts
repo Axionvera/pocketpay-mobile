@@ -29,6 +29,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 import { fetchTransactionsPage, fetchXlmBalance } from '../src/services/stellar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useWalletStore } from '../src/store/walletStore';
 
 const mockFetchTransactionsPage = fetchTransactionsPage as jest.MockedFunction<
@@ -62,6 +63,47 @@ describe('AC-P1 – addPendingTransaction', () => {
   });
 });
 
+describe('AC-P1a – repeated hash replaces the optimistic row', () => {
+  it('keeps one visible optimistic row when the same deterministic hash is added again', () => {
+    useWalletStore.getState().addPendingTransaction('hash1', {
+      id: 'hash1',
+      amount: '10.0000000',
+    });
+    useWalletStore.getState().addPendingTransaction('hash1', {
+      id: 'hash1',
+      amount: '10.0000000',
+      status: 'unknown',
+    });
+
+    const state = useWalletStore.getState();
+    expect(Object.keys(state.pendingTransactions)).toEqual(['hash1']);
+    expect(
+      state.transactions.filter(
+        (tx) =>
+          (tx.status === 'pending' || tx.status === 'unknown') &&
+          (tx.id === 'hash1' || tx.hash === 'hash1' || tx.transaction_hash === 'hash1')
+      )
+    ).toHaveLength(1);
+    expect(state.transactions[0]).toEqual(
+      expect.objectContaining({ id: 'hash1', status: 'unknown' })
+    );
+  });
+});
+
+describe('AC-P1b – preserve unknown submission state', () => {
+  it('keeps an acknowledgement-lost transaction marked unknown for reconciliation', () => {
+    useWalletStore.getState().addPendingTransaction('hash-unknown', {
+      id: 'hash-unknown',
+      amount: '10.0000000',
+      status: 'unknown',
+    });
+
+    const state = useWalletStore.getState();
+    expect(state.pendingTransactions['hash-unknown'].status).toBe('unknown');
+    expect(state.transactions[0].status).toBe('unknown');
+  });
+});
+
 describe('AC-P2 – concurrent pending entries', () => {
   it('does not clobber a concurrent pending entry with a different hash', () => {
     useWalletStore.getState().addPendingTransaction('hash1', { id: 'hash1', amount: '10' });
@@ -92,6 +134,9 @@ describe('AC-P3 – reconcile on refresh', () => {
     expect(
       state.transactions.filter((t) => t.id === 'hash1' || t.transaction_hash === 'hash1')
     ).toHaveLength(1);
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith(
+      '@pocketpay_pending_transactions:GPUBLIC123'
+    );
   });
 
   it('reconciles using the hash field on the submit response, not the Horizon operation id', async () => {
@@ -135,6 +180,107 @@ describe('AC-P2b – concurrent add during an in-flight refresh', () => {
     const state = useWalletStore.getState();
     expect(state.pendingTransactions['hash2']).toBeDefined();
     expect(state.transactions.some((t) => t.id === 'hash2')).toBe(true);
+  });
+});
+
+describe('AC-P2c – add during reconciliation persistence', () => {
+  it('keeps a newly-added pending transaction while the reconciled snapshot is being persisted', async () => {
+    useWalletStore.getState().addPendingTransaction('hash1', { id: 'hash1', amount: '10' });
+
+    mockFetchTransactionsPage.mockResolvedValueOnce({
+      records: [{ id: 'op1', transaction_hash: 'hash1', amount: '10.0000000' }] as any,
+      nextCursor: null,
+      hasMore: false,
+    });
+
+    let markPersistenceStarted: () => void = () => {};
+    let releasePersistence: () => void = () => {};
+    const persistenceStarted = new Promise<void>((resolve) => {
+      markPersistenceStarted = resolve;
+    });
+    const persistenceGate = new Promise<void>((resolve) => {
+      releasePersistence = resolve;
+    });
+
+    const mockRemoveItem = AsyncStorage.removeItem as jest.MockedFunction<
+      typeof AsyncStorage.removeItem
+    >;
+    mockRemoveItem.mockImplementationOnce(async () => {
+      markPersistenceStarted();
+      await persistenceGate;
+    });
+
+    const refreshPromise = useWalletStore.getState().refreshWalletData();
+
+    // Wait until refresh has reconciled hash1 and is blocked on persistence.
+    await persistenceStarted;
+
+    // A second send finishes during the storage wait.
+    useWalletStore.getState().addPendingTransaction('hash2', { id: 'hash2', amount: '20' });
+
+    // The in-memory reconciliation must already be committed, so hash2 is
+    // based on the clean post-refresh snapshot rather than stale hash1 state.
+    let state = useWalletStore.getState();
+    expect(state.pendingTransactions['hash1']).toBeUndefined();
+    expect(state.pendingTransactions['hash2']).toBeDefined();
+
+    await act(async () => {
+      releasePersistence();
+      await refreshPromise;
+    });
+
+    state = useWalletStore.getState();
+    expect(state.pendingTransactions['hash1']).toBeUndefined();
+    expect(state.pendingTransactions['hash2']).toBeDefined();
+    expect(state.transactions.some((tx) => tx.id === 'hash2')).toBe(true);
+    expect(
+      state.transactions.filter(
+        (tx) => tx.id === 'hash1' || tx.transaction_hash === 'hash1'
+      )
+    ).toHaveLength(1);
+  });
+});
+
+describe('AC-P2c – overlapping same-wallet refreshes', () => {
+  it('keeps the newer refresh result when an older request completes last', async () => {
+    let resolveFirst: (value: any) => void = () => {};
+    let resolveSecond: (value: any) => void = () => {};
+    const firstPage = new Promise((resolve) => {
+      resolveFirst = resolve;
+    });
+    const secondPage = new Promise((resolve) => {
+      resolveSecond = resolve;
+    });
+
+    mockFetchTransactionsPage
+      .mockReturnValueOnce(firstPage as any)
+      .mockReturnValueOnce(secondPage as any);
+
+    const firstRefresh = useWalletStore.getState().refreshWalletData();
+    const secondRefresh = useWalletStore.getState().refreshWalletData();
+
+    await act(async () => {
+      resolveSecond({
+        records: [{ id: 'newer-operation', transaction_hash: 'newer-hash' }],
+        nextCursor: 'newer-cursor',
+        hasMore: true,
+      });
+      await secondRefresh;
+    });
+
+    await act(async () => {
+      resolveFirst({
+        records: [{ id: 'older-operation', transaction_hash: 'older-hash' }],
+        nextCursor: 'older-cursor',
+        hasMore: true,
+      });
+      await firstRefresh;
+    });
+
+    const state = useWalletStore.getState();
+    expect(state.transactions.map((tx) => tx.id)).toEqual(['newer-operation']);
+    expect(state.nextCursor).toBe('newer-cursor');
+    expect(state.hasMoreTransactions).toBe(true);
   });
 });
 
