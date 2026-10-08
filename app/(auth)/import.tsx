@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StrKey } from '@stellar/stellar-sdk';
@@ -8,13 +8,13 @@ import { WalletEmptyState } from '../../src/components/WalletEmptyState';
 import { SIZES, RADIUS, ThemeColors } from '../../src/constants/theme';
 import { useTheme } from '../../src/hooks/useTheme';
 import { useWalletStore } from '../../src/store/walletStore';
-import { WALLET_SAVE_FAILURE_MESSAGE } from '../../src/utils/walletStorageErrors';
 import { importWallet } from 'pocketpay-sdk';
 import { Info, Shield, CheckCircle } from 'lucide-react-native';
 import type { OnboardingError, StorageError } from '../../src/types/onboarding';
 import {
   classifyOnboardingError,
-  mapWalletErrorToStorageError,
+  classifyWalletImportConflict,
+  saveImportedWalletWithRecovery,
 } from '../../src/types/onboarding';
 
 const SECRET_KEY_LENGTH = 56;
@@ -27,6 +27,9 @@ export default function ImportWalletScreen() {
   const [secretKey, setSecretKey] = useState('');
   const [error, setError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const importInProgress = useRef(false);
 
   // Recovery states
   const [onboardingError, setOnboardingError] = useState<OnboardingError | null>(null);
@@ -75,6 +78,7 @@ export default function ImportWalletScreen() {
   }
 
   const handleImport = async () => {
+    if (importInProgress.current) return;
     setError('');
     resetErrors();
 
@@ -87,20 +91,43 @@ export default function ImportWalletScreen() {
       return;
     }
 
+    importInProgress.current = true;
+    setIsImporting(true);
     try {
       const { publicKey } = await importWallet(trimmedKey);
 
-      const saved = await setWallet(publicKey, trimmedKey);
-      if (!saved) {
-        // Classify the storage error
-        setStorageError(mapWalletErrorToStorageError(WALLET_SAVE_FAILURE_MESSAGE));
+      // Never silently replace an already active wallet's stored secret.
+      // Read the current store after the asynchronous SDK import, not the
+      // stale account state captured when this screen first rendered.
+      const conflict = classifyWalletImportConflict(
+        useWalletStore.getState().publicKey,
+        publicKey,
+      );
+      if (conflict) {
+        setOnboardingError(conflict);
         return;
       }
 
+      // A SecureStore write normally reports success/failure as a boolean,
+      // but unexpected rejected writes must still show storage recovery UI.
+      // Never surface a provider's raw exception (which may contain secrets).
+      const storageFailure = await saveImportedWalletWithRecovery(
+        () => setWallet(publicKey, trimmedKey),
+      );
+      if (storageFailure) {
+        setStorageError(storageFailure);
+        return;
+      }
+
+      // Do not keep a successfully persisted secret in component form state.
+      setSecretKey('');
       setIsSuccess(true);
     } catch (err: any) {
       const errorMsg = err?.message || String(err);
       setOnboardingError(classifyOnboardingError(errorMsg));
+    } finally {
+      importInProgress.current = false;
+      setIsImporting(false);
     }
   };
 
@@ -114,10 +141,33 @@ export default function ImportWalletScreen() {
   };
 
   const handleStartOver = () => {
+    setIsCancelled(false);
     resetErrors();
     setError('');
     setSecretKey('');
   };
+
+  const handleCancel = () => {
+    // SecureStore writes cannot be aborted by this screen.
+    if (importInProgress.current) return;
+    resetErrors();
+    setError('');
+    setSecretKey('');
+    setIsCancelled(true);
+  };
+
+  if (isCancelled) {
+    return (
+      <View style={styles.container}>
+        <WalletEmptyState
+          variant="cancelled"
+          subtitle="You cancelled this import attempt. You can start another import or create a wallet when you're ready."
+          onCreate={() => router.replace('/(auth)/create')}
+          onImport={handleStartOver}
+        />
+      </View>
+    );
+  }
 
   // ── Storage Error State ────────────────────────────────────
   if (storageError) {
@@ -182,7 +232,7 @@ export default function ImportWalletScreen() {
         <View style={styles.infoBanner}>
           <Info color={colors.primary} size={18} />
           <Text style={styles.infoText}>
-            This app runs on <Text style={styles.infoBold}>Testnet</Text>. Only test-net secret keys will work.
+            This app runs on <Text style={styles.infoBold}>Testnet</Text>. Use a key reserved for testing, never one used on Mainnet.
           </Text>
         </View>
 
@@ -209,11 +259,20 @@ export default function ImportWalletScreen() {
         />
       </View>
 
-      <AsyncActionButton
-        title="Import Wallet"
-        onPress={handleImport}
-        loadingText="Importing…"
-      />
+      <View style={styles.actions}>
+        <AsyncActionButton
+          title="Import Wallet"
+          onPress={handleImport}
+          loadingText="Importing…"
+        />
+        <AsyncActionButton
+          title="Cancel Import"
+          variant="outline"
+          onPress={handleCancel}
+          disabled={isImporting}
+          accessibilityHint="Clears the entered key before importing. Unavailable while the wallet is being saved."
+        />
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -228,6 +287,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  actions: {
+    gap: SIZES.sm,
   },
   contentCenter: {
     flex: 1,

@@ -124,6 +124,24 @@ User taps Create/Import
 
 Cancelled setup (user presses Back during create/import flow) leaves the user on the `(auth)` index screen with no wallet state changes — the safe default state.
 
+### Import validation, recovery, and overwrite protection (#521)
+
+The import screen validates blank input, the secret-key prefix, exact length, base32 characters, and the Stellar checksum before invoking the SDK. Invalid input returns fixed, user-readable copy rather than echoing the entered secret. An SDK import failure is classified to a typed onboarding error; neither the exception's raw message nor the secret seed is rendered in the error-state UI.
+
+On a successful SDK import, the screen checks the **current** wallet store immediately before attempting SecureStore persistence:
+
+| Existing wallet | Attempted import | Result |
+|-----------------|------------------|--------|
+| None | Valid seed | Continue with secure persistence |
+| Same public key | Valid seed | `duplicate_wallet`: reject; original wallet is retained |
+| Different public key | Valid seed | `existing_wallet`: reject; an implicit replacement is not allowed |
+
+The two new errors use fixed safe messages from `ONBOARDING_ERROR_MESSAGES`, point the user to a backup and explicit reset before replacement, and never display the public account key or entered secret. The root app waits for initial SecureStore restoration before showing the import screen, and the import screen keeps only one import/save in flight. On a successful save, the secret is cleared from the form state.
+
+Both a normal `setWallet()` false-return **and an unexpected rejected secure save** now enter the existing typed `storage_error` / `persist_failed` recovery state, never the generic SDK import-error UI or success state. The `saveImportedWalletWithRecovery()` boundary in `src/types/onboarding.ts` discards raw provider exception details; the rendered message is fixed and never echoes a secret seed. Retry returns to the import form; Start Over clears the form. The explicit Cancel Import action remains disabled while the persistence request is in flight because the secure-store write cannot be cancelled or rolled back by the screen.
+
+The focused `src/types/onboarding.import.test.ts` cases cover empty, same-account and different-account decisions, confirmed/false/rejected secure saves, and fixed recovery messages that do not echo secret input. They do **not** replace device-level keystore, biometric, accessibility, or full navigation verification.
+
 ---
 
 ## Contributor Checklist
