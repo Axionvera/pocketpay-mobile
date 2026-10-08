@@ -4,7 +4,6 @@ import Constants from 'expo-constants';
 import { useAppStore } from '../store/appStore';
 import { useWalletStore } from '../store/walletStore';
 import { getLastErrorReport } from './errorReporting';
-import { redactSensitiveString } from './redactSensitive';
 import { computeNetworkEnvironment } from '../features/settings/useNetworkEnvironment';
 import { FEATURE_FLAGS } from '../config/featureFlags';
 
@@ -35,6 +34,28 @@ function getFeatureFlagsSnapshot(): Record<string, boolean> {
   );
 }
 
+/** A coarse support category; raw network errors stay in the redacted field. */
+function classifyNetworkError(error: string | null | undefined): string | null {
+  if (!error) return null;
+  const message = error.toLowerCase();
+  if (/timeout|timed out/.test(message)) return 'timeout';
+  if (/rate.limit|too many requests|\b429\b/.test(message)) return 'rate_limit';
+  if (/unauthorized|forbidden|permission|\b401\b|\b403\b/.test(message)) return 'authorization';
+  if (/network|connection|offline|fetch|socket|dns|unreachable/.test(message)) return 'connection';
+  return 'other';
+}
+
+// Error messages and caller-supplied source/name strings can contain arbitrary
+// credentials, URLs, and personal data that format-based redaction cannot
+// reliably recognize. Keep only known-safe labels in exported reports.
+const SAFE_ERROR_NAMES = new Set([
+  'Error', 'TypeError', 'ReferenceError', 'SyntaxError', 'RangeError',
+  'URIError', 'EvalError', 'AggregateError',
+]);
+const SAFE_ERROR_SOURCES = new Set([
+  'ErrorBoundary', 'GlobalJsHandler', 'GlobalHandler', 'UnhandledPromiseRejection',
+]);
+
 export const getDiagnostics = async () => {
   const appState = useAppStore.getState();
   const walletState = useWalletStore.getState();
@@ -62,7 +83,11 @@ export const getDiagnostics = async () => {
      */
     network: {
       tier: network.networkTier,
-      label: network.networkLabel,
+      // A custom network name comes verbatim from build configuration for
+      // display in Settings. It is untrusted free text, so export only its
+      // category rather than copying arbitrary credentials or user data into
+      // a report that someone may share with support.
+      label: network.networkTier === 'custom' ? 'Custom Network' : network.networkLabel,
       horizonHost: network.horizonHost,
       sorobanHost: network.sorobanHost,
       vaultMode: network.vaultMode,
@@ -77,29 +102,31 @@ export const getDiagnostics = async () => {
     },
     walletState: {
       hasPublicKey: !!walletState.publicKey,
-      isBalanceLoaded: walletState.balance !== '0.0000000',
+      // Balance readiness is a fetch lifecycle, not whether the amount is
+      // nonzero: zero-fund accounts can be fully loaded, while a previously
+      // nonzero amount can remain cached after a failed refresh.
+      isBalanceLoaded: walletState.balanceState === 'available',
       balanceState: walletState.balanceState,
       fundingStatus: walletState.fundingStatus,
       transactionsCount: walletState.transactions.length,
       isLoading: walletState.isLoading,
       lastRefreshed: walletState.lastRefreshed,
-      lastError: walletState.error
-        ? redactSensitiveString(walletState.error)
-        : null,
+      lastError: walletState.error ? 'Details omitted for privacy' : null,
     },
     networkHealth: {
       classifiedError: networkErrorType,
       hasError: !!walletState.error,
     },
     /**
-     * Most recent failure captured by reportError (ErrorBoundary / global
-     * handlers). Messages are already redacted at the reporting boundary.
+     * Most recent failure captured by reportError. Even messages redacted
+     * for known key formats may contain unknown bearer tokens, query-string
+     * credentials or user details. Export categories, never raw messages.
      */
     lastReportedError: lastError
       ? {
-          source: lastError.source,
-          name: lastError.name,
-          message: lastError.message,
+          source: SAFE_ERROR_SOURCES.has(lastError.source) ? lastError.source : 'Other',
+          name: SAFE_ERROR_NAMES.has(lastError.name) ? lastError.name : 'Error',
+          message: 'Details omitted for privacy',
           isFatal: Boolean(lastError.isFatal),
           timestamp: lastError.timestamp,
         }

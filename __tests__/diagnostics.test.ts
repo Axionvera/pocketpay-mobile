@@ -17,22 +17,22 @@ describe('getDiagnostics', () => {
     jest.restoreAllMocks();
   });
 
-  it('redacts a Stellar secret key that leaked into the wallet store error', async () => {
+  it('does not export wallet error text containing a Stellar secret key', async () => {
     useWalletStore.setState({ error: `Signing failed for secret ${SAMPLE_SECRET_KEY}` });
 
     const raw = await getDiagnostics();
 
     expect(raw).not.toContain(SAMPLE_SECRET_KEY);
-    expect(raw).toContain('[REDACTED_SECRET]');
+    expect(JSON.parse(raw).walletState.lastError).toBe('Details omitted for privacy');
   });
 
-  it('redacts a Stellar public key that leaked into the wallet store error', async () => {
+  it('does not export wallet error text containing a Stellar public key', async () => {
     useWalletStore.setState({ error: `Account not found: ${SAMPLE_PUBLIC_KEY}` });
 
     const raw = await getDiagnostics();
 
     expect(raw).not.toContain(SAMPLE_PUBLIC_KEY);
-    expect(raw).toContain('[REDACTED_PUBLIC_KEY]');
+    expect(JSON.parse(raw).walletState.lastError).toBe('Details omitted for privacy');
   });
 
   it('never includes a raw secret or public key anywhere in the payload, regardless of source', async () => {
@@ -46,6 +46,61 @@ describe('getDiagnostics', () => {
 
     expect(raw).not.toMatch(/\bS[A-Z0-9]{55}\b/);
     expect(raw).not.toMatch(/\bG[A-Z0-9]{55}\b/);
+  });
+
+  it('classifies network failures without exposing raw wallet errors in the category', async () => {
+    useWalletStore.setState({ error: 'Network request failed for a private endpoint' });
+
+    const parsed = JSON.parse(await getDiagnostics());
+
+    expect(parsed.networkHealth).toEqual({
+      classifiedError: 'connection',
+      hasError: true,
+    });
+    expect(parsed.networkHealth.classifiedError).not.toContain('endpoint');
+  });
+
+  it('never exports opaque URL tokens or untrusted reporter fields as error details', async () => {
+    const token = 'opaque-client-credential-7654-not-a-wallet-key';
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    useWalletStore.setState({
+      error: 'Network request failed: https://private.example/?access_token=' + token,
+    });
+    reportError(new Error('Authorization bearer ' + token), {
+      source: 'injected-' + token,
+      isFatal: false,
+    });
+
+    const raw = await getDiagnostics();
+    const parsed = JSON.parse(raw);
+
+    expect(raw).not.toContain(token);
+    expect(parsed.networkHealth.classifiedError).toBe('connection');
+    expect(parsed.walletState.lastError).toBe('Details omitted for privacy');
+    expect(parsed.lastReportedError).toMatchObject({
+      source: 'Other',
+      name: 'Error',
+      message: 'Details omitted for privacy',
+    });
+  });
+
+  it('does not echo malformed endpoint URLs into the support report', async () => {
+    const previousUrl = process.env.EXPO_PUBLIC_STELLAR_HORIZON_URL;
+    const marker = 'private-endpoint-token-678';
+    try {
+      process.env.EXPO_PUBLIC_STELLAR_HORIZON_URL = 'invalid url/?access_token=' + marker;
+      const raw = await getDiagnostics();
+      const parsed = JSON.parse(raw);
+
+      expect(parsed.network.horizonHost).toBe('Invalid URL');
+      expect(raw).not.toContain(marker);
+    } finally {
+      if (previousUrl === undefined) {
+        delete process.env.EXPO_PUBLIC_STELLAR_HORIZON_URL;
+      } else {
+        process.env.EXPO_PUBLIC_STELLAR_HORIZON_URL = previousUrl;
+      }
+    }
   });
 
   it('reports null for lastError when the wallet store has no error', async () => {
@@ -66,6 +121,18 @@ describe('getDiagnostics', () => {
     const mainnetParsed = JSON.parse(await getDiagnostics());
     expect(mainnetParsed.network.tier).toBe('mainnet');
     expect(mainnetParsed.network.label).toBe('Public Network (Mainnet)');
+  });
+
+  it('does not export free-form custom network labels from build configuration', async () => {
+    const marker = 'private-custom-endpoint-token-12345';
+    process.env.EXPO_PUBLIC_STELLAR_NETWORK = `CUSTOM-${marker}`;
+
+    const raw = await getDiagnostics();
+    const parsed = JSON.parse(raw);
+
+    expect(parsed.network.tier).toBe('custom');
+    expect(parsed.network.label).toBe('Custom Network');
+    expect(raw).not.toContain(marker);
   });
 
   it('exposes only hostnames for Horizon/Soroban, never a full URL', async () => {
@@ -106,7 +173,7 @@ describe('getDiagnostics', () => {
     expect(parsed.storage.secureStoreAvailable).toBe(false);
   });
 
-  it('includes the most recent reported error with an already-redacted message', async () => {
+  it('includes the most recent reported error without its raw message', async () => {
     reportError(new Error(`boom ${SAMPLE_SECRET_KEY}`), { source: 'GlobalJsHandler', isFatal: true });
 
     const parsed = JSON.parse(await getDiagnostics());
@@ -114,7 +181,23 @@ describe('getDiagnostics', () => {
     expect(parsed.lastReportedError).not.toBeNull();
     expect(parsed.lastReportedError.source).toBe('GlobalJsHandler');
     expect(parsed.lastReportedError.isFatal).toBe(true);
-    expect(parsed.lastReportedError.message).not.toContain(SAMPLE_SECRET_KEY);
+    expect(parsed.lastReportedError.message).toBe('Details omitted for privacy');
+  });
+
+  it('uses balance fetch readiness, not the balance amount, in the support report', async () => {
+    const previous = useWalletStore.getState();
+    try {
+      useWalletStore.setState({ balance: '0.0000000', balanceState: 'available' });
+      const loaded = JSON.parse(await getDiagnostics());
+      expect(loaded.walletState.isBalanceLoaded).toBe(true);
+
+      useWalletStore.setState({ balance: '25.0000000', balanceState: 'unavailable' });
+      const failedRefresh = JSON.parse(await getDiagnostics());
+      expect(failedRefresh.walletState.isBalanceLoaded).toBe(false);
+      expect(JSON.stringify(failedRefresh)).not.toContain('25.0000000');
+    } finally {
+      useWalletStore.setState({ balance: previous.balance, balanceState: previous.balanceState });
+    }
   });
 
   it('never exposes the wallet balance or full transaction list, only counts/booleans', async () => {
